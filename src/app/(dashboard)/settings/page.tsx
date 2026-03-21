@@ -120,9 +120,9 @@ export default function SettingsPage() {
             <Separator />
             <p className="text-sm text-gray-500">Configure price alerts, portfolio drift notifications, and more.</p>
             <div className="space-y-3">
-              {['Portfolio drift &gt; 5%', 'SIP failure', 'FD maturity reminder', 'Insurance premium due'].map((alert) => (
+              {['Portfolio drift > 5%', 'SIP failure', 'FD maturity reminder', 'Insurance premium due'].map((alert) => (
                 <div key={alert} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                  <span className="text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: alert }} />
+                  <span className="text-sm text-gray-700">{alert}</span>
                   <Button variant="outline" size="sm">Enable</Button>
                 </div>
               ))}
