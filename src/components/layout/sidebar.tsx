@@ -8,7 +8,7 @@ import {
   Bitcoin, DollarSign, FileText, Landmark, Leaf,
   UserCheck, PiggyBank, Shield, Heart, Car, Home,
   Wallet, Gem, Building, Settings, ChevronDown,
-  ChevronRight, LayoutDashboard, Activity,
+  ChevronRight, LayoutDashboard, Activity, PieChart,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -193,6 +193,22 @@ export function Sidebar() {
         >
           <Activity className="w-3.5 h-3.5" style={{ color: pathname === '/prices' ? '#C9A84C' : undefined }} />
           <span>Live Prices</span>
+        </Link>
+        <Link
+          href="/portfolio"
+          className={cn(
+            'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all',
+            pathname === '/portfolio'
+              ? 'text-white font-semibold'
+              : 'text-white/55 hover:text-white/90 hover:bg-white/5'
+          )}
+          style={{
+            borderLeft: pathname === '/portfolio' ? '2px solid #C9A84C' : '2px solid transparent',
+            backgroundColor: pathname === '/portfolio' ? 'rgba(201,168,76,0.1)' : undefined,
+          }}
+        >
+          <PieChart className="w-3.5 h-3.5" style={{ color: pathname === '/portfolio' ? '#C9A84C' : undefined }} />
+          <span>Portfolio</span>
         </Link>
       </div>
 
