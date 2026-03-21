@@ -1,0 +1,76 @@
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 97%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 19%;
+    --primary-foreground: 0 0% 97%;
+    --secondary: 215 20% 95%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 215 20% 95%;
+    --muted-foreground: 215 14% 45%;
+    --accent: 40 55% 54%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --border: 215 20% 91%;
+    --input: 215 20% 91%;
+    --ring: 222 47% 19%;
+    --radius: 0.625rem;
+
+    /* WealthView brand */
+    --wv-navy: #1B2A4A;
+    --wv-gold: #C9A84C;
+    --wv-offwhite: #F7F5F0;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    background-color: #F7F5F0;
+    color: #1a1a2e;
+    font-family: var(--font-inter), system-ui, sans-serif;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 100px;
+  }
+
+  /* Range input thumb */
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #1B2A4A;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+}
