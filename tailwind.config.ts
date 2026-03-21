@@ -9,11 +9,28 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: 'var(--background)',
-        foreground: 'var(--foreground)',
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
+        // WealthView brand
+        navy:       '#1B2A4A',
+        gold:       '#C9A84C',
+        'gold-light': '#F5EDD6',
+        teal:       '#2E8B8B',
+        gain:       '#059669',
+        loss:       '#DC2626',
+        // Page / surface
+        bg:         '#F7F5F0',
+        surface:    '#FFFFFF',
+        border:     '#E8E5DD',
+        // Text
+        'text-primary':   '#1A1A2E',
+        'text-secondary': '#6B7280',
+        'text-muted':     '#9CA3AF',
+        // shadcn tokens
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
+        },
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
@@ -30,25 +47,25 @@ const config: Config = {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
         },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-        },
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
-        },
-        // WealthView brand colors
-        navy: '#1B2A4A',
-        gold: '#C9A84C',
-        offwhite: '#F7F5F0',
+        destructive: { DEFAULT: 'hsl(var(--destructive))' },
+        input:  'hsl(var(--input))',
+        ring:   'hsl(var(--ring))',
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        sans:    ['var(--font-dm-sans)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-playfair)', 'Georgia', 'serif'],
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        lg:   '12px',
+        md:   '8px',
+        sm:   '6px',
+        xl:   '16px',
+        '2xl':'20px',
+      },
+      boxShadow: {
+        card: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+        'card-hover': '0 4px 12px rgba(0,0,0,0.08)',
+        gold: '0 0 0 2px #C9A84C',
       },
     },
   },

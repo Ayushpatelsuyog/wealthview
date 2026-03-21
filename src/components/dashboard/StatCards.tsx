@@ -1,128 +1,84 @@
 'use client';
 
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import {
-  TrendingUp,
-  IndianRupee,
-  PieChart,
-  Shield,
-  Leaf,
-  Landmark,
-  AlertTriangle,
-  RefreshCw,
-  Receipt,
-  CreditCard,
-  Activity,
-} from 'lucide-react';
-
 interface StatCard {
   label: string;
   value: string;
-  sub?: string;
-  icon: React.ElementType;
-  color: string;
-  bgColor: string;
-  badge?: { text: string; variant: 'default' | 'destructive' | 'secondary' | 'outline' };
+  sub: string;
+  valueColor?: string;
+  badge?: { text: string; color: string; bg: string };
 }
 
 const stats: StatCard[] = [
   {
-    label: 'Portfolio XIRR',
+    label: 'XIRR',
     value: '16.8%',
     sub: 'Annualised returns',
-    icon: TrendingUp,
-    color: '#16a34a',
-    bgColor: '#f0fdf4',
+    valueColor: '#059669',
   },
   {
     label: 'Total Invested',
     value: '₹5.92 Cr',
     sub: 'Across all assets',
-    icon: IndianRupee,
-    color: '#2563eb',
-    bgColor: '#eff6ff',
   },
   {
     label: 'Equity : Debt',
     value: '64 : 36',
     sub: 'Asset allocation ratio',
-    icon: PieChart,
-    color: '#7c3aed',
-    bgColor: '#f5f3ff',
+    valueColor: '#2E8B8B',
   },
   {
     label: 'Emergency Fund',
     value: '14.2 mo',
     sub: 'vs 6 mo recommended',
-    icon: Shield,
-    color: '#16a34a',
-    bgColor: '#f0fdf4',
+    valueColor: '#059669',
   },
   {
     label: 'Annual Dividends',
     value: '₹4.82 L',
     sub: 'Last 12 months',
-    icon: Leaf,
-    color: '#0891b2',
-    bgColor: '#ecfeff',
+    valueColor: '#2E8B8B',
   },
   {
     label: 'Avg FD Yield',
     value: '7.35%',
     sub: 'Weighted average',
-    icon: Landmark,
-    color: '#d97706',
-    bgColor: '#fffbeb',
+    valueColor: '#C9A84C',
   },
   {
     label: 'Insurance Cover',
     value: '₹2.5 Cr',
-    sub: 'Total sum assured',
-    icon: AlertTriangle,
-    color: '#dc2626',
-    bgColor: '#fef2f2',
-    badge: { text: 'Low', variant: 'destructive' },
+    sub: 'vs ₹4 Cr ideal',
+    badge: { text: 'Low', color: '#D97706', bg: '#FEF3C7' },
   },
   {
     label: 'Monthly SIP',
     value: '₹1.25 L',
-    sub: 'Active SIPs',
-    icon: RefreshCw,
-    color: '#7c3aed',
-    bgColor: '#f5f3ff',
+    sub: 'Active SIPs running',
+    valueColor: '#2E8B8B',
   },
   {
-    label: 'STCG Tax',
+    label: 'STCG Liability',
     value: '₹3.42 L',
-    sub: 'Short-term capital gains',
-    icon: Receipt,
-    color: '#dc2626',
-    bgColor: '#fef2f2',
+    sub: 'Short-term gains',
+    valueColor: '#DC2626',
   },
   {
-    label: 'LTCG Tax',
+    label: 'LTCG Exempt',
     value: '₹18.65 L',
-    sub: 'Long-term capital gains',
-    icon: Receipt,
-    color: '#d97706',
-    bgColor: '#fffbeb',
+    sub: 'Long-term gains',
+    valueColor: '#059669',
   },
   {
     label: 'Active Loans',
     value: '₹32 L',
     sub: 'Total outstanding',
-    icon: CreditCard,
-    color: '#dc2626',
-    bgColor: '#fef2f2',
+    valueColor: '#DC2626',
   },
   {
     label: 'Portfolio Drift',
     value: '1.2%',
     sub: 'From target allocation',
-    icon: Activity,
-    color: '#16a34a',
-    bgColor: '#f0fdf4',
+    valueColor: '#059669',
   },
 ];
 
@@ -130,24 +86,28 @@ export function StatCards() {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {stats.map((stat) => (
-        <Card key={stat.label} className="p-4 border-0 shadow-sm bg-white">
-          <div className="flex items-start justify-between mb-3">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: stat.bgColor }}
-            >
-              <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
-            </div>
+        <div key={stat.label} className="wv-card p-4">
+          <div className="flex items-start justify-between mb-2">
+            <p className="text-[10px] uppercase tracking-wider font-medium" style={{ color: '#9CA3AF' }}>
+              {stat.label}
+            </p>
             {stat.badge && (
-              <Badge variant={stat.badge.variant} className="text-xs px-1.5 py-0">
+              <span
+                className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                style={{ color: stat.badge.color, backgroundColor: stat.badge.bg }}
+              >
                 {stat.badge.text}
-              </Badge>
+              </span>
             )}
           </div>
-          <p className="text-xl font-bold text-gray-900">{stat.value}</p>
-          <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
-          {stat.sub && <p className="text-[10px] text-gray-400 mt-0.5">{stat.sub}</p>}
-        </Card>
+          <p
+            className="font-display text-xl font-semibold leading-none"
+            style={{ color: stat.valueColor ?? '#1A1A2E' }}
+          >
+            {stat.value}
+          </p>
+          <p className="text-[11px] mt-1.5" style={{ color: '#9CA3AF' }}>{stat.sub}</p>
+        </div>
       ))}
     </div>
   );

@@ -4,73 +4,108 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
 @layer base {
   :root {
-    --background: 0 0% 97%;
-    --foreground: 222 47% 11%;
+    --background: 40 20% 97%;
+    --foreground: 240 25% 14%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 240 25% 14%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 222 47% 19%;
+    --popover-foreground: 240 25% 14%;
+    --primary: 220 47% 19%;
     --primary-foreground: 0 0% 97%;
-    --secondary: 215 20% 95%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 215 20% 95%;
-    --muted-foreground: 215 14% 45%;
+    --secondary: 38 30% 93%;
+    --secondary-foreground: 240 25% 14%;
+    --muted: 38 20% 94%;
+    --muted-foreground: 220 9% 46%;
     --accent: 40 55% 54%;
-    --accent-foreground: 222 47% 11%;
+    --accent-foreground: 240 25% 14%;
     --destructive: 0 84% 60%;
-    --border: 215 20% 91%;
-    --input: 215 20% 91%;
-    --ring: 222 47% 19%;
-    --radius: 0.625rem;
-
-    /* WealthView brand */
-    --wv-navy: #1B2A4A;
-    --wv-gold: #C9A84C;
-    --wv-offwhite: #F7F5F0;
+    --border: 38 20% 88%;
+    --input: 38 20% 88%;
+    --ring: 220 47% 19%;
+    --radius: 0.75rem;
   }
 
   * {
-    @apply border-border;
+    border-color: #E8E5DD;
   }
 
   body {
     background-color: #F7F5F0;
-    color: #1a1a2e;
-    font-family: var(--font-inter), system-ui, sans-serif;
+    color: #1A1A2E;
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 
-  /* Scrollbar styling */
-  ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+  h1, h2, h3 {
+    font-family: var(--font-playfair), Georgia, serif;
   }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 100px;
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-playfair), Georgia, serif;
   }
 
-  /* Range input thumb */
-  input[type='range']::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #1B2A4A;
-    cursor: pointer;
-    border: 2px solid white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  .text-balance {
+    text-wrap: balance;
   }
+
+  /* Section heading with gold rule */
+  .section-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--font-playfair), Georgia, serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1A1A2E;
+  }
+  .section-heading::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, #C9A84C40, transparent);
+  }
+
+  /* Premium card */
+  .wv-card {
+    background: #FFFFFF;
+    border: 1px solid #E8E5DD;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+
+  /* Gold accent border-left for active nav */
+  .nav-active {
+    border-left: 2px solid #C9A84C;
+    background: rgba(201,168,76,0.08);
+    color: #FFFFFF;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1c9b8; border-radius: 100px; }
+
+/* Range slider */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 100px;
+  outline: none;
+  cursor: pointer;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #C9A84C;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
 }

@@ -1,112 +1,67 @@
 'use client';
 
-import { Card } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { TrendingUp } from 'lucide-react';
 
 const members = [
-  {
-    name: 'Rajesh Shah',
-    initials: 'RS',
-    role: 'Admin',
-    netWorth: 41300000,
-    change: 1.42,
-    color: '#1B2A4A',
-  },
-  {
-    name: 'Priya Shah',
-    initials: 'PS',
-    role: 'Member',
-    netWorth: 21800000,
-    change: 0.98,
-    color: '#C9A84C',
-  },
-  {
-    name: 'Arjun Shah',
-    initials: 'AS',
-    role: 'Member',
-    netWorth: 15700000,
-    change: 1.65,
-    color: '#2A3F6F',
-  },
-  {
-    name: 'Mehul Joshi',
-    initials: 'MJ',
-    role: 'Advisor',
-    netWorth: null,
-    change: null,
-    color: '#6B7280',
-  },
+  { name: 'Rajesh Shah',  initials: 'RS', role: 'Admin',  netWorth: '₹4.13 Cr', change: '+1.42%', color: '#1B2A4A', positive: true },
+  { name: 'Priya Shah',   initials: 'PS', role: 'Member', netWorth: '₹2.18 Cr', change: '+0.98%', color: '#2E8B8B', positive: true },
+  { name: 'Arjun Shah',   initials: 'AS', role: 'Member', netWorth: '₹1.57 Cr', change: '+1.65%', color: '#C9A84C', positive: true },
+  { name: 'Mehul Joshi',  initials: 'MJ', role: 'Advisor', netWorth: 'View only', change: null,    color: '#6B7280', positive: null },
 ];
 
-function formatINR(amount: number): string {
-  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(2)} Cr`;
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(2)} L`;
-  return `₹${amount.toLocaleString('en-IN')}`;
-}
+const roleColors: Record<string, { bg: string; text: string }> = {
+  Admin:   { bg: 'rgba(27,42,74,0.08)',  text: '#1B2A4A' },
+  Member:  { bg: 'rgba(46,139,139,0.08)',text: '#2E8B8B' },
+  Advisor: { bg: '#F5EDD6',              text: '#C9A84C' },
+};
 
 export function FamilyMembers() {
   return (
-    <Card className="p-5 border-0 shadow-sm bg-white">
+    <div className="wv-card p-5">
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="font-semibold text-gray-900">Family Members</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Individual wealth overview</p>
-        </div>
+        <h3 className="section-heading text-sm flex-1">Family Members</h3>
         <button
-          className="text-xs font-medium px-3 py-1.5 rounded-md transition-colors hover:opacity-90"
+          className="text-xs font-semibold px-3 py-1.5 rounded-lg ml-4"
           style={{ backgroundColor: '#1B2A4A', color: 'white' }}
         >
           Manage
         </button>
       </div>
 
-      <div className="space-y-3">
-        {members.map((member) => (
+      <div className="grid grid-cols-2 gap-3">
+        {members.map((m) => (
           <div
-            key={member.name}
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+            key={m.name}
+            className="p-3 rounded-xl border transition-all cursor-pointer group"
+            style={{ borderColor: '#E8E5DD' }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#C9A84C'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#E8E5DD'; }}
           >
-            <Avatar className="w-10 h-10 flex-shrink-0">
-              <AvatarFallback
-                className="text-white text-xs font-semibold"
-                style={{ backgroundColor: member.color }}
+            <div className="flex items-start justify-between mb-2">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                style={{ backgroundColor: m.color }}
               >
-                {member.initials}
-              </AvatarFallback>
-            </Avatar>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-gray-900 truncate">{member.name}</p>
-                <Badge
-                  variant="outline"
-                  className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0"
-                  style={{
-                    borderColor: member.role === 'Admin' ? '#1B2A4A' : undefined,
-                    color: member.role === 'Admin' ? '#1B2A4A' : undefined,
-                  }}
-                >
-                  {member.role}
-                </Badge>
+                {m.initials}
               </div>
-              {member.netWorth ? (
-                <p className="text-xs text-gray-500 mt-0.5">{formatINR(member.netWorth)}</p>
-              ) : (
-                <p className="text-xs text-gray-400 mt-0.5">View-only access</p>
-              )}
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                style={{ backgroundColor: roleColors[m.role]?.bg, color: roleColors[m.role]?.text }}
+              >
+                {m.role}
+              </span>
             </div>
-
-            {member.change !== null && (
-              <div className="flex items-center gap-1 text-green-600">
-                <TrendingUp className="w-3 h-3" />
-                <span className="text-xs font-medium">+{member.change}%</span>
+            <p className="text-xs font-semibold mb-0.5" style={{ color: '#1A1A2E' }}>{m.name}</p>
+            <p className="font-display text-base font-semibold" style={{ color: '#1A1A2E' }}>{m.netWorth}</p>
+            {m.change && (
+              <div className="flex items-center gap-1 mt-1">
+                <TrendingUp className="w-3 h-3" style={{ color: '#059669' }} />
+                <span className="text-[11px] font-medium" style={{ color: '#059669' }}>{m.change}</span>
               </div>
             )}
           </div>
         ))}
       </div>
-    </Card>
+    </div>
   );
 }
