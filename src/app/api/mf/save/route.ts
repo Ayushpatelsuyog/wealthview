@@ -114,36 +114,81 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── 6. Create holding ─────────────────────────────────────────────────────
-  const { data: holding, error: holdingErr } = await supabase
+  // ── 6. Find or create holding (deduplication by portfolio + symbol) ────────
+  const { data: existingHolding } = await supabase
     .from('holdings')
-    .insert({
-      portfolio_id:   portfolioId,
-      broker_id:      brokerId,
-      asset_type:     'mutual_fund',
-      symbol:         schemeCode.toString(),
-      name:           schemeName,
-      quantity:       units,
-      avg_buy_price:  purchaseNav,
-      currency:       'INR',
-      metadata: {
-        category,
-        fund_house:  fundHouse ?? null,
-        plan_type:   planType  ?? null,
-        folio:       folio     ?? null,
-        is_sip:      isSIP     ?? false,
-        sip_amount:  sipAmount ?? null,
-        current_nav: currentNav ?? null,
-        amfi_code:   schemeCode,
-        ...(holderDetails ?? {}),
-        ...(sipMetadata   ?? {}),
-      },
-    })
-    .select('id')
-    .single();
+    .select('id, quantity, avg_buy_price, metadata')
+    .eq('portfolio_id', portfolioId)
+    .eq('symbol', schemeCode.toString())
+    .eq('asset_type', 'mutual_fund')
+    .maybeSingle();
 
-  if (holdingErr || !holding) {
-    return NextResponse.json({ error: holdingErr?.message ?? 'Holding insert failed (RLS?)' }, { status: 500 });
+  let holdingId: string;
+  let consolidated = false;
+
+  if (existingHolding) {
+    // ── Consolidate into existing holding ──────────────────────────────────
+    consolidated = true;
+    holdingId    = existingHolding.id;
+
+    const oldQty    = Number(existingHolding.quantity);
+    const oldAvg    = Number(existingHolding.avg_buy_price);
+    const newQty    = Number(units);
+    const totalQty  = oldQty + newQty;
+    const weightedAvg = totalQty > 0 ? (oldQty * oldAvg + newQty * Number(purchaseNav)) / totalQty : Number(purchaseNav);
+
+    const existingMeta = (existingHolding.metadata ?? {}) as Record<string, unknown>;
+    const existingSips = Array.isArray(existingMeta.sips) ? existingMeta.sips : [];
+    const updatedMeta  = {
+      ...existingMeta,
+      folio:       folio       ?? existingMeta.folio       ?? null,
+      current_nav: currentNav  ?? existingMeta.current_nav ?? null,
+      ...(holderDetails ?? {}),
+      ...(sipMetadata ? {
+        ...sipMetadata,
+        sips: sipMetadata.sips ? [...existingSips, ...sipMetadata.sips] : existingSips,
+      } : {}),
+    };
+
+    const { error: updateErr } = await supabase
+      .from('holdings')
+      .update({ quantity: totalQty, avg_buy_price: weightedAvg, metadata: updatedMeta })
+      .eq('id', holdingId);
+
+    if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
+  } else {
+    // ── Create new holding ─────────────────────────────────────────────────
+    const { data: newHolding, error: holdingErr } = await supabase
+      .from('holdings')
+      .insert({
+        portfolio_id:   portfolioId,
+        broker_id:      brokerId,
+        asset_type:     'mutual_fund',
+        symbol:         schemeCode.toString(),
+        name:           schemeName,
+        quantity:       units,
+        avg_buy_price:  purchaseNav,
+        currency:       'INR',
+        metadata: {
+          category,
+          fund_house:  fundHouse ?? null,
+          plan_type:   planType  ?? null,
+          folio:       folio     ?? null,
+          is_sip:      isSIP     ?? false,
+          sip_amount:  sipAmount ?? null,
+          current_nav: currentNav ?? null,
+          amfi_code:   schemeCode,
+          ...(holderDetails ?? {}),
+          ...(sipMetadata   ?? {}),
+        },
+      })
+      .select('id')
+      .single();
+
+    if (holdingErr || !newHolding) {
+      return NextResponse.json({ error: holdingErr?.message ?? 'Holding insert failed (RLS?)' }, { status: 500 });
+    }
+    holdingId = newHolding.id;
   }
 
   // ── 7. Create transaction(s) ──────────────────────────────────────────────
@@ -166,7 +211,7 @@ export async function POST(req: NextRequest) {
       const label  = `SIP #${sip.sipNumber} - ₹${amtFmt}/month (started ${sip.sipStart})`;
       for (const inst of sip.breakdown) {
         allTxnRows.push({
-          holding_id: holding.id,
+          holding_id: holdingId,
           type:       'sip',
           quantity:   inst.units_purchased,
           price:      inst.nav,
@@ -186,7 +231,7 @@ export async function POST(req: NextRequest) {
     const { error: txnErr } = await supabase
       .from('transactions')
       .insert({
-        holding_id: holding.id,
+        holding_id: holdingId,
         type:       isSIP ? 'sip' : 'buy',
         quantity:   units,
         price:      purchaseNav,
@@ -200,5 +245,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ holdingId: holding.id });
+  return NextResponse.json({ holdingId, consolidated });
 }

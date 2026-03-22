@@ -794,13 +794,13 @@ export function HoldingDetailSheet({
           style={{ borderColor: '#E8E5DD', backgroundColor: '#FAFAF8' }}>
           <div className="grid grid-cols-4 gap-2">
             <Button
-              onClick={() => { router.push(`/add-assets/mutual-funds?fund=${h.symbol}&mode=lump`); onClose(); }}
+              onClick={() => { router.push(`/add-assets/mutual-funds?add_to=${h.id}`); onClose(); }}
               className="h-9 text-[11px] font-semibold"
               style={{ backgroundColor: '#1B2A4A', color: 'white' }}>
               <Plus className="w-3 h-3 mr-1" />Add Lump Sum
             </Button>
             <Button
-              onClick={() => { router.push(`/add-assets/mutual-funds?fund=${h.symbol}&mode=sip`); onClose(); }}
+              onClick={() => { router.push(`/add-assets/mutual-funds?add_to=${h.id}&sip=1`); onClose(); }}
               className="h-9 text-[11px] font-semibold"
               style={{ backgroundColor: 'rgba(201,168,76,0.12)', color: '#B8922A', border: '1px solid rgba(201,168,76,0.35)' }}>
               <RefreshCw className="w-3 h-3 mr-1" />Add SIP

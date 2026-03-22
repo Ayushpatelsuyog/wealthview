@@ -575,7 +575,7 @@ export default function MutualFundsPortfolioPage() {
                               holdingId={h.id}
                               onDelete={deleteHolding}
                               onViewDetails={(id) => setDetailId(id)}
-                              onAddMore={(id) => router.push(`/add-assets/mutual-funds?fund=${holdings.find(x=>x.id===id)?.symbol}`)}
+                              onAddMore={(id) => router.push(`/add-assets/mutual-funds?add_to=${id}`)}
                             />
                           </td>
                         </tr>

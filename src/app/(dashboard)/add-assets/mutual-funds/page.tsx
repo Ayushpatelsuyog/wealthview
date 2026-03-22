@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect, useCallback, useLayoutEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input }    from '@/components/ui/input';
 import { Label }    from '@/components/ui/label';
@@ -17,6 +17,7 @@ import { formatLargeINR } from '@/lib/utils/formatters';
 import { calculateXIRR }  from '@/lib/utils/calculations';
 import { BrokerSelector } from '@/components/forms/BrokerSelector';
 import { CASImporter }    from '@/components/forms/CASImporter';
+import { useHoldingPrefill } from '@/hooks/use-holding-prefill';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -525,11 +526,41 @@ function SipBlockCard({
   );
 }
 
+// ─── Search Params Reader (isolated Suspense boundary) ───────────────────────
+// Keeps useSearchParams() in its own tiny component so the main page can
+// render fully on the server without being wrapped in Suspense itself.
+
+function SearchParamsReader({
+  onParams,
+}: {
+  onParams: (edit: string | null, addTo: string | null, sip: boolean) => void;
+}) {
+  const searchParams = useSearchParams();
+  const cbRef = useRef(onParams);
+  cbRef.current = onParams;
+  useLayoutEffect(() => {
+    cbRef.current(
+      searchParams.get('edit'),
+      searchParams.get('add_to'),
+      searchParams.get('sip') === '1',
+    );
+  }, [searchParams]);
+  return null;
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function MutualFundsPage() {
   const router  = useRouter();
   const supabase = createClient();
+
+  // ── Mode (new / edit / add_to) ─────────────────────────────────────────────
+  const [editHoldingId,  setEditHoldingId]  = useState<string | null>(null);
+  const [addToHoldingId, setAddToHoldingId] = useState<string | null>(null);
+  const [forceSipMode,   setForceSipMode]   = useState(false);
+  const mode      = editHoldingId ? 'edit' : addToHoldingId ? 'add_to' : 'new';
+  const prefillId = editHoldingId ?? addToHoldingId;
+  const { prefill, loading: prefillLoading, error: prefillError } = useHoldingPrefill(prefillId);
 
   // ── Auth & family data ─────────────────────────────────────────────────────
   const [familyId,    setFamilyId]    = useState<string | null>(null);
@@ -621,6 +652,39 @@ export default function MutualFundsPage() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // ── Apply prefill when entering edit / add_to mode ─────────────────────────
+  useEffect(() => {
+    if (!prefill) return;
+    setSelectedFund({ schemeCode: prefill.schemeCode, schemeName: prefill.schemeName, category: prefill.category });
+    setQuery(prefill.schemeName);
+    setPortfolio(prefill.portfolioName);
+    if (prefill.brokerId) setBroker(prefill.brokerId);
+    setFolio(prefill.folio);
+    setIsSIP(forceSipMode || prefill.isSIP);
+    setHolder(prefill.holder);
+    if (prefill.isSIP) {
+      setSipBlocks(prefill.sipGroups.length > 0
+        ? prefill.sipGroups.map((g) => ({
+            ...newSipBlock(),
+            sipAmount: g.sipAmount, sipDate: g.sipDate, sipStart: g.sipStart,
+            manualOverride: true,
+            manualInstallments: g.manualInstallments,
+            manualTotalUnits:   g.manualTotalUnits,
+            manualAvgNav:       g.manualAvgNav,
+          }))
+        : [newSipBlock()]);
+    } else {
+      setAmount(prefill.investedAmount.toFixed(2));
+      setNav(prefill.purchaseNav.toFixed(4));
+      setPurchaseDate(prefill.purchaseDate);
+    }
+    setIsNavLoading(true);
+    fetch(`/api/mf/nav?scheme_code=${prefill.schemeCode}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data: NavData | null) => { if (data) setNavData(data); })
+      .finally(() => setIsNavLoading(false));
+  }, [prefill]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Fund search ────────────────────────────────────────────────────────────
   function handleQueryChange(val: string) {
@@ -829,15 +893,24 @@ export default function MutualFundsPage() {
     }
 
     try {
-      const res = await fetch('/api/mf/save', {
-        method: 'POST',
+      const endpoint    = mode === 'add_to' ? '/api/mf/add-units'
+                        : mode === 'edit'   ? '/api/mf/update'
+                        :                    '/api/mf/save';
+      const httpMethod  = mode === 'edit' ? 'PUT' : 'POST';
+      const finalPayload = mode === 'new' ? payload : { ...payload, holdingId: prefillId };
+      const res = await fetch(endpoint, {
+        method: httpMethod,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(finalPayload),
       });
       const json = await res.json();
       if (!res.ok) { setToast({ type: 'error', message: json.error ?? 'Save failed' }); return; }
 
-      setToast({ type: 'success', message: `${selectedFund!.schemeName.split(' - ')[0]} saved!` });
+      const fundShortName = selectedFund!.schemeName.split(' - ')[0];
+      const successMsg = json.consolidated
+        ? `Units added to existing ${fundShortName} holding!`
+        : `${fundShortName} saved!`;
+      setToast({ type: 'success', message: successMsg });
 
       if (andAnother) {
         setSavedHolder({ ...holder });
@@ -865,17 +938,70 @@ export default function MutualFundsPage() {
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="p-6 max-w-2xl mx-auto">
+      {/* Isolated Suspense for search params — does not affect page SSR */}
+      <Suspense>
+        <SearchParamsReader onParams={(edit, addTo, sip) => {
+          setEditHoldingId(edit);
+          setAddToHoldingId(addTo);
+          setForceSipMode(sip);
+        }} />
+      </Suspense>
+
       <div className="flex items-center gap-4 mb-6">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(46,139,139,0.1)' }}>
           <BarChart3 className="w-5 h-5" style={{ color: '#2E8B8B' }} />
         </div>
         <div>
-          <h1 className="font-display text-xl font-semibold" style={{ color: '#1A1A2E' }}>Mutual Funds</h1>
-          <p className="text-xs" style={{ color: '#9CA3AF' }}>Add and manage your mutual fund holdings</p>
+          <h1 className="font-display text-xl font-semibold" style={{ color: '#1A1A2E' }}>
+            {mode === 'edit' ? 'Edit Holding' : mode === 'add_to' ? 'Add More Units' : 'Mutual Funds'}
+          </h1>
+          <p className="text-xs" style={{ color: '#9CA3AF' }}>
+            {mode === 'edit'   ? 'Update the details for this holding'
+             : mode === 'add_to' ? 'Add more units to an existing holding'
+             : 'Add and manage your mutual fund holdings'}
+          </p>
         </div>
       </div>
 
       {toast && <ToastBanner toast={toast} onClose={() => setToast(null)} />}
+
+      {/* Prefill loading / error / mode banners */}
+      {prefillLoading && (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl mb-4 text-xs"
+          style={{ backgroundColor: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.15)', color: '#1B2A4A' }}>
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />Loading holding data…
+        </div>
+      )}
+      {prefillError && (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl mb-4 text-xs"
+          style={{ backgroundColor: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)', color: '#DC2626' }}>
+          <AlertCircle className="w-3.5 h-3.5" />{prefillError}
+        </div>
+      )}
+      {mode === 'add_to' && !prefillLoading && (
+        <div className="flex items-center justify-between px-4 py-3 rounded-xl mb-4 text-xs"
+          style={{ backgroundColor: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.2)', color: '#059669' }}>
+          <span className="flex flex-col gap-0.5">
+            <span className="font-semibold">
+              <TrendingUp className="w-3.5 h-3.5 inline mr-1.5" />
+              Adding units to: {prefill?.schemeName ?? '…'}
+            </span>
+            {prefill && (
+              <span style={{ color: '#6B7280' }}>
+                Existing: {prefill.existingUnits.toFixed(4)} units · Invested: {formatLargeINR(prefill.investedAmount)}
+              </span>
+            )}
+          </span>
+          <button onClick={() => router.push('/portfolio/mutual-funds')} className="underline ml-4 flex-shrink-0" style={{ color: '#6B7280' }}>Cancel</button>
+        </div>
+      )}
+      {mode === 'edit' && !prefillLoading && (
+        <div className="flex items-center justify-between px-4 py-3 rounded-xl mb-4 text-xs"
+          style={{ backgroundColor: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.2)', color: '#C9A84C' }}>
+          <span>Editing holding — existing buy/SIP transactions will be replaced on save</span>
+          <button onClick={() => router.push('/portfolio/mutual-funds')} className="underline" style={{ color: '#6B7280' }}>Cancel</button>
+        </div>
+      )}
 
       {/* Reuse holder banner */}
       {showReuseHolder && savedHolder && (
@@ -960,6 +1086,7 @@ export default function MutualFundsPage() {
                   onFocus={() => { if (searchResults.length > 0) setShowDrop(true); }}
                   placeholder="Type fund name (min 2 chars)…"
                   className="h-9 text-xs pr-8"
+                  disabled={mode === 'add_to'}
                   style={errors.fund ? { borderColor: '#DC2626' } : {}} />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
                   {isSearching
@@ -1201,13 +1328,19 @@ export default function MutualFundsPage() {
               <Button onClick={() => handleSave(false)} disabled={isSaving}
                 className="flex-1 h-9 text-xs font-semibold"
                 style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>
-                {isSaving ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Saving…</> : 'Save entry'}
+                {isSaving
+                  ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Saving…</>
+                  : mode === 'edit'   ? 'Update Holding'
+                  : mode === 'add_to' ? 'Add Units'
+                  : 'Save entry'}
               </Button>
-              <Button onClick={() => handleSave(true)} disabled={isSaving}
-                className="flex-1 h-9 text-xs font-semibold text-white"
-                style={{ backgroundColor: '#1B2A4A' }}>
-                Save &amp; add another
-              </Button>
+              {mode === 'new' && (
+                <Button onClick={() => handleSave(true)} disabled={isSaving}
+                  className="flex-1 h-9 text-xs font-semibold text-white"
+                  style={{ backgroundColor: '#1B2A4A' }}>
+                  Save &amp; add another
+                </Button>
+              )}
               <Button variant="outline" className="h-9 text-xs"
                 style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
                 onClick={() => router.push('/portfolio/mutual-funds')}>
