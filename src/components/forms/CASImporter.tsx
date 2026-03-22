@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import {
   Upload, FileText, Check, AlertCircle, Loader2, Download,
-  ChevronDown, X, RefreshCw,
+  X, RefreshCw,
 } from 'lucide-react';
 import { Button }   from '@/components/ui/button';
 import { Input }    from '@/components/ui/input';
@@ -81,7 +81,7 @@ export function CASImporter({ familyId, members, portfolios, memberId }: CASImpo
 
   // ── Import state ───────────────────────────────────────────────────────────
   const [isImporting,   setIsImporting]   = useState(false);
-  const [importProgress,setImportProgress]= useState({ current: 0, total: 0 });
+  const [_importProgress,setImportProgress]= useState({ current: 0, total: 0 });
   const [importResult,  setImportResult]  = useState<{
     imported: number; totalFunds: number;
     totalInvested: number; totalCurrentValue: number; errors: string[];
@@ -212,7 +212,7 @@ export function CASImporter({ familyId, members, portfolios, memberId }: CASImpo
   function toggleFund(id: string) {
     setSelected(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
       return next;
     });
   }

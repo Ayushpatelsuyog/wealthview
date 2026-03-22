@@ -220,8 +220,49 @@ export function HoldingDetailSheet({
   } | null>(null);
   const [recalcErr, setRecalcErr] = useState('');
 
+  // ── SIP groups from transactions ────────────────────────────────────────────
+  const sipGroups = useMemo(() => {
+    const map = new Map<string, { sipNum: number; amount: number; start: string; txns: Transaction[] }>();
+    for (const t of (holding?.transactions ?? [])) {
+      if (t.type !== 'sip') continue;
+      const parsed = parseSipNote(t.notes);
+      const key = parsed ? `sip-${parsed.sipNum}` : 'sip-0';
+      if (!map.has(key)) {
+        map.set(key, { sipNum: parsed?.sipNum ?? 0, amount: parsed?.amount ?? 0, start: parsed?.start ?? '', txns: [] });
+      }
+      map.get(key)!.txns.push(t);
+    }
+    return Array.from(map.values()).sort((a, b) => a.sipNum - b.sipNum);
+  }, [holding?.transactions]);
+
+  // ── Running unit map (ascending) ────────────────────────────────────────────
+  const runningMap = useMemo(() => {
+    const txnsAsc = [...(holding?.transactions ?? [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const map: Record<string, number> = {};
+    let cum = 0;
+    txnsAsc.forEach(t => {
+      const sign = TXN_CONFIG[t.type]?.sign ?? 1;
+      cum = Math.max(0, cum + sign * Number(t.quantity));
+      map[t.id] = cum;
+    });
+    return map;
+  }, [holding?.transactions]);
+
+  // ── Sorted + filtered transactions ──────────────────────────────────────────
+  const txnsSorted = useMemo(() =>
+    [...(holding?.transactions ?? [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [holding?.transactions],
+  );
+
+  const txnsFiltered = useMemo(() =>
+    activeFilter === 'all' ? txnsSorted : txnsSorted.filter(t => txnFilterKey(t) === activeFilter),
+    [txnsSorted, activeFilter],
+  );
+
+  // ── All hooks above — guard must come after all hooks ───────────────────────
   if (!holding) return null;
 
+  // h is narrowed to HoldingDetail (non-null) after the guard above
   const h    = holding;
   const meta = h.metadata ?? {};
   const isSIP = !!meta.is_sip;
@@ -233,39 +274,11 @@ export function HoldingDetailSheet({
       }))
     : [];
 
-  // ── SIP groups from transactions ────────────────────────────────────────────
-  const sipGroups = useMemo(() => {
-    const map = new Map<string, { sipNum: number; amount: number; start: string; txns: Transaction[] }>();
-    for (const t of h.transactions) {
-      if (t.type !== 'sip') continue;
-      const parsed = parseSipNote(t.notes);
-      const key = parsed ? `sip-${parsed.sipNum}` : 'sip-0';
-      if (!map.has(key)) {
-        map.set(key, { sipNum: parsed?.sipNum ?? 0, amount: parsed?.amount ?? 0, start: parsed?.start ?? '', txns: [] });
-      }
-      map.get(key)!.txns.push(t);
-    }
-    return Array.from(map.values()).sort((a, b) => a.sipNum - b.sipNum);
-  }, [h.transactions]);
-
   // Should show recalculate button?
   const sipTxnCount       = h.transactions.filter(t => t.type === 'sip').length;
   const expectedInstalls  = sipList.reduce((s, sip) => s + (sip.installments || 0), 0);
   const isConsolidated    = isSIP && sipList.length > 0 && sipTxnCount < Math.max(sipList.length * 2, expectedInstalls - 2);
   const canRecalculate    = isSIP && sipList.length > 0;
-
-  // ── Running unit map (ascending) ────────────────────────────────────────────
-  const runningMap = useMemo(() => {
-    const txnsAsc = [...h.transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    const map: Record<string, number> = {};
-    let cum = 0;
-    txnsAsc.forEach(t => {
-      const sign = TXN_CONFIG[t.type]?.sign ?? 1;
-      cum = Math.max(0, cum + sign * Number(t.quantity));
-      map[t.id] = cum;
-    });
-    return map;
-  }, [h.transactions]);
 
   // ── Filter options ──────────────────────────────────────────────────────────
   const filterOptions: { key: string; label: string }[] = [{ key: 'all', label: 'All' }];
@@ -276,27 +289,16 @@ export function HoldingDetailSheet({
   if (h.transactions.some(t => t.type === 'buy'))  filterOptions.push({ key: 'lump', label: 'Lump Sum' });
   if (h.transactions.some(t => t.type === 'sell')) filterOptions.push({ key: 'sell', label: 'Redemptions' });
 
-  // ── Filtered + paginated transactions ───────────────────────────────────────
-  const txnsSorted = useMemo(() =>
-    [...h.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-    [h.transactions],
-  );
-
-  const txnsFiltered = useMemo(() =>
-    activeFilter === 'all' ? txnsSorted : txnsSorted.filter(t => txnFilterKey(t) === activeFilter),
-    [txnsSorted, activeFilter],
-  );
-
   const txnsVisible = txnsFiltered.slice(0, visibleCount);
   const hasMore     = txnsFiltered.length > visibleCount;
 
   // ── Summary stats ───────────────────────────────────────────────────────────
-  const buyTxns       = h.transactions.filter(t => t.type === 'buy' || t.type === 'sip');
-  const sellTxns      = h.transactions.filter(t => t.type === 'sell');
-  const totalBuyAmt   = buyTxns.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
-  const totalSellAmt  = sellTxns.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
+  const buyTxns        = h.transactions.filter(t => t.type === 'buy' || t.type === 'sip');
+  const sellTxns       = h.transactions.filter(t => t.type === 'sell');
+  const totalBuyAmt    = buyTxns.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
+  const totalSellAmt   = sellTxns.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
   const totalStampDuty = buyTxns.reduce((s, t) => s + Number(t.fees ?? 0), 0);
-  const totalBuyUnits = buyTxns.reduce((s, t) => s + Number(t.quantity), 0);
+  const totalBuyUnits  = buyTxns.reduce((s, t) => s + Number(t.quantity), 0);
 
   // ── Delete holding ──────────────────────────────────────────────────────────
   async function handleDelete() {
@@ -332,8 +334,8 @@ export function HoldingDetailSheet({
           breakdown: data.monthly_breakdown ?? [],
         });
       }
-      const newCount     = groups.reduce((s, g) => s + g.breakdown.length, 0);
-      const oldSipCount  = h.transactions.filter(t => t.type === 'sip').length;
+      const newCount    = groups.reduce((s, g) => s + g.breakdown.length, 0);
+      const oldSipCount = h.transactions.filter(t => t.type === 'sip').length;
       setRecalcData({ groups, newCount, oldSipCount });
       setRecalcState('confirm');
     } catch (e: unknown) {
@@ -346,11 +348,9 @@ export function HoldingDetailSheet({
     if (!recalcData) return;
     setRecalcState('saving');
     try {
-      // Delete all existing SIP transactions for this holding
       await supabase.from('transactions').delete()
         .eq('holding_id', h.id).eq('type', 'sip');
 
-      // Insert individual installments per SIP
       for (const sip of recalcData.groups) {
         if (sip.breakdown.length === 0) continue;
         const amtFmt = Number(sip.amount).toLocaleString('en-IN');

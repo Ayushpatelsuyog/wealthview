@@ -16,7 +16,7 @@ interface SipInstallment {
 }
 
 // Parse "DD-MM-YYYY" from mfapi
-function parseApiDate(s: string): Date {
+function _parseApiDate(s: string): Date {
   const [d, m, y] = s.split('-').map(Number);
   return new Date(y, m - 1, d);
 }

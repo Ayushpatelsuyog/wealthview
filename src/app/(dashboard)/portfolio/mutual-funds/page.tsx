@@ -44,7 +44,7 @@ type SortKey = 'value' | 'pnlPct' | 'xirr' | 'name' | 'recent';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function PnlBadge({ value, pct }: { value: number; pct: number }) {
+function _PnlBadge({ value, pct }: { value: number; pct: number }) {
   const up = value >= 0;
   return (
     <div>

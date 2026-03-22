@@ -318,7 +318,7 @@ function SipBlockCard({
   const effectiveUnits = block.manualOverride
     ? (parseFloat(block.manualTotalUnits) || 0)
     : (block.totalUnits ?? 0);
-  const effectiveAvgNav = block.manualOverride
+  const _effectiveAvgNav = block.manualOverride
     ? (parseFloat(block.manualAvgNav) || 0)
     : (block.avgNav ?? 0);
   const effectiveInvested = block.manualOverride
