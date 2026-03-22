@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TrendingUp, Upload, Link as LinkIcon, Check, ChevronDown } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { BrokerSelector } from '@/components/forms/BrokerSelector';
 
 const STOCKS = [
   { symbol: 'RELIANCE',  name: 'Reliance Industries Ltd',       exchange: 'NSE', price: 2847.55 },
@@ -21,18 +23,14 @@ const STOCKS = [
   { symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical Industries', exchange: 'NSE', price: 1678.45 },
 ];
 
-const BROKERS = [
-  { id: 'zerodha', name: 'Zerodha',     color: '#2E8B8B', letter: 'Z' },
-  { id: 'groww',   name: 'Groww',       color: '#00D09C', letter: 'G' },
-  { id: 'angel',   name: 'Angel One',   color: '#DC2626', letter: 'A' },
-  { id: 'icici',   name: 'ICICI Direct',color: '#FF6600', letter: 'I' },
-];
-
-const MEMBERS = ['Rajesh Shah', 'Priya Shah', 'Arjun Shah'];
+interface FamilyMember { id: string; name: string }
 
 type Stock = typeof STOCKS[number];
 
 export default function IndianStocksPage() {
+  const supabase = createClient();
+  const [familyId, setFamilyId]   = useState<string | null>(null);
+  const [members,  setMembers]    = useState<FamilyMember[]>([]);
   const [member, setMember]       = useState('');
   const [broker, setBroker]       = useState('');
   const [query, setQuery]         = useState('');
@@ -45,6 +43,29 @@ export default function IndianStocksPage() {
   const [demat, setDemat]         = useState('');
   const [brokerage, setBrokerage] = useState('');
   const [saved, setSaved]         = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from('users')
+        .select('id, name, family_id')
+        .eq('id', user.id)
+        .single();
+      if (!profile) return;
+      setMember(profile.id);
+      if (profile.family_id) {
+        setFamilyId(profile.family_id);
+        const { data: familyUsers } = await supabase
+          .from('users')
+          .select('id, name')
+          .eq('family_id', profile.family_id);
+        setMembers(familyUsers ?? [{ id: profile.id, name: profile.name }]);
+      } else {
+        setMembers([{ id: profile.id, name: profile.name }]);
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = query.length >= 2
     ? STOCKS.filter((s) =>
@@ -87,22 +108,22 @@ export default function IndianStocksPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
                 <Select value={member} onValueChange={setMember}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select member" /></SelectTrigger>
-                  <SelectContent>{MEMBERS.map((m) => <SelectItem key={m} value={m} className="text-xs">{m}</SelectItem>)}</SelectContent>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Loading…" /></SelectTrigger>
+                  <SelectContent>
+                    {members.length > 0
+                      ? members.map((m) => <SelectItem key={m.id} value={m.id} className="text-xs">{m.name}</SelectItem>)
+                      : <SelectItem value="loading" disabled className="text-xs">Loading members…</SelectItem>
+                    }
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs" style={{ color: '#6B7280' }}>Broker</Label>
-                <div className="grid grid-cols-4 gap-2">
-                  {BROKERS.map((b) => (
-                    <button key={b.id} onClick={() => setBroker(b.id)}
-                      className="flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all"
-                      style={{ borderColor: broker === b.id ? b.color : '#E8E5DD', backgroundColor: broker === b.id ? `${b.color}12` : 'white', boxShadow: broker === b.id ? `0 0 0 1px ${b.color}` : 'none' }}>
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: b.color }}>{b.letter}</div>
-                      <span className="text-[10px] font-medium text-center leading-tight" style={{ color: '#6B7280' }}>{b.name}</span>
-                    </button>
-                  ))}
-                </div>
+                <BrokerSelector
+                  familyId={familyId}
+                  selectedBrokerId={broker}
+                  onChange={setBroker}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs" style={{ color: '#6B7280' }}>Demat Account No.</Label>

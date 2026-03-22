@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BarChart3, Upload, Link as LinkIcon, Check, ChevronDown, Loader2, AlertCircle, X, TrendingUp, TrendingDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
+import { BrokerSelector } from '@/components/forms/BrokerSelector';
+import { CASImporter }    from '@/components/forms/CASImporter';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,13 +35,6 @@ interface Portfolio    { id: string; name: string; type: string }
 interface Toast { type: 'success' | 'error'; message: string }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const BROKERS = [
-  { id: 'coin',   name: 'Coin / Zerodha', color: '#2E8B8B', letter: 'C', platformId: 'coin'  },
-  { id: 'groww',  name: 'Groww',          color: '#00D09C', letter: 'G', platformId: 'groww' },
-  { id: 'kuvera', name: 'Kuvera',         color: '#5C6BC0', letter: 'K', platformId: 'other' },
-  { id: 'mfu',    name: 'MFU',            color: '#C9A84C', letter: 'M', platformId: 'other' },
-];
 
 const DEFAULT_PORTFOLIOS = ['Long-term Growth', 'Retirement', 'Tax Saving'];
 
@@ -99,6 +94,7 @@ export default function MutualFundsPage() {
   const supabase = createClient();
 
   // ── Auth & DB data ─────────────────────────────────────────────────────────
+  const [familyId,   setFamilyId]   = useState<string | null>(null);
   const [members,    setMembers]    = useState<FamilyMember[]>([]);
   const [dbPortfolios, setDbPortfolios] = useState<Portfolio[]>([]);
   const [member,     setMember]     = useState('');
@@ -152,6 +148,7 @@ export default function MutualFundsPage() {
 
       if (!profile) return;
       setMember(profile.id);
+      if (profile.family_id) setFamilyId(profile.family_id);
 
       if (profile.family_id) {
         const { data: familyUsers } = await supabase
@@ -281,7 +278,6 @@ export default function MutualFundsPage() {
     setIsSaving(true);
     setToast(null);
 
-    const brokerInfo = BROKERS.find((b) => b.id === broker);
     const totalUnits = isSIP && sipAmount && sipCount
       ? (parseFloat(sipAmount) * parseInt(sipCount) / parseFloat(nav)).toFixed(3)
       : units;
@@ -307,8 +303,7 @@ export default function MutualFundsPage() {
           isSIP,
           sipAmount:      isSIP ? parseFloat(sipAmount) : undefined,
           portfolioName:  portfolio,
-          brokerName:     brokerInfo?.name ?? broker,
-          brokerPlatformId: brokerInfo?.platformId ?? 'other',
+          brokerId:       broker || undefined,
           currentNav:     navData?.nav,
         }),
       });
@@ -408,19 +403,12 @@ export default function MutualFundsPage() {
 
               <div className="space-y-1.5">
                 <Label className="text-xs" style={{ color: '#6B7280' }}>Platform / Broker</Label>
-                <FieldError msg={errors.broker} />
-                <div className="grid grid-cols-4 gap-2">
-                  {BROKERS.map((b) => (
-                    <button
-                      key={b.id} onClick={() => { setBroker(b.id); setErrors((e) => ({ ...e, broker: '' })); }}
-                      className="flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all"
-                      style={{ borderColor: broker === b.id ? b.color : '#E8E5DD', backgroundColor: broker === b.id ? `${b.color}12` : 'white', boxShadow: broker === b.id ? `0 0 0 1px ${b.color}` : 'none' }}
-                    >
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: b.color }}>{b.letter}</div>
-                      <span className="text-[10px] font-medium text-center leading-tight" style={{ color: '#6B7280' }}>{b.name}</span>
-                    </button>
-                  ))}
-                </div>
+                <BrokerSelector
+                  familyId={familyId}
+                  selectedBrokerId={broker}
+                  onChange={(id) => { setBroker(id); setErrors((e) => ({ ...e, broker: '' })); }}
+                  error={errors.broker}
+                />
               </div>
             </div>
           </div>
@@ -665,18 +653,13 @@ export default function MutualFundsPage() {
         {/* ─── Tab 2: CSV Import ─── */}
         <TabsContent value="import">
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Import Statement</p>
-            <label className="flex flex-col items-center justify-center w-full h-40 rounded-xl border-2 border-dashed cursor-pointer hover:bg-bg transition-colors" style={{ borderColor: '#E8E5DD' }}>
-              <Upload className="w-8 h-8 mb-2" style={{ color: '#9CA3AF' }} />
-              <p className="text-sm font-medium" style={{ color: '#6B7280' }}>Drop your CAS statement here</p>
-              <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>PDF or CSV · CAMS or KFintech</p>
-              <input type="file" className="hidden" accept=".pdf,.csv" />
-            </label>
-            <div className="mt-4 p-3 rounded-xl text-xs" style={{ backgroundColor: '#F7F5F0', color: '#6B7280' }}>
-              Upload your CAMS or KFintech CAS statement (PDF or CSV) — download it from{' '}
-              <a href="https://www.mfcentral.com" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: '#1B2A4A' }}>mfcentral.com</a>{' '}
-              for free.
-            </div>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Import CAS Statement</p>
+            <CASImporter
+              familyId={familyId}
+              members={members}
+              portfolios={dbPortfolios}
+              memberId={member}
+            />
           </div>
         </TabsContent>
 
