@@ -30,6 +30,12 @@ interface ImportFund {
   userId: string;       // family member to assign
 }
 
+interface ImportRequest {
+  funds: ImportFund[];
+  sourceFilename?: string;
+  sourceType?: string;
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
 
@@ -38,7 +44,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { funds }: { funds: ImportFund[] } = await req.json();
+  const body: ImportRequest = await req.json();
+  const { funds, sourceFilename = 'manual', sourceType = 'manual_csv' } = body;
   if (!Array.isArray(funds) || funds.length === 0) {
     return NextResponse.json({ error: 'No funds provided' }, { status: 400 });
   }
@@ -92,6 +99,24 @@ export async function POST(req: NextRequest) {
     return created.id;
   }
 
+  // ── Create import batch record ─────────────────────────────────────────────
+  const { data: batch, error: batchErr } = await supabase
+    .from('import_batches')
+    .insert({
+      family_id:       familyId,
+      user_id:         user.id,
+      source_filename: sourceFilename,
+      source_type:     sourceType,
+      funds_count:     funds.length,
+      total_invested:  0,   // updated at end
+    })
+    .select('id')
+    .single();
+  if (batchErr || !batch) {
+    return NextResponse.json({ error: batchErr?.message ?? 'Could not create import batch' }, { status: 500 });
+  }
+  const batchId = batch.id;
+
   // ── Import each fund ───────────────────────────────────────────────────────
   let imported = 0;
   let totalInvested = 0;
@@ -111,10 +136,11 @@ export async function POST(req: NextRequest) {
       const { data: holding, error: hErr } = await supabase
         .from('holdings')
         .insert({
-          portfolio_id:  portfolioId,
-          broker_id:     fund.brokerId ?? null,
-          asset_type:    'mutual_fund',
-          symbol:        fund.schemeCode ? fund.schemeCode.toString() : fund.schemeName.slice(0, 20).replace(/\s+/g, '_'),
+          portfolio_id:    portfolioId,
+          broker_id:       fund.brokerId ?? null,
+          asset_type:      'mutual_fund',
+          import_batch_id: batchId,
+          symbol:          fund.schemeCode ? fund.schemeCode.toString() : fund.schemeName.slice(0, 20).replace(/\s+/g, '_'),
           name:          fund.schemeName,
           quantity:      fund.totalUnits,
           avg_buy_price: fund.avgNav,
@@ -164,7 +190,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── Update batch with actual totals ───────────────────────────────────────
+  await supabase
+    .from('import_batches')
+    .update({ funds_count: imported, total_invested: totalInvested })
+    .eq('id', batchId);
+
   return NextResponse.json({
+    batchId,
     imported,
     totalFunds: funds.length,
     totalInvested,

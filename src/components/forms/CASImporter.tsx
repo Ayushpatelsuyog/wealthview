@@ -243,7 +243,11 @@ export function CASImporter({ familyId, members, portfolios, memberId }: CASImpo
       const res = await fetch('/api/mf/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ funds: fundPayloads }),
+        body: JSON.stringify({
+          funds: fundPayloads,
+          sourceFilename: fileName ?? 'upload',
+          sourceType: funds[0]?.status !== undefined ? 'template_csv' : 'cams_csv',
+        }),
       });
       const result = await res.json();
       setImportResult(result);

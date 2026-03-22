@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   RefreshCw, PlusCircle, Loader2, AlertCircle, TrendingUp, TrendingDown,
-  ChevronDown, ChevronUp, MoreHorizontal, Search, Download,
+  ChevronDown, ChevronUp, MoreHorizontal, Search, Download, History,
 } from 'lucide-react';
+import { ImportHistory } from '@/components/portfolio/ImportHistory';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR, formatPercentage } from '@/lib/utils/formatters';
 import { calculateXIRR } from '@/lib/utils/calculations';
@@ -669,6 +670,21 @@ export default function MutualFundsPortfolioPage() {
           )}
         </>
       )}
+
+      {/* ── Import History ──────────────────────────────────────────────────────── */}
+      <div className="wv-card p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <History className="w-4 h-4" style={{ color: '#9CA3AF' }} />
+          <h3 className="text-sm font-semibold" style={{ color: '#1B2A4A' }}>Import History</h3>
+          <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: '#F7F5F0', color: '#9CA3AF' }}>
+            CAS bulk imports only
+          </span>
+        </div>
+        <ImportHistory
+          memberNames={memberNames}
+          onHoldingsChanged={loadHoldings}
+        />
+      </div>
     </div>
   );
 }

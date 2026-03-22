@@ -63,6 +63,20 @@ CREATE TABLE brokers (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE import_batches (
+  id             UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  family_id      UUID          NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+  user_id        UUID          NOT NULL REFERENCES users(id)    ON DELETE CASCADE,
+  source_filename TEXT         NOT NULL DEFAULT 'manual',
+  source_type    TEXT          NOT NULL DEFAULT 'manual_csv',
+  funds_count    INTEGER       NOT NULL DEFAULT 0,
+  total_invested NUMERIC(20,4) NOT NULL DEFAULT 0,
+  imported_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  status         TEXT          NOT NULL DEFAULT 'active',
+  undone_at      TIMESTAMPTZ,
+  metadata       JSONB         DEFAULT '{}'
+);
+
 CREATE TABLE holdings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   portfolio_id UUID NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
@@ -74,6 +88,7 @@ CREATE TABLE holdings (
   avg_buy_price NUMERIC(20, 4) NOT NULL DEFAULT 0,
   currency TEXT NOT NULL DEFAULT 'INR',
   metadata JSONB DEFAULT '{}',
+  import_batch_id UUID REFERENCES import_batches(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -189,6 +204,7 @@ ALTER TABLE families ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE portfolios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE brokers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE import_batches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE holdings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE manual_assets ENABLE ROW LEVEL SECURITY;
@@ -253,6 +269,10 @@ CREATE POLICY "users_insert" ON users
 
 CREATE POLICY "users_update" ON users
   FOR UPDATE USING (id = auth.uid());
+
+-- import_batches
+CREATE POLICY "import_batches_family_access" ON import_batches
+  FOR ALL USING (family_id = get_my_family_id());
 
 -- portfolios
 CREATE POLICY "portfolios_family_access" ON portfolios
@@ -347,6 +367,8 @@ CREATE POLICY "audit_log_insert" ON audit_log
 -- ============================================================
 -- INDEXES
 -- ============================================================
+CREATE INDEX idx_import_batches_family_id ON import_batches(family_id);
+CREATE INDEX idx_holdings_import_batch_id ON holdings(import_batch_id) WHERE import_batch_id IS NOT NULL;
 CREATE INDEX idx_portfolios_family_id ON portfolios(family_id);
 CREATE INDEX idx_holdings_portfolio_id ON holdings(portfolio_id);
 CREATE INDEX idx_holdings_symbol ON holdings(symbol);
