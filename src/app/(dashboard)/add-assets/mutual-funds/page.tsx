@@ -91,6 +91,26 @@ const CAT_COLORS: Record<string, { bg: string; text: string }> = {
 
 function getCatStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: '#F3F4F6', text: '#6B7280' }; }
 
+// Refine AMFI API category using fund name keywords
+function detectCategory(schemeName: string, apiCategory: string): string {
+  const n = schemeName.toUpperCase();
+  if (/\bELSS\b|TAX\s*SAVER|TAX\s*SAVING|80C/.test(n))             return 'ELSS';
+  if (/\bINDEX\b|\bNIFTY\b|\bSENSEX\b|\bETF\b|\bNAVDAQ\b|\bS&P\b|\bNASDAQ\b/.test(n)) return 'Index/ETF';
+  if (/\bLIQUID\b|\bOVERNIGHT\b|\bMONEY\s*MARKET\b/.test(n))        return 'Liquid';
+  if (/\bGILT\b|\bG-SEC\b|\bGOVT\b|\bSOVEREIGN\b/.test(n))          return 'Gilt';
+  if (/\bHYBRID\b|\bBALANCED\b|\bAGGRESSIVE\b|\bCONSERVATIVE\b|\bARBITRAGE\b|\bBAF\b|\bDAA\b/.test(n)) return 'Hybrid';
+  if (/\bDEBT\b|\bBOND\b|\bCREDIT\b|\bDURATION\b|\bINCOME\b|\bCORPORATE\b|\bFIXED\s*INCOME\b/.test(n)) return 'Debt';
+  // Fall back to normalised API category
+  const ac = apiCategory.toUpperCase();
+  if (ac.includes('ELSS'))               return 'ELSS';
+  if (ac.includes('INDEX') || ac.includes('ETF')) return 'Index/ETF';
+  if (ac.includes('LIQUID') || ac.includes('OVERNIGHT') || ac.includes('MONEY MARKET')) return 'Liquid';
+  if (ac.includes('GILT') || ac.includes('G-SEC')) return 'Gilt';
+  if (ac.includes('HYBRID') || ac.includes('BALANCED') || ac.includes('ARBITRAGE')) return 'Hybrid';
+  if (ac.includes('DEBT') || ac.includes('BOND') || ac.includes('INCOME') || ac.includes('CREDIT') || ac.includes('DURATION') || ac.includes('CORPORATE')) return 'Debt';
+  return 'Equity';
+}
+
 function fmtNavDate(raw: string): string {
   if (!raw) return '';
   const [d, m, y] = raw.split('-');
@@ -665,7 +685,7 @@ export default function MutualFundsPage() {
   // ── Apply prefill when entering edit / add_to mode ─────────────────────────
   useEffect(() => {
     if (!prefill) return;
-    setSelectedFund({ schemeCode: prefill.schemeCode, schemeName: prefill.schemeName, category: prefill.category });
+    setSelectedFund({ schemeCode: prefill.schemeCode, schemeName: prefill.schemeName, category: detectCategory(prefill.schemeName, prefill.category) });
     setQuery(prefill.schemeName);
     setPortfolio(prefill.portfolioName);
     if (prefill.brokerId) setBroker(prefill.brokerId);
@@ -752,7 +772,8 @@ export default function MutualFundsPage() {
   }
 
   const selectFund = useCallback(async (fund: SearchResult) => {
-    setSelectedFund(fund);
+    const refinedFund = { ...fund, category: detectCategory(fund.schemeName, fund.category) };
+    setSelectedFund(refinedFund);
     setQuery(fund.schemeName);
     setShowDrop(false);
     setNavData(null);

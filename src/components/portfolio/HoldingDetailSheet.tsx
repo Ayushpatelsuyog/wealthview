@@ -53,6 +53,8 @@ interface SipMeta {
   start_date: string;
   installments: number;
   units: number;
+  status?: string;   // 'active' | 'inactive'
+  stop_date?: string;
 }
 
 // ─── Transaction type config ─────────────────────────────────────────────────
@@ -125,10 +127,59 @@ function txnFilterKey(t: Transaction): string {
 
 // ─── Redemption form ─────────────────────────────────────────────────────────
 
+// FIFO exit load: 1% on units held < 1 year
+function calcExitLoad(
+  redeemUnits: number,
+  redeemDate: string,
+  buyTxns: Transaction[],
+): number {
+  const redeemMs = new Date(redeemDate).getTime();
+  const oneYearMs = 365 * 24 * 3600 * 1000;
+  // Sort buys ascending
+  const buys = [...buyTxns].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  let remaining = redeemUnits;
+  let loadAmt = 0;
+  for (const b of buys) {
+    if (remaining <= 0) break;
+    const units = Math.min(remaining, Number(b.quantity));
+    const heldMs = redeemMs - new Date(b.date).getTime();
+    if (heldMs < oneYearMs) loadAmt += units * Number(b.price) * 0.01;
+    remaining -= units;
+  }
+  return loadAmt;
+}
+
+// FIFO P&L split: STCG (<1yr) and LTCG (>1yr)
+function calcPnL(
+  redeemUnits: number,
+  sellNav: number,
+  redeemDate: string,
+  buyTxns: Transaction[],
+): { stcg: number; ltcg: number; costBasis: number } {
+  const redeemMs = new Date(redeemDate).getTime();
+  const oneYearMs = 365 * 24 * 3600 * 1000;
+  const buys = [...buyTxns].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  let remaining = redeemUnits;
+  let stcg = 0, ltcg = 0, costBasis = 0;
+  for (const b of buys) {
+    if (remaining <= 0) break;
+    const units = Math.min(remaining, Number(b.quantity));
+    const cost  = units * Number(b.price);
+    const sale  = units * sellNav;
+    const gain  = sale - cost;
+    const heldMs = redeemMs - new Date(b.date).getTime();
+    costBasis += cost;
+    if (heldMs < oneYearMs) stcg += gain; else ltcg += gain;
+    remaining -= units;
+  }
+  return { stcg, ltcg, costBasis };
+}
+
 function RedemptionForm({
-  holdingId, maxUnits, currentNav, onSuccess, onCancel,
+  holdingId, maxUnits, currentNav, buyTxns, onSuccess, onCancel,
 }: {
   holdingId: string; maxUnits: number; currentNav: number | null;
+  buyTxns: Transaction[];
   onSuccess: () => void; onCancel: () => void;
 }) {
   const supabase = createClient();
@@ -139,17 +190,27 @@ function RedemptionForm({
   const [saving,   setSaving]   = useState(false);
   const [err,      setErr]      = useState('');
 
+  const u = parseFloat(units) || 0;
+  const n = parseFloat(sellNav) || 0;
+  const redeemValue = u * n;
+  const stt = redeemValue * 0.001;  // 0.001% (equity MFs)
+  const exitLoad = u > 0 && n > 0 && sellDate ? calcExitLoad(u, sellDate, buyTxns) : 0;
+  const pnl = u > 0 && n > 0 && sellDate ? calcPnL(u, n, sellDate, buyTxns) : null;
+  const netProceeds = redeemValue - stt - exitLoad;
+  const isFullRedeem = u >= maxUnits - 0.0001;
+
   async function submit() {
-    const u = parseFloat(units), n = parseFloat(sellNav);
     if (!u || u <= 0 || u > maxUnits) { setErr(`Enter up to ${maxUnits.toFixed(4)} units`); return; }
     if (!n || n <= 0)                  { setErr('Enter a valid sell NAV'); return; }
     setSaving(true); setErr('');
     const { error } = await supabase.from('transactions').insert({
-      holding_id: holdingId, type: 'sell', quantity: u, price: n, date: sellDate, fees: 0,
+      holding_id: holdingId, type: 'sell', quantity: u, price: n, date: sellDate,
+      fees: parseFloat((stt + exitLoad).toFixed(2)),
       notes: reason || null,
     });
     if (error) { setErr(error.message); setSaving(false); return; }
-    await supabase.from('holdings').update({ quantity: maxUnits - u }).eq('id', holdingId);
+    const newQty = Math.max(0, maxUnits - u);
+    await supabase.from('holdings').update({ quantity: newQty }).eq('id', holdingId);
     onSuccess();
   }
 
@@ -160,9 +221,16 @@ function RedemptionForm({
       {err && <p className="text-[11px]" style={{ color: '#DC2626' }}>{err}</p>}
       <div className="grid grid-cols-3 gap-2">
         <div className="space-y-1">
-          <Label className="text-[10px]" style={{ color: '#6B7280' }}>Units</Label>
-          <Input value={units} onChange={e => setUnits(e.target.value)}
-            placeholder={`Max ${maxUnits.toFixed(4)}`} type="number" step="0.0001" className="h-8 text-xs" />
+          <Label className="text-[10px]" style={{ color: '#6B7280' }}>Units to Redeem</Label>
+          <div className="flex gap-1">
+            <Input value={units} onChange={e => setUnits(e.target.value)}
+              placeholder={`Max ${maxUnits.toFixed(4)}`} type="number" step="0.0001" className="h-8 text-xs flex-1" />
+            <button onClick={() => setUnits(maxUnits.toFixed(4))}
+              className="px-2 rounded text-[10px] font-medium flex-shrink-0"
+              style={{ backgroundColor: 'rgba(220,38,38,0.08)', color: '#DC2626', border: '1px solid rgba(220,38,38,0.2)' }}>
+              All
+            </button>
+          </div>
         </div>
         <div className="space-y-1">
           <Label className="text-[10px]" style={{ color: '#6B7280' }}>Sell NAV (₹)</Label>
@@ -170,22 +238,175 @@ function RedemptionForm({
             type="number" step="0.0001" className="h-8 text-xs" />
         </div>
         <div className="space-y-1">
-          <Label className="text-[10px]" style={{ color: '#6B7280' }}>Date</Label>
+          <Label className="text-[10px]" style={{ color: '#6B7280' }}>Redemption Date</Label>
           <Input value={sellDate} onChange={e => setSellDate(e.target.value)}
             type="date" className="h-8 text-xs" max={new Date().toISOString().split('T')[0]} />
         </div>
       </div>
       <Input value={reason} onChange={e => setReason(e.target.value)}
         placeholder="Reason (optional)" className="h-8 text-xs" />
-      {units && sellNav && (
-        <p className="text-[11px]" style={{ color: '#6B7280' }}>
-          Value: <strong>{formatLargeINR(parseFloat(units) * parseFloat(sellNav))}</strong>
-        </p>
+
+      {/* Charges & P&L breakdown */}
+      {u > 0 && n > 0 && (
+        <div className="rounded-lg p-3 space-y-1.5"
+          style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
+          <div className="flex justify-between text-[11px]">
+            <span style={{ color: '#6B7280' }}>Redemption value</span>
+            <span className="font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(redeemValue)}</span>
+          </div>
+          <div className="flex justify-between text-[11px]">
+            <span style={{ color: '#6B7280' }}>STT (0.001%)</span>
+            <span style={{ color: '#DC2626' }}>−₹{stt.toFixed(2)}</span>
+          </div>
+          {exitLoad > 0 && (
+            <div className="flex justify-between text-[11px]">
+              <span style={{ color: '#6B7280' }}>Exit load (1% on units &lt;1yr)</span>
+              <span style={{ color: '#DC2626' }}>−{formatLargeINR(exitLoad)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-[11px] border-t pt-1.5"
+            style={{ borderColor: '#E8E5DD' }}>
+            <span className="font-semibold" style={{ color: '#6B7280' }}>Net proceeds</span>
+            <span className="font-bold" style={{ color: '#059669' }}>{formatLargeINR(netProceeds)}</span>
+          </div>
+          {pnl && (
+            <>
+              <div className="border-t pt-1.5" style={{ borderColor: '#E8E5DD' }}>
+                <p className="text-[10px] font-semibold mb-1" style={{ color: '#9CA3AF' }}>TAX ESTIMATE (informational)</p>
+              </div>
+              {pnl.stcg !== 0 && (
+                <div className="flex justify-between text-[11px]">
+                  <span style={{ color: '#6B7280' }}>STCG (&lt;1yr, 20%)</span>
+                  <span style={{ color: pnl.stcg >= 0 ? '#DC2626' : '#059669' }}>
+                    {pnl.stcg >= 0 ? '+' : ''}{formatLargeINR(pnl.stcg)} → tax ~{formatLargeINR(Math.max(0, pnl.stcg * 0.2))}
+                  </span>
+                </div>
+              )}
+              {pnl.ltcg !== 0 && (
+                <div className="flex justify-between text-[11px]">
+                  <span style={{ color: '#6B7280' }}>LTCG (&gt;1yr, 12.5% above ₹1.25L)</span>
+                  <span style={{ color: pnl.ltcg >= 0 ? '#DC2626' : '#059669' }}>
+                    {pnl.ltcg >= 0 ? '+' : ''}{formatLargeINR(pnl.ltcg)} → tax ~{formatLargeINR(Math.max(0, (pnl.ltcg - 125000) * 0.125))}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+          {isFullRedeem && (
+            <p className="text-[10px] pt-1" style={{ color: '#C9A84C' }}>
+              Full redemption — holding will be marked as past holding.
+            </p>
+          )}
+        </div>
       )}
+
       <div className="flex gap-2">
         <Button onClick={submit} disabled={saving} className="flex-1 h-8 text-xs"
           style={{ backgroundColor: '#DC2626', color: 'white' }}>
           {saving && <Loader2 className="w-3 h-3 animate-spin mr-1" />}Confirm Redemption
+        </Button>
+        <Button variant="outline" onClick={onCancel} className="h-8 text-xs"
+          style={{ borderColor: '#E8E5DD', color: '#6B7280' }}>Cancel</Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Dividend form ────────────────────────────────────────────────────────────
+
+function DividendForm({
+  holdingId, onSuccess, onCancel,
+}: {
+  holdingId: string;
+  onSuccess: () => void; onCancel: () => void;
+}) {
+  const supabase = createClient();
+  const [divDate,   setDivDate]   = useState(new Date().toISOString().split('T')[0]);
+  const [amount,    setAmount]    = useState('');
+  const [divType,   setDivType]   = useState<'payout' | 'reinvest'>('payout');
+  const [units,     setUnits]     = useState('');
+  const [nav,       setNav]       = useState('');
+  const [saving,    setSaving]    = useState(false);
+  const [err,       setErr]       = useState('');
+
+  async function submit() {
+    const amt = parseFloat(amount);
+    if (!amt || amt <= 0) { setErr('Enter a valid dividend amount'); return; }
+    setSaving(true); setErr('');
+
+    if (divType === 'reinvest') {
+      // Reinvestment: record as dividend txn + sip-style buy
+      const u = parseFloat(units), n = parseFloat(nav);
+      if (!u || u <= 0) { setErr('Enter units reinvested'); setSaving(false); return; }
+      if (!n || n <= 0) { setErr('Enter NAV at reinvestment'); setSaving(false); return; }
+      const { error: e1 } = await supabase.from('transactions').insert({
+        holding_id: holdingId, type: 'dividend', quantity: 1, price: amt, date: divDate,
+        fees: 0, notes: `IDCW Reinvestment — ${u.toFixed(4)} units @ ₹${n.toFixed(4)}`,
+      });
+      if (e1) { setErr(e1.message); setSaving(false); return; }
+      // Add units to holding as a buy
+      const { data: hld } = await supabase.from('holdings').select('quantity').eq('id', holdingId).single();
+      if (hld) await supabase.from('holdings').update({ quantity: Number(hld.quantity) + u }).eq('id', holdingId);
+    } else {
+      const { error } = await supabase.from('transactions').insert({
+        holding_id: holdingId, type: 'dividend', quantity: 1, price: amt, date: divDate,
+        fees: 0, notes: 'IDCW Payout',
+      });
+      if (error) { setErr(error.message); setSaving(false); return; }
+    }
+    onSuccess();
+  }
+
+  return (
+    <div className="rounded-xl border p-4 space-y-3"
+      style={{ borderColor: 'rgba(5,150,105,0.25)', backgroundColor: 'rgba(5,150,105,0.02)' }}>
+      <p className="text-xs font-semibold" style={{ color: '#059669' }}>Record Dividend</p>
+      {err && <p className="text-[11px]" style={{ color: '#DC2626' }}>{err}</p>}
+
+      {/* Type toggle */}
+      <div className="flex gap-1">
+        {(['payout', 'reinvest'] as const).map(t => (
+          <button key={t} onClick={() => setDivType(t)}
+            className="flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-colors"
+            style={divType === t
+              ? { backgroundColor: '#059669', color: 'white' }
+              : { backgroundColor: '#F7F5F0', color: '#6B7280', border: '1px solid #E8E5DD' }}>
+            {t === 'payout' ? 'IDCW Payout' : 'IDCW Reinvestment'}
+          </button>
+        ))}
+      </div>
+
+      <div className={`grid gap-2 ${divType === 'reinvest' ? 'grid-cols-2' : 'grid-cols-2'}`}>
+        <div className="space-y-1">
+          <Label className="text-[10px]" style={{ color: '#6B7280' }}>Dividend Amount (₹)</Label>
+          <Input value={amount} onChange={e => setAmount(e.target.value)}
+            type="number" step="0.01" placeholder="Total dividend received" className="h-8 text-xs" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px]" style={{ color: '#6B7280' }}>Date</Label>
+          <Input value={divDate} onChange={e => setDivDate(e.target.value)}
+            type="date" className="h-8 text-xs" max={new Date().toISOString().split('T')[0]} />
+        </div>
+        {divType === 'reinvest' && (
+          <>
+            <div className="space-y-1">
+              <Label className="text-[10px]" style={{ color: '#6B7280' }}>Units Reinvested</Label>
+              <Input value={units} onChange={e => setUnits(e.target.value)}
+                type="number" step="0.0001" className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px]" style={{ color: '#6B7280' }}>NAV at Reinvestment (₹)</Label>
+              <Input value={nav} onChange={e => setNav(e.target.value)}
+                type="number" step="0.0001" className="h-8 text-xs" />
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        <Button onClick={submit} disabled={saving} className="flex-1 h-8 text-xs"
+          style={{ backgroundColor: '#059669', color: 'white' }}>
+          {saving && <Loader2 className="w-3 h-3 animate-spin mr-1" />}Save Dividend
         </Button>
         <Button variant="outline" onClick={onCancel} className="h-8 text-xs"
           style={{ borderColor: '#E8E5DD', color: '#6B7280' }}>Cancel</Button>
@@ -209,8 +430,10 @@ export function HoldingDetailSheet({
 
   const [showHolder,  setShowHolder]  = useState(false);
   const [showRedeem,  setShowRedeem]  = useState(false);
+  const [showDividend,setShowDividend]= useState(false);
   const [deleting,    setDeleting]    = useState(false);
   const [redeemDone,  setRedeemDone]  = useState(false);
+  const [dividendDone,setDividendDone]= useState(false);
   const [activeFilter,setActiveFilter] = useState<string>('all');
   const [visibleCount,setVisibleCount] = useState(20);
   const [recalcState, setRecalcState] = useState<RecalcState>('idle');
@@ -224,9 +447,16 @@ export function HoldingDetailSheet({
   const [txnDeleteConfirmId, setTxnDeleteConfirmId] = useState<string | null>(null);
   const [deletingTxnId,      setDeletingTxnId]      = useState<string | null>(null);
   const [txnDeleteError,     setTxnDeleteError]     = useState('');
+  const [sipToggleIdx,       setSipToggleIdx]       = useState<number | null>(null);
+  const [sipStopDate,        setSipStopDate]        = useState('');
+  const [sipToggling,        setSipToggling]        = useState(false);
+  const [sipToggleErr,       setSipToggleErr]       = useState('');
 
   useEffect(() => {
-    if (!open) { setView('detail'); setTxnDeleteConfirmId(null); setTxnDeleteError(''); }
+    if (!open) {
+      setView('detail'); setTxnDeleteConfirmId(null); setTxnDeleteError('');
+      setSipToggleIdx(null); setSipToggleErr('');
+    }
   }, [open]);
 
   // ── SIP groups from transactions ────────────────────────────────────────────
@@ -280,6 +510,8 @@ export function HoldingDetailSheet({
     ? (meta.sips as SipMeta[]).map(s => ({
         amount: Number(s.amount), date: String(s.date), start_date: String(s.start_date),
         installments: Number(s.installments), units: Number(s.units),
+        status: String(s.status ?? 'active'),
+        stop_date: s.stop_date ? String(s.stop_date) : undefined,
       }))
     : [];
 
@@ -351,6 +583,9 @@ export function HoldingDetailSheet({
           sip_date:    sip.date,
           start_date:  sip.start_date,
         });
+        if (sip.status === 'inactive' && sip.stop_date) {
+          params.set('end_date', sip.stop_date);
+        }
         const res = await fetch(`/api/mf/sip-calculate?${params}`);
         if (!res.ok) throw new Error(`SIP ${i + 1} calc failed`);
         const data = await res.json();
@@ -401,6 +636,47 @@ export function HoldingDetailSheet({
     } catch {
       setRecalcErr('Failed to save. Please try again.');
       setRecalcState('idle');
+    }
+  }
+
+  // ── SIP toggle (activate / deactivate) ─────────────────────────────────────
+  async function handleSipToggle(sipIndex: number, currentStatus: string) {
+    if (currentStatus === 'inactive') {
+      // Re-activate immediately (no stop date needed)
+      setSipToggling(true); setSipToggleErr('');
+      try {
+        const res = await fetch('/api/mf/update-sip-status', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ holdingId: h.id, sipIndex, status: 'active' }),
+        });
+        if (!res.ok) { const j = await res.json(); setSipToggleErr(j.error ?? 'Failed'); return; }
+        onHoldingChanged();
+      } finally {
+        setSipToggling(false);
+      }
+    } else {
+      // Ask for a stop date before deactivating
+      setSipToggleIdx(sipIndex);
+      setSipStopDate(new Date().toISOString().split('T')[0]);
+      setSipToggleErr('');
+    }
+  }
+
+  async function confirmSipStop(sipIndex: number) {
+    if (!sipStopDate) { setSipToggleErr('Please enter a stop date'); return; }
+    setSipToggling(true); setSipToggleErr('');
+    try {
+      const res = await fetch('/api/mf/update-sip-status', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ holdingId: h.id, sipIndex, status: 'inactive', stop_date: sipStopDate }),
+      });
+      if (!res.ok) { const j = await res.json(); setSipToggleErr(j.error ?? 'Failed'); return; }
+      setSipToggleIdx(null);
+      onHoldingChanged();
+    } finally {
+      setSipToggling(false);
     }
   }
 
@@ -507,7 +783,8 @@ export function HoldingDetailSheet({
             <div className="px-6 py-4 border-b" style={{ borderColor: '#E8E5DD' }}>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>
-                  Active SIPs ({sipList.length})
+                  SIPs ({sipList.filter(s => s.status !== 'inactive').length} active
+                  {sipList.some(s => s.status === 'inactive') ? ` / ${sipList.length} total` : ''})
                 </p>
                 {/* Recalculate button */}
                 {canRecalculate && recalcState === 'idle' && (
@@ -569,44 +846,104 @@ export function HoldingDetailSheet({
                 <p className="mb-2 text-[11px]" style={{ color: '#DC2626' }}>{recalcErr}</p>
               )}
 
+              {sipToggleErr && (
+                <p className="mb-2 text-[11px]" style={{ color: '#DC2626' }}>{sipToggleErr}</p>
+              )}
+
               {/* SIP cards (clickable to filter) */}
               <div className={`grid gap-2 ${sipList.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 {sipList.map((sip, i) => {
-                  const filterKey = `sip-${i + 1}`;
-                  const grp       = sipGroups.find(g => g.sipNum === i + 1);
-                  const grpUnits  = grp ? grp.txns.reduce((s, t) => s + Number(t.quantity), 0) : sip.units;
+                  const filterKey   = `sip-${i + 1}`;
+                  const grp         = sipGroups.find(g => g.sipNum === i + 1);
+                  const grpUnits    = grp ? grp.txns.reduce((s, t) => s + Number(t.quantity), 0) : sip.units;
                   const grpInvested = grp ? grp.txns.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0) : (sip.amount * sip.installments);
-                  const grpCount  = grp?.txns.length ?? sip.installments;
-                  const grpAvgNav = grpUnits > 0 ? grpInvested / grpUnits : 0;
-                  const isActive  = activeFilter === filterKey;
+                  const grpCount    = grp?.txns.length ?? sip.installments;
+                  const grpAvgNav   = grpUnits > 0 ? grpInvested / grpUnits : 0;
+                  const isFiltered  = activeFilter === filterKey;
+                  const isInactive  = sip.status === 'inactive';
+                  const isTogglingThis = sipToggleIdx === i;
 
                   return (
-                    <button
+                    <div
                       key={i}
-                      onClick={() => { setActiveFilter(isActive ? 'all' : filterKey); setVisibleCount(20); }}
-                      className="text-left p-3 rounded-xl border transition-all"
+                      className="p-3 rounded-xl border transition-all"
                       style={{
-                        borderColor: isActive ? 'rgba(201,168,76,0.5)' : '#E8E5DD',
-                        backgroundColor: isActive ? 'rgba(201,168,76,0.08)' : 'rgba(27,42,74,0.01)',
-                        boxShadow: isActive ? '0 0 0 2px rgba(201,168,76,0.2)' : 'none',
+                        borderColor: isFiltered ? 'rgba(201,168,76,0.5)' : isInactive ? 'rgba(220,38,38,0.2)' : '#E8E5DD',
+                        backgroundColor: isFiltered ? 'rgba(201,168,76,0.08)' : isInactive ? 'rgba(220,38,38,0.02)' : 'rgba(27,42,74,0.01)',
+                        boxShadow: isFiltered ? '0 0 0 2px rgba(201,168,76,0.2)' : 'none',
                       }}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold" style={{ color: '#C9A84C' }}>
-                          SIP #{i + 1} — {formatLargeINR(sip.amount)}/month on {sip.date}
-                        </span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
-                          style={{ backgroundColor: 'rgba(5,150,105,0.1)', color: '#059669' }}>Active</span>
+                      <div className="flex items-start justify-between mb-2 gap-2">
+                        <button
+                          onClick={() => { setActiveFilter(isFiltered ? 'all' : filterKey); setVisibleCount(20); }}
+                          className="text-left flex-1"
+                        >
+                          <span className="text-[10px] font-bold block" style={{ color: isInactive ? '#9CA3AF' : '#C9A84C' }}>
+                            SIP #{i + 1} — {formatLargeINR(sip.amount)}/month on {sip.date}
+                          </span>
+                        </button>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+                            style={isInactive
+                              ? { backgroundColor: 'rgba(220,38,38,0.1)', color: '#DC2626' }
+                              : { backgroundColor: 'rgba(5,150,105,0.1)', color: '#059669' }}>
+                            {isInactive ? 'Stopped' : 'Active'}
+                          </span>
+                          <button
+                            onClick={() => handleSipToggle(i, sip.status ?? 'active')}
+                            disabled={sipToggling}
+                            className="text-[9px] px-1.5 py-0.5 rounded font-medium transition-colors"
+                            style={isInactive
+                              ? { backgroundColor: 'rgba(5,150,105,0.1)', color: '#059669', border: '1px solid rgba(5,150,105,0.25)' }
+                              : { backgroundColor: 'rgba(220,38,38,0.08)', color: '#DC2626', border: '1px solid rgba(220,38,38,0.2)' }}>
+                            {sipToggling && sipToggleIdx === i ? '…' : isInactive ? 'Re-activate' : 'Stop'}
+                          </button>
+                        </div>
                       </div>
+
+                      {/* Stop date picker (shown when user clicks Stop) */}
+                      {isTogglingThis && (
+                        <div className="mb-2 p-2 rounded-lg space-y-1.5"
+                          style={{ backgroundColor: 'rgba(220,38,38,0.04)', border: '1px solid rgba(220,38,38,0.15)' }}>
+                          <p className="text-[10px]" style={{ color: '#DC2626' }}>When did this SIP stop?</p>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="date" value={sipStopDate} onChange={e => setSipStopDate(e.target.value)}
+                              max={new Date().toISOString().split('T')[0]}
+                              className="h-7 text-[11px] flex-1"
+                            />
+                            <button
+                              onClick={() => confirmSipStop(i)} disabled={sipToggling}
+                              className="h-7 px-3 rounded text-[11px] font-semibold text-white flex-shrink-0"
+                              style={{ backgroundColor: '#DC2626' }}>
+                              {sipToggling ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Confirm'}
+                            </button>
+                            <button
+                              onClick={() => { setSipToggleIdx(null); setSipToggleErr(''); }}
+                              className="h-7 px-2 rounded text-[11px] flex-shrink-0"
+                              style={{ color: '#6B7280' }}>
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-3 gap-2 text-[10px]">
                         <div>
                           <p style={{ color: '#9CA3AF' }}>Started</p>
                           <p className="font-semibold mt-0.5" style={{ color: '#1A1A2E' }}>{fmtDate(sip.start_date)}</p>
                         </div>
-                        <div>
-                          <p style={{ color: '#9CA3AF' }}>Installments</p>
-                          <p className="font-semibold mt-0.5" style={{ color: '#1A1A2E' }}>{grpCount}</p>
-                        </div>
+                        {isInactive && sip.stop_date ? (
+                          <div>
+                            <p style={{ color: '#9CA3AF' }}>Stopped</p>
+                            <p className="font-semibold mt-0.5" style={{ color: '#DC2626' }}>{fmtDate(sip.stop_date)}</p>
+                          </div>
+                        ) : (
+                          <div>
+                            <p style={{ color: '#9CA3AF' }}>Installments</p>
+                            <p className="font-semibold mt-0.5" style={{ color: '#1A1A2E' }}>{grpCount}</p>
+                          </div>
+                        )}
                         <div>
                           <p style={{ color: '#9CA3AF' }}>Units</p>
                           <p className="font-semibold mt-0.5" style={{ color: '#1A1A2E' }}>{grpUnits.toFixed(4)}</p>
@@ -620,7 +957,7 @@ export function HoldingDetailSheet({
                           <p className="font-semibold mt-0.5" style={{ color: '#1A1A2E' }}>₹{grpAvgNav.toFixed(4)}</p>
                         </div>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -804,6 +1141,7 @@ export function HoldingDetailSheet({
             <div className="px-6 py-4 border-b" style={{ borderColor: '#E8E5DD' }}>
               <RedemptionForm
                 holdingId={h.id} maxUnits={Number(h.quantity)} currentNav={h.currentNav}
+                buyTxns={h.transactions.filter(t => t.type === 'buy' || t.type === 'sip')}
                 onSuccess={() => { setShowRedeem(false); setRedeemDone(true); onHoldingChanged(); }}
                 onCancel={() => setShowRedeem(false)}
               />
@@ -813,6 +1151,23 @@ export function HoldingDetailSheet({
             <div className="mx-6 my-3 flex items-center gap-2 p-3 rounded-xl text-xs"
               style={{ backgroundColor: 'rgba(5,150,105,0.08)', color: '#059669' }}>
               ✓ Redemption recorded successfully.
+            </div>
+          )}
+
+          {/* ── Dividend form ── */}
+          {showDividend && (
+            <div className="px-6 py-4 border-b" style={{ borderColor: '#E8E5DD' }}>
+              <DividendForm
+                holdingId={h.id}
+                onSuccess={() => { setShowDividend(false); setDividendDone(true); onHoldingChanged(); }}
+                onCancel={() => setShowDividend(false)}
+              />
+            </div>
+          )}
+          {dividendDone && (
+            <div className="mx-6 my-3 flex items-center gap-2 p-3 rounded-xl text-xs"
+              style={{ backgroundColor: 'rgba(5,150,105,0.08)', color: '#059669' }}>
+              ✓ Dividend recorded successfully.
             </div>
           )}
         </div>
@@ -916,7 +1271,7 @@ export function HoldingDetailSheet({
             </Button>
           ) : (
             <>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   onClick={() => { router.push(`/add-assets/mutual-funds?add_to=${h.id}`); onClose(); }}
                   className="h-9 text-[11px] font-semibold"
@@ -929,9 +1284,15 @@ export function HoldingDetailSheet({
                   style={{ backgroundColor: 'rgba(201,168,76,0.12)', color: '#B8922A', border: '1px solid rgba(201,168,76,0.35)' }}>
                   <RefreshCw className="w-3 h-3 mr-1" />Add SIP
                 </Button>
-                <Button variant="outline" onClick={() => { setRedeemDone(false); setShowRedeem(!showRedeem); }}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <Button variant="outline" onClick={() => { setRedeemDone(false); setDividendDone(false); setShowRedeem(!showRedeem); if (showDividend) setShowDividend(false); }}
                   className="h-9 text-[11px]" style={{ borderColor: '#E8E5DD', color: '#6B7280' }}>
                   {showRedeem ? 'Cancel' : 'Redeem'}
+                </Button>
+                <Button variant="outline" onClick={() => { setDividendDone(false); setRedeemDone(false); setShowDividend(!showDividend); if (showRedeem) setShowRedeem(false); }}
+                  className="h-9 text-[11px]" style={{ borderColor: 'rgba(5,150,105,0.3)', color: '#059669' }}>
+                  {showDividend ? 'Cancel' : 'Dividend'}
                 </Button>
                 <Button variant="outline"
                   onClick={() => setView('edit-transactions')}

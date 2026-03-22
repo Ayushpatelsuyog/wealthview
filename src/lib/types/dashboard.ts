@@ -45,6 +45,7 @@ export interface DashboardSnapshot {
   avgFdYield: number;
   insuranceCoverage: number;
   monthlySipOutflow: number;
+  activeSipCount: number;
   unrealizedStcg: number;
   unrealizedLtcg: number;
   loanExposure: number;

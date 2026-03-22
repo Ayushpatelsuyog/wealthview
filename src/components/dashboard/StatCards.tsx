@@ -56,7 +56,7 @@ function buildStats(s: DashboardSnapshot) {
       : { label: 'Insurance Cover', ...noData() },
 
     has && s.monthlySipOutflow > 0
-      ? { label: 'Monthly SIP', value: fmt(s.monthlySipOutflow), sub: 'Active SIPs running', valueColor: '#2E8B8B' }
+      ? { label: 'Monthly SIP', value: fmt(s.monthlySipOutflow), sub: `${s.activeSipCount ?? 1} active SIP${(s.activeSipCount ?? 1) === 1 ? '' : 's'} running`, valueColor: '#2E8B8B' }
       : { label: 'Monthly SIP', ...noData() },
 
     has && s.unrealizedStcg > 0

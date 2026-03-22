@@ -78,7 +78,7 @@ function emptySnapshot(): DashboardSnapshot {
     },
     overallXirr: 0, equityDebtRatio: { equity: 0, debt: 0 },
     emergencyFundMonths: 0, annualDividendIncome: 0, avgFdYield: 0,
-    insuranceCoverage: 0, monthlySipOutflow: 0,
+    insuranceCoverage: 0, monthlySipOutflow: 0, activeSipCount: 0,
     unrealizedStcg: 0, unrealizedLtcg: 0, loanExposure: 0, rebalancingDrift: 0,
     members: [], cashFlows: [], hasRealData: false, needsOnboarding: false,
     lastUpdated: new Date().toISOString(),
@@ -154,6 +154,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     let stcgGains = 0;
     let ltcgGains = 0;
     let sipMonthly = 0;
+    let activeSipCount = 0;
     let annualDividends = 0;
 
     const holdingBuckets: Record<string, { invested: number; current: number }> = {};
@@ -192,9 +193,21 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
         else ltcgGains += pnl;
       }
 
-      // SIP detection
+      // SIP detection — sum only active SIPs from the sips array (or fall back to sip_amount)
       const meta = h.metadata as Row ?? {};
-      if (meta.is_sip && meta.sip_amount) sipMonthly += Number(meta.sip_amount);
+      if (meta.is_sip) {
+        if (Array.isArray(meta.sips)) {
+          for (const sip of meta.sips as Array<Record<string, unknown>>) {
+            if (sip.status !== 'inactive') {
+              sipMonthly += Number(sip.amount ?? 0);
+              activeSipCount++;
+            }
+          }
+        } else if (meta.sip_amount) {
+          sipMonthly += Number(meta.sip_amount);
+          activeSipCount++;
+        }
+      }
 
       // Dividends in last 12 months
       const divTxns = txns.filter(t => t.type === 'dividend');
@@ -359,6 +372,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       avgFdYield,
       insuranceCoverage,
       monthlySipOutflow: sipMonthly,
+      activeSipCount,
       unrealizedStcg: stcgGains,
       unrealizedLtcg: ltcgGains,
       loanExposure,
