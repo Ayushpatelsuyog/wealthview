@@ -176,19 +176,23 @@ function calcPnL(
 }
 
 function RedemptionForm({
-  holdingId, maxUnits, currentNav, buyTxns, onSuccess, onCancel,
+  holdingId, maxUnits, currentNav, buyTxns, editingTxn, onSuccess, onCancel,
 }: {
   holdingId: string; maxUnits: number; currentNav: number | null;
   buyTxns: Transaction[];
+  editingTxn?: Transaction | null;
   onSuccess: () => void; onCancel: () => void;
 }) {
   const supabase = createClient();
-  const [units,    setUnits]    = useState('');
-  const [sellNav,  setSellNav]  = useState(currentNav?.toFixed(4) ?? '');
-  const [sellDate, setSellDate] = useState(new Date().toISOString().split('T')[0]);
-  const [reason,   setReason]   = useState('');
+  const [units,    setUnits]    = useState(editingTxn ? String(editingTxn.quantity) : '');
+  const [sellNav,  setSellNav]  = useState(editingTxn ? String(editingTxn.price) : (currentNav?.toFixed(4) ?? ''));
+  const [sellDate, setSellDate] = useState(editingTxn?.date ?? new Date().toISOString().split('T')[0]);
+  const [reason,   setReason]   = useState(editingTxn?.notes ?? '');
   const [saving,   setSaving]   = useState(false);
   const [err,      setErr]      = useState('');
+
+  // When editing, available units = current + already-sold units (since we'll delete the old txn)
+  const effectiveMaxUnits = editingTxn ? maxUnits + Number(editingTxn.quantity) : maxUnits;
 
   const u = parseFloat(units) || 0;
   const n = parseFloat(sellNav) || 0;
@@ -197,19 +201,31 @@ function RedemptionForm({
   const exitLoad = u > 0 && n > 0 && sellDate ? calcExitLoad(u, sellDate, buyTxns) : 0;
   const pnl = u > 0 && n > 0 && sellDate ? calcPnL(u, n, sellDate, buyTxns) : null;
   const netProceeds = redeemValue - stt - exitLoad;
-  const isFullRedeem = u >= maxUnits - 0.0001;
+  const isFullRedeem = u >= effectiveMaxUnits - 0.0001;
 
   async function submit() {
-    if (!u || u <= 0 || u > maxUnits) { setErr(`Enter up to ${maxUnits.toFixed(4)} units`); return; }
+    if (!u || u <= 0 || u > effectiveMaxUnits) { setErr(`Enter up to ${effectiveMaxUnits.toFixed(4)} units`); return; }
     if (!n || n <= 0)                  { setErr('Enter a valid sell NAV'); return; }
     setSaving(true); setErr('');
+
+    // If editing: delete old transaction first (API will restore units)
+    if (editingTxn) {
+      const delRes = await fetch('/api/mf/delete-transaction', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionId: editingTxn.id }),
+      });
+      if (!delRes.ok) { const j = await delRes.json(); setErr(j.error ?? 'Failed to update'); setSaving(false); return; }
+    }
+
     const { error } = await supabase.from('transactions').insert({
       holding_id: holdingId, type: 'sell', quantity: u, price: n, date: sellDate,
       fees: parseFloat((stt + exitLoad).toFixed(2)),
       notes: reason || null,
     });
     if (error) { setErr(error.message); setSaving(false); return; }
-    const newQty = Math.max(0, maxUnits - u);
+    // Recalculate holding quantity: fetch current (post-delete) and subtract new sell
+    const { data: hld } = await supabase.from('holdings').select('quantity').eq('id', holdingId).single();
+    const newQty = Math.max(0, Number(hld?.quantity ?? 0) - u);
     await supabase.from('holdings').update({ quantity: newQty }).eq('id', holdingId);
     onSuccess();
   }
@@ -217,15 +233,15 @@ function RedemptionForm({
   return (
     <div className="rounded-xl border p-4 space-y-3"
       style={{ borderColor: 'rgba(220,38,38,0.25)', backgroundColor: 'rgba(220,38,38,0.02)' }}>
-      <p className="text-xs font-semibold" style={{ color: '#DC2626' }}>Record Redemption</p>
+      <p className="text-xs font-semibold" style={{ color: '#DC2626' }}>{editingTxn ? 'Edit Redemption' : 'Record Redemption'}</p>
       {err && <p className="text-[11px]" style={{ color: '#DC2626' }}>{err}</p>}
       <div className="grid grid-cols-3 gap-2">
         <div className="space-y-1">
           <Label className="text-[10px]" style={{ color: '#6B7280' }}>Units to Redeem</Label>
           <div className="flex gap-1">
             <Input value={units} onChange={e => setUnits(e.target.value)}
-              placeholder={`Max ${maxUnits.toFixed(4)}`} type="number" step="0.0001" className="h-8 text-xs flex-1" />
-            <button onClick={() => setUnits(maxUnits.toFixed(4))}
+              placeholder={`Max ${effectiveMaxUnits.toFixed(4)}`} type="number" step="0.0001" className="h-8 text-xs flex-1" />
+            <button onClick={() => setUnits(effectiveMaxUnits.toFixed(4))}
               className="px-2 rounded text-[10px] font-medium flex-shrink-0"
               style={{ backgroundColor: 'rgba(220,38,38,0.08)', color: '#DC2626', border: '1px solid rgba(220,38,38,0.2)' }}>
               All
@@ -303,7 +319,8 @@ function RedemptionForm({
       <div className="flex gap-2">
         <Button onClick={submit} disabled={saving} className="flex-1 h-8 text-xs"
           style={{ backgroundColor: '#DC2626', color: 'white' }}>
-          {saving && <Loader2 className="w-3 h-3 animate-spin mr-1" />}Confirm Redemption
+          {saving && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
+          {editingTxn ? 'Save Changes' : 'Confirm Redemption'}
         </Button>
         <Button variant="outline" onClick={onCancel} className="h-8 text-xs"
           style={{ borderColor: '#E8E5DD', color: '#6B7280' }}>Cancel</Button>
@@ -315,17 +332,21 @@ function RedemptionForm({
 // ─── Dividend form ────────────────────────────────────────────────────────────
 
 function DividendForm({
-  holdingId, onSuccess, onCancel,
+  holdingId, editingTxn, onSuccess, onCancel,
 }: {
   holdingId: string;
+  editingTxn?: Transaction | null;
   onSuccess: () => void; onCancel: () => void;
 }) {
   const supabase = createClient();
-  const [divDate,   setDivDate]   = useState(new Date().toISOString().split('T')[0]);
-  const [amount,    setAmount]    = useState('');
-  const [divType,   setDivType]   = useState<'payout' | 'reinvest'>('payout');
-  const [units,     setUnits]     = useState('');
-  const [nav,       setNav]       = useState('');
+  const isReinvest = editingTxn?.notes?.includes('Reinvestment') ?? false;
+  const reinvestMatch = editingTxn?.notes?.match(/([\d.]+) units @ ₹([\d.]+)/);
+
+  const [divDate,   setDivDate]   = useState(editingTxn?.date ?? new Date().toISOString().split('T')[0]);
+  const [amount,    setAmount]    = useState(editingTxn ? String(editingTxn.price) : '');
+  const [divType,   setDivType]   = useState<'payout' | 'reinvest'>(isReinvest ? 'reinvest' : 'payout');
+  const [units,     setUnits]     = useState(reinvestMatch?.[1] ?? '');
+  const [nav,       setNav]       = useState(reinvestMatch?.[2] ?? '');
   const [saving,    setSaving]    = useState(false);
   const [err,       setErr]       = useState('');
 
@@ -334,8 +355,16 @@ function DividendForm({
     if (!amt || amt <= 0) { setErr('Enter a valid dividend amount'); return; }
     setSaving(true); setErr('');
 
+    // If editing: delete old transaction first (API handles unit restoration)
+    if (editingTxn) {
+      const delRes = await fetch('/api/mf/delete-transaction', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionId: editingTxn.id }),
+      });
+      if (!delRes.ok) { const j = await delRes.json(); setErr(j.error ?? 'Failed'); setSaving(false); return; }
+    }
+
     if (divType === 'reinvest') {
-      // Reinvestment: record as dividend txn + sip-style buy
       const u = parseFloat(units), n = parseFloat(nav);
       if (!u || u <= 0) { setErr('Enter units reinvested'); setSaving(false); return; }
       if (!n || n <= 0) { setErr('Enter NAV at reinvestment'); setSaving(false); return; }
@@ -344,7 +373,6 @@ function DividendForm({
         fees: 0, notes: `IDCW Reinvestment — ${u.toFixed(4)} units @ ₹${n.toFixed(4)}`,
       });
       if (e1) { setErr(e1.message); setSaving(false); return; }
-      // Add units to holding as a buy
       const { data: hld } = await supabase.from('holdings').select('quantity').eq('id', holdingId).single();
       if (hld) await supabase.from('holdings').update({ quantity: Number(hld.quantity) + u }).eq('id', holdingId);
     } else {
@@ -360,7 +388,7 @@ function DividendForm({
   return (
     <div className="rounded-xl border p-4 space-y-3"
       style={{ borderColor: 'rgba(5,150,105,0.25)', backgroundColor: 'rgba(5,150,105,0.02)' }}>
-      <p className="text-xs font-semibold" style={{ color: '#059669' }}>Record Dividend</p>
+      <p className="text-xs font-semibold" style={{ color: '#059669' }}>{editingTxn ? 'Edit Dividend' : 'Record Dividend'}</p>
       {err && <p className="text-[11px]" style={{ color: '#DC2626' }}>{err}</p>}
 
       {/* Type toggle */}
@@ -447,6 +475,7 @@ export function HoldingDetailSheet({
   const [txnDeleteConfirmId, setTxnDeleteConfirmId] = useState<string | null>(null);
   const [deletingTxnId,      setDeletingTxnId]      = useState<string | null>(null);
   const [txnDeleteError,     setTxnDeleteError]     = useState('');
+  const [editingTxn,         setEditingTxn]         = useState<Transaction | null>(null);
   const [sipToggleIdx,       setSipToggleIdx]       = useState<number | null>(null);
   const [sipStopDate,        setSipStopDate]        = useState('');
   const [sipToggling,        setSipToggling]        = useState(false);
@@ -456,6 +485,7 @@ export function HoldingDetailSheet({
     if (!open) {
       setView('detail'); setTxnDeleteConfirmId(null); setTxnDeleteError('');
       setSipToggleIdx(null); setSipToggleErr('');
+      setEditingTxn(null);
     }
   }, [open]);
 
@@ -1187,6 +1217,31 @@ export function HoldingDetailSheet({
               )}
             </div>
             <div>
+              {/* Inline edit form for sell/dividend */}
+              {editingTxn && editingTxn.type === 'sell' && (
+                <div className="px-6 py-4 border-b" style={{ borderColor: '#FDE68A', backgroundColor: '#FFFBEB' }}>
+                  <RedemptionForm
+                    holdingId={h.id}
+                    maxUnits={Number(h.quantity)}
+                    currentNav={h.currentNav}
+                    buyTxns={h.transactions.filter(t => t.type === 'buy' || t.type === 'sip')}
+                    editingTxn={editingTxn}
+                    onSuccess={() => { setEditingTxn(null); onHoldingChanged(); }}
+                    onCancel={() => setEditingTxn(null)}
+                  />
+                </div>
+              )}
+              {editingTxn && editingTxn.type === 'dividend' && (
+                <div className="px-6 py-4 border-b" style={{ borderColor: '#FDE68A', backgroundColor: '#FFFBEB' }}>
+                  <DividendForm
+                    holdingId={h.id}
+                    editingTxn={editingTxn}
+                    onSuccess={() => { setEditingTxn(null); onHoldingChanged(); }}
+                    onCancel={() => setEditingTxn(null)}
+                  />
+                </div>
+              )}
+
               {(h.transactions ?? []).length === 0 ? (
                 <p className="px-6 py-8 text-xs text-center" style={{ color: '#9CA3AF' }}>No transactions found</p>
               ) : [...(h.transactions ?? [])]
@@ -1195,16 +1250,19 @@ export function HoldingDetailSheet({
                   const cfg        = TXN_CONFIG[t.type] ?? { label: t.type, bg: '#F3F4F6', text: '#6B7280', sign: 1 };
                   const amt        = Number(t.quantity) * Number(t.price);
                   const lbl        = txnLabel(t);
-                  const isEditable = t.type === 'buy' || t.type === 'sip';
-                  const isConfirming = txnDeleteConfirmId === t.id;
-                  const isDeleting   = deletingTxnId === t.id;
+                  const isConfirming  = txnDeleteConfirmId === t.id;
+                  const isDeleting    = deletingTxnId === t.id;
+                  const isBeingEdited = editingTxn?.id === t.id;
                   return (
-                    <div key={t.id} className="border-b px-6 py-3" style={{ borderColor: '#F7F5F0' }}>
+                    <div key={t.id} className="border-b px-6 py-3"
+                      style={{ borderColor: '#F7F5F0', backgroundColor: isBeingEdited ? 'rgba(201,168,76,0.05)' : undefined }}>
                       {isConfirming ? (
                         <div className="rounded-xl border p-3 space-y-2"
                           style={{ borderColor: 'rgba(220,38,38,0.25)', backgroundColor: 'rgba(220,38,38,0.02)' }}>
                           <p className="text-[11px] font-semibold" style={{ color: '#DC2626' }}>
                             Delete this {lbl} transaction from {fmtDate(t.date)} for {formatLargeINR(amt)}?
+                            {t.type === 'sell' && ' (sold units will be restored)'}
+                            {t.type === 'dividend' && t.notes?.includes('Reinvestment') && ' (reinvested units will be removed)'}
                           </p>
                           <div className="flex gap-2">
                             <Button onClick={() => handleDeleteTransaction(t.id)} disabled={isDeleting}
@@ -1234,18 +1292,26 @@ export function HoldingDetailSheet({
                           <span className="text-[11px] flex-shrink-0 w-16 text-right" style={{ color: '#6B7280' }}>
                             {Number(t.quantity).toFixed(4)}
                           </span>
-                          {isEditable && (
-                            <button
-                              onClick={() => { router.push(`/add-assets/mutual-funds?edit_transaction=${t.id}`); onClose(); }}
-                              className="flex-shrink-0 p-1.5 rounded-lg transition-colors"
-                              style={{ backgroundColor: 'rgba(27,42,74,0.06)', color: '#1B2A4A' }}
-                              title="Edit transaction"
-                            >
-                              <Edit className="w-3 h-3" />
-                            </button>
-                          )}
                           <button
-                            onClick={() => { setTxnDeleteConfirmId(t.id); setTxnDeleteError(''); }}
+                            onClick={() => {
+                              if (t.type === 'buy' || t.type === 'sip') {
+                                router.push(`/add-assets/mutual-funds?edit_transaction=${t.id}`);
+                                onClose();
+                              } else {
+                                setEditingTxn(isBeingEdited ? null : t);
+                              }
+                            }}
+                            className="flex-shrink-0 p-1.5 rounded-lg transition-colors"
+                            style={{
+                              backgroundColor: isBeingEdited ? 'rgba(201,168,76,0.15)' : 'rgba(27,42,74,0.06)',
+                              color: isBeingEdited ? '#C9A84C' : '#1B2A4A',
+                            }}
+                            title="Edit transaction"
+                          >
+                            <Edit className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => { setTxnDeleteConfirmId(t.id); setTxnDeleteError(''); setEditingTxn(null); }}
                             className="flex-shrink-0 p-1.5 rounded-lg transition-colors"
                             style={{ backgroundColor: 'rgba(220,38,38,0.06)', color: '#DC2626' }}
                             title="Delete transaction"

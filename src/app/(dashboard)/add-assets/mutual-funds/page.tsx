@@ -59,7 +59,6 @@ interface HolderFields {
   email: string;
   bankName: string;
   bankLast4: string;
-  pan: string;
 }
 
 interface SipCalcResult {
@@ -133,7 +132,7 @@ function newSipBlock(): SipBlock {
 
 const BLANK_HOLDER: HolderFields = {
   firstHolder: '', secondHolder: '', nominee: '',
-  mobile: '', email: '', bankName: '', bankLast4: '', pan: '',
+  mobile: '', email: '', bankName: '', bankLast4: '',
 };
 
 const INDIAN_BANKS = [
@@ -204,7 +203,7 @@ function HolderSection({
         <span className="flex items-center gap-2">
           <User className="w-3.5 h-3.5" />
           Holder &amp; Contact Details
-          {(holder.firstHolder || holder.mobile || holder.pan) && (
+          {(holder.firstHolder || holder.mobile) && (
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#059669' }} />
           )}
         </span>
@@ -258,12 +257,6 @@ function HolderSection({
                 value={holder.bankLast4}
                 onChange={(e) => onChange({ ...holder, bankLast4: e.target.value.replace(/\D/g, '').slice(0, 4) })}
                 placeholder="8149" maxLength={4} inputMode="numeric" className="h-9 text-xs" />
-            </div>
-            <div className="col-span-2 space-y-1">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>PAN</Label>
-              <Input value={holder.pan} onChange={set('pan')}
-                placeholder="ABCDE1234F" maxLength={10}
-                className="h-9 text-xs uppercase tracking-widest" />
             </div>
           </div>
         </div>
@@ -902,7 +895,6 @@ export default function MutualFundsPage() {
       email:         holder.email        || null,
       bank_name:     holder.bankName     || null,
       bank_last4:    holder.bankLast4    || null,
-      pan:           holder.pan          || null,
     };
 
     let payload: Record<string, unknown>;

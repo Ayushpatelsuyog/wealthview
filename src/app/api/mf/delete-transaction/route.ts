@@ -10,16 +10,23 @@ export async function DELETE(req: NextRequest) {
   const { transactionId } = await req.json();
   if (!transactionId) return NextResponse.json({ error: 'Missing transactionId' }, { status: 400 });
 
-  // Fetch transaction to get holding_id — RLS ensures ownership
+  // Fetch transaction (type + quantity needed for unit restoration) — RLS ensures ownership
   const { data: txn, error: txnErr } = await supabase
     .from('transactions')
-    .select('id, holding_id')
+    .select('id, holding_id, type, quantity, notes')
     .eq('id', transactionId)
     .single();
 
   if (txnErr || !txn) return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
 
   const holdingId = txn.holding_id;
+
+  // Fetch current holding quantity before deleting
+  const { data: holding } = await supabase
+    .from('holdings')
+    .select('quantity, avg_buy_price')
+    .eq('id', holdingId)
+    .single();
 
   // Delete the transaction
   const { error: delErr } = await supabase
@@ -29,32 +36,66 @@ export async function DELETE(req: NextRequest) {
 
   if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 });
 
-  // Count remaining buy/sip transactions for this holding
-  const { data: remaining, error: countErr } = await supabase
-    .from('transactions')
-    .select('quantity, price')
-    .eq('holding_id', holdingId)
-    .in('type', ['buy', 'sip']);
+  // ── Handle sell: restore units to holding ──────────────────────────────────
+  if (txn.type === 'sell' && holding) {
+    const restoredQty = Number(holding.quantity) + Number(txn.quantity);
+    // Recalculate avg from remaining buys
+    const { data: buys } = await supabase
+      .from('transactions')
+      .select('quantity, price')
+      .eq('holding_id', holdingId)
+      .in('type', ['buy', 'sip']);
 
-  if (countErr) return NextResponse.json({ error: countErr.message }, { status: 500 });
+    const totalQty = (buys ?? []).reduce((s, t) => s + Number(t.quantity), 0);
+    const totalAmt = (buys ?? []).reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
+    const avgPrice = totalQty > 0 ? totalAmt / totalQty : Number(holding.avg_buy_price);
 
-  if (!remaining || remaining.length === 0) {
-    // Last purchase transaction — delete the holding itself
-    await supabase.from('holdings').delete().eq('id', holdingId);
-    return NextResponse.json({ deleted: true, holdingDeleted: true });
+    await supabase
+      .from('holdings')
+      .update({ quantity: restoredQty, avg_buy_price: avgPrice })
+      .eq('id', holdingId);
+
+    return NextResponse.json({ deleted: true, holdingId, unitsRestored: Number(txn.quantity) });
   }
 
-  // Recalculate holding totals
-  const totalQty = remaining.reduce((s, t) => s + Number(t.quantity), 0);
-  const totalAmt = remaining.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
-  const avgPrice = totalQty > 0 ? totalAmt / totalQty : 0;
+  // ── Handle dividend reinvestment: remove re-invested units ─────────────────
+  if (txn.type === 'dividend' && txn.notes?.includes('Reinvestment') && holding) {
+    // Notes format: "IDCW Reinvestment — X.XXXX units @ ₹Y.YYYY"
+    const match = String(txn.notes).match(/([\d.]+) units/);
+    if (match) {
+      const reinvestedUnits = parseFloat(match[1]);
+      const newQty = Math.max(0, Number(holding.quantity) - reinvestedUnits);
+      await supabase.from('holdings').update({ quantity: newQty }).eq('id', holdingId);
+    }
+    return NextResponse.json({ deleted: true, holdingId });
+  }
 
-  const { error: updateErr } = await supabase
-    .from('holdings')
-    .update({ quantity: totalQty, avg_buy_price: avgPrice })
-    .eq('id', holdingId);
+  // ── Handle buy/sip: recalculate from remaining purchases ──────────────────
+  if (txn.type === 'buy' || txn.type === 'sip') {
+    const { data: remaining, error: countErr } = await supabase
+      .from('transactions')
+      .select('quantity, price')
+      .eq('holding_id', holdingId)
+      .in('type', ['buy', 'sip']);
 
-  if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    if (countErr) return NextResponse.json({ error: countErr.message }, { status: 500 });
+
+    if (!remaining || remaining.length === 0) {
+      await supabase.from('holdings').delete().eq('id', holdingId);
+      return NextResponse.json({ deleted: true, holdingDeleted: true });
+    }
+
+    const totalQty = remaining.reduce((s, t) => s + Number(t.quantity), 0);
+    const totalAmt = remaining.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
+    const avgPrice = totalQty > 0 ? totalAmt / totalQty : 0;
+
+    const { error: updateErr } = await supabase
+      .from('holdings')
+      .update({ quantity: totalQty, avg_buy_price: avgPrice })
+      .eq('id', holdingId);
+
+    if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
+  }
 
   return NextResponse.json({ deleted: true, holdingId });
 }

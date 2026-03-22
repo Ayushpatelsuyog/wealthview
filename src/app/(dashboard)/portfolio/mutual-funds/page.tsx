@@ -128,13 +128,27 @@ export default function MutualFundsPortfolioPage() {
   const [memberNames, setMemberNames] = useState<Record<string, string>>({});
   const [detailId, setDetailId]     = useState<string | null>(null);
 
-  // Filter + sort state
-  const [filterBroker,   setFilterBroker]   = useState('All');
-  const [filterPortfolio,setFilterPortfolio] = useState('All');
-  const [filterCategory, setFilterCategory]  = useState('All');
-  const [filterMember,   setFilterMember]    = useState('All');
-  const [sortKey,        setSortKey]         = useState<SortKey>('value');
-  const [searchQuery,    setSearchQuery]     = useState('');
+  // Filter + sort state — multi-select sets
+  const [filterBrokers,    setFilterBrokers]    = useState<Set<string>>(new Set());
+  const [filterPortfolios, setFilterPortfolios] = useState<Set<string>>(new Set());
+  const [filterCategories, setFilterCategories] = useState<Set<string>>(new Set());
+  const [filterMembers,    setFilterMembers]    = useState<Set<string>>(new Set());
+  const [sortKey,          setSortKey]          = useState<SortKey>('value');
+  const [searchQuery,      setSearchQuery]      = useState('');
+
+  function toggleSet(set: Set<string>, setFn: (s: Set<string>) => void, val: string) {
+    const next = new Set(set);
+    if (next.has(val)) next.delete(val); else next.add(val);
+    setFn(next);
+  }
+
+  function clearFilters() {
+    setFilterBrokers(new Set()); setFilterPortfolios(new Set());
+    setFilterCategories(new Set()); setFilterMembers(new Set());
+    setSearchQuery('');
+  }
+
+  const isFiltered = filterBrokers.size > 0 || filterPortfolios.size > 0 || filterCategories.size > 0 || filterMembers.size > 0 || !!searchQuery;
 
   // ── Load holdings ──────────────────────────────────────────────────────────
 
@@ -234,19 +248,19 @@ export default function MutualFundsPortfolioPage() {
 
   // ── Derived filter options ────────────────────────────────────────────────
 
-  const brokers    = useMemo(() => ['All', ...Array.from(new Set(holdings.map(h => h.brokers?.name ?? '—').filter(Boolean)))], [holdings]);
-  const portfolios = useMemo(() => ['All', ...Array.from(new Set(holdings.map(h => h.portfolios?.name ?? 'My Portfolio').filter(Boolean)))], [holdings]);
-  const categories = useMemo(() => ['All', ...Array.from(new Set(holdings.map(h => String(h.metadata?.category ?? '')).filter(Boolean)))], [holdings]);
-  const members    = useMemo(() => ['All', ...Array.from(new Set(holdings.map(h => h.memberName).filter(Boolean)))], [holdings]);
+  const brokers    = useMemo(() => Array.from(new Set(holdings.map(h => h.brokers?.name ?? '—').filter(Boolean))), [holdings]);
+  const portfolios = useMemo(() => Array.from(new Set(holdings.map(h => h.portfolios?.name ?? 'My Portfolio').filter(Boolean))), [holdings]);
+  const categories = useMemo(() => Array.from(new Set(holdings.map(h => String(h.metadata?.category ?? '')).filter(Boolean))), [holdings]);
+  const members    = useMemo(() => Array.from(new Set(holdings.map(h => h.memberName).filter(Boolean))), [holdings]);
 
   // ── Filtered + sorted holdings ────────────────────────────────────────────
 
   const filtered = useMemo(() => {
     let rows = holdings;
-    if (filterBroker    !== 'All') rows = rows.filter(h => (h.brokers?.name ?? '—') === filterBroker);
-    if (filterPortfolio !== 'All') rows = rows.filter(h => (h.portfolios?.name ?? 'My Portfolio') === filterPortfolio);
-    if (filterCategory  !== 'All') rows = rows.filter(h => String(h.metadata?.category ?? '') === filterCategory);
-    if (filterMember    !== 'All') rows = rows.filter(h => h.memberName === filterMember);
+    if (filterBrokers.size > 0)    rows = rows.filter(h => filterBrokers.has(h.brokers?.name ?? '—'));
+    if (filterPortfolios.size > 0) rows = rows.filter(h => filterPortfolios.has(h.portfolios?.name ?? 'My Portfolio'));
+    if (filterCategories.size > 0) rows = rows.filter(h => filterCategories.has(String(h.metadata?.category ?? '')));
+    if (filterMembers.size > 0)    rows = rows.filter(h => filterMembers.has(h.memberName));
     if (searchQuery)               rows = rows.filter(h => h.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return [...rows].sort((a, b) => {
@@ -255,11 +269,11 @@ export default function MutualFundsPortfolioPage() {
         case 'pnlPct':  return (b.gainLossPct ?? 0) - (a.gainLossPct ?? 0);
         case 'xirr':    return (b.xirr ?? -Infinity) - (a.xirr ?? -Infinity);
         case 'name':    return a.name.localeCompare(b.name);
-        case 'recent':  return 0; // already sorted by created_at desc from DB
+        case 'recent':  return 0;
         default:        return 0;
       }
     });
-  }, [holdings, filterBroker, filterPortfolio, filterCategory, filterMember, searchQuery, sortKey]);
+  }, [holdings, filterBrokers, filterPortfolios, filterCategories, filterMembers, searchQuery, sortKey]);
 
   // ── Summary totals ────────────────────────────────────────────────────────
 
@@ -348,6 +362,9 @@ export default function MutualFundsPortfolioPage() {
       </button>
     );
   }
+
+  const filteredCount = filtered.length;
+  const totalCount    = holdings.length;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -451,37 +468,62 @@ export default function MutualFundsPortfolioPage() {
                 <option value="name">Sort: Name A-Z</option>
                 <option value="recent">Sort: Recent first</option>
               </select>
+              {/* Filter count + clear */}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px]" style={{ color: '#9CA3AF' }}>
+                  Showing <strong style={{ color: '#1A1A2E' }}>{filteredCount}</strong> of {totalCount}
+                </span>
+                {isFiltered && (
+                  <button onClick={clearFilters}
+                    className="text-[11px] px-2 py-0.5 rounded-full font-medium transition-colors"
+                    style={{ backgroundColor: 'rgba(220,38,38,0.08)', color: '#DC2626', border: '1px solid rgba(220,38,38,0.2)' }}>
+                    Clear filters ✕
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Broker pills */}
-            {brokers.length > 2 && (
+            {/* Broker pills — always show if >1 broker */}
+            {brokers.length > 1 && (
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: '#9CA3AF' }}>Broker</span>
-                {brokers.map(b => <Pill key={b} label={b} active={filterBroker === b} onClick={() => setFilterBroker(b)} />)}
+                {brokers.filter(b => b !== 'All').map(b => (
+                  <Pill key={b} label={b} active={filterBrokers.has(b)}
+                    onClick={() => toggleSet(filterBrokers, setFilterBrokers, b)} />
+                ))}
               </div>
             )}
 
             {/* Portfolio pills */}
-            {portfolios.length > 2 && (
+            {portfolios.length > 1 && (
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: '#9CA3AF' }}>Portfolio</span>
-                {portfolios.map(p => <Pill key={p} label={p} active={filterPortfolio === p} onClick={() => setFilterPortfolio(p)} />)}
+                {portfolios.filter(p => p !== 'All').map(p => (
+                  <Pill key={p} label={p} active={filterPortfolios.has(p)}
+                    onClick={() => toggleSet(filterPortfolios, setFilterPortfolios, p)} />
+                ))}
               </div>
             )}
 
-            {/* Category pills */}
-            {categories.length > 2 && (
+            {/* Category pills — always show if any categories exist */}
+            {categories.length > 1 && (
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: '#9CA3AF' }}>Category</span>
-                {categories.map(c => <Pill key={c} label={c} active={filterCategory === c} onClick={() => setFilterCategory(c)} />)}
+                {categories.filter(c => c !== 'All').map(c => (
+                  <Pill key={c} label={c} active={filterCategories.has(c)}
+                    onClick={() => toggleSet(filterCategories, setFilterCategories, c)} />
+                ))}
               </div>
             )}
 
             {/* Member pills */}
-            {members.length > 2 && (
+            {members.length > 1 && (
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: '#9CA3AF' }}>Member</span>
-                {members.map(m => <Pill key={m} label={m} active={filterMember === m} onClick={() => setFilterMember(m)} />)}
+                {members.filter(m => m !== 'All').map(m => (
+                  <Pill key={m} label={m} active={filterMembers.has(m)}
+                    onClick={() => toggleSet(filterMembers, setFilterMembers, m)} />
+                ))}
               </div>
             )}
           </div>
