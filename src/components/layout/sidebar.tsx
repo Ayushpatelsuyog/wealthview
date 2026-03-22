@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   TrendingUp, Globe, BarChart3, Layers, Building2,
   Bitcoin, DollarSign, FileText, Landmark, Leaf,
@@ -85,6 +85,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
 
 function NavRow({ item, depth = 0 }: { item: NavItem; depth?: number }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
 
   const hrefBase  = item.href?.split('?')[0] ?? '';
@@ -201,16 +202,15 @@ function NavRow({ item, depth = 0 }: { item: NavItem; depth?: number }) {
       <item.icon style={iconStyle} />
       <span style={labelStyle}>{item.label}</span>
       {item.addHref && (
-        <Link
-          href={item.addHref}
+        <button
           style={plusStyle}
-          onClick={(e) => e.stopPropagation()}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'rgba(201,168,76,0.20)'; (e.currentTarget as HTMLAnchorElement).style.color = '#C9A84C'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.35)'; }}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(item.addHref!); }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(201,168,76,0.20)'; (e.currentTarget as HTMLButtonElement).style.color = '#C9A84C'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.35)'; }}
           title="Add new"
         >
           <Plus style={{ width: 10, height: 10 }} />
-        </Link>
+        </button>
       )}
     </Link>
   );

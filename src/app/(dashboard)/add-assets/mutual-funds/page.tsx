@@ -533,7 +533,7 @@ function SipBlockCard({
 function SearchParamsReader({
   onParams,
 }: {
-  onParams: (edit: string | null, addTo: string | null, sip: boolean) => void;
+  onParams: (edit: string | null, addTo: string | null, sip: boolean, editTxn: string | null) => void;
 }) {
   const searchParams = useSearchParams();
   const cbRef = useRef(onParams);
@@ -543,6 +543,7 @@ function SearchParamsReader({
       searchParams.get('edit'),
       searchParams.get('add_to'),
       searchParams.get('sip') === '1',
+      searchParams.get('edit_transaction'),
     );
   }, [searchParams]);
   return null;
@@ -606,6 +607,14 @@ export default function MutualFundsPage() {
   const [errors,   setErrors]   = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [toast,    setToast]    = useState<Toast | null>(null);
+
+  // ── Edit single transaction mode ───────────────────────────────────────────
+  const [editTxnId,      setEditTxnId]      = useState<string | null>(null);
+  const [editTxnLoading, setEditTxnLoading] = useState(false);
+  const [editTxnError,   setEditTxnError]   = useState('');
+  const [editTxnData,    setEditTxnData]    = useState<{
+    fundName: string; txnType: string; folio: string;
+  } | null>(null);
 
   // ── Load user + family ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -685,6 +694,44 @@ export default function MutualFundsPage() {
       .then((data: NavData | null) => { if (data) setNavData(data); })
       .finally(() => setIsNavLoading(false));
   }, [prefill]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Load single transaction for edit_transaction mode ──────────────────────
+  useEffect(() => {
+    if (!editTxnId) { setEditTxnData(null); setEditTxnError(''); return; }
+    setEditTxnLoading(true);
+    setEditTxnError('');
+    (async () => {
+      try {
+        const { data: txn, error: txnErr } = await supabase
+          .from('transactions')
+          .select('id, type, price, quantity, date, fees, holding_id')
+          .eq('id', editTxnId)
+          .single();
+        if (txnErr || !txn) { setEditTxnError('Transaction not found'); setEditTxnLoading(false); return; }
+        const { data: holding, error: holdingErr } = await supabase
+          .from('holdings')
+          .select('id, symbol, name, metadata')
+          .eq('id', txn.holding_id)
+          .single();
+        if (holdingErr || !holding) { setEditTxnError('Holding not found'); setEditTxnLoading(false); return; }
+        const meta = (holding.metadata ?? {}) as Record<string, unknown>;
+        // Pre-fill form fields: invested amount ≈ price × quantity + fees
+        setAmount(String(Math.round(Number(txn.price) * Number(txn.quantity) + Number(txn.fees ?? 0))));
+        setPurchaseDate(txn.date);
+        setNav(String(txn.price));
+        setFolio(meta.folio ? String(meta.folio) : '');
+        setEditTxnData({
+          fundName: holding.name,
+          txnType:  txn.type,
+          folio:    meta.folio ? String(meta.folio) : '',
+        });
+        setEditTxnLoading(false);
+      } catch (e) {
+        setEditTxnError(e instanceof Error ? e.message : 'Failed to load transaction');
+        setEditTxnLoading(false);
+      }
+    })();
+  }, [editTxnId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Fund search ────────────────────────────────────────────────────────────
   function handleQueryChange(val: string) {
@@ -928,6 +975,40 @@ export default function MutualFundsPage() {
       setIsSaving(false); }
   }
 
+  // ── Save a single transaction (edit_transaction mode) ─────────────────────
+  async function handleSaveTransaction() {
+    const errs: Record<string, string> = {};
+    if (!amount || parseFloat(amount) <= 0) errs.amount = 'Enter invested amount';
+    if (!nav    || parseFloat(nav)    <= 0) errs.nav    = 'Enter NAV at purchase';
+    if (!purchaseDate)                      errs.purchaseDate = 'Enter purchase date';
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    setIsSaving(true);
+    setToast(null);
+    const n     = parseFloat(nav);
+    const applySD = purchaseDate >= '2020-07-01';
+    const sd    = applySD ? parseFloat((parseFloat(amount) * 0.00005).toFixed(2)) : 0;
+    const effAmt = parseFloat(amount) - sd;
+    const u     = parseFloat((effAmt / n).toFixed(6));
+
+    try {
+      const res = await fetch('/api/mf/update-transaction', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionId: editTxnId, price: n, quantity: u, date: purchaseDate, fees: sd }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setToast({ type: 'error', message: json.error ?? 'Update failed' }); return; }
+      setToast({ type: 'success', message: 'Transaction updated' });
+      setTimeout(() => router.push('/portfolio/mutual-funds'), 1200);
+    } catch (e) {
+      setToast({ type: 'error', message: String(e) });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   // ── Update a single SIP block ──────────────────────────────────────────────
   function updateSipBlock(id: string, updated: SipBlock) {
     setSipBlocks((prev) => prev.map((b) => b.id === id ? updated : b));
@@ -940,10 +1021,11 @@ export default function MutualFundsPage() {
     <div className="p-6 max-w-2xl mx-auto">
       {/* Isolated Suspense for search params — does not affect page SSR */}
       <Suspense>
-        <SearchParamsReader onParams={(edit, addTo, sip) => {
+        <SearchParamsReader onParams={(edit, addTo, sip, editTxn) => {
           setEditHoldingId(edit);
           setAddToHoldingId(addTo);
           setForceSipMode(sip);
+          setEditTxnId(editTxn);
         }} />
       </Suspense>
 
@@ -953,17 +1035,125 @@ export default function MutualFundsPage() {
         </div>
         <div>
           <h1 className="font-display text-xl font-semibold" style={{ color: '#1A1A2E' }}>
-            {mode === 'edit' ? 'Edit Holding' : mode === 'add_to' ? 'Add More Units' : 'Mutual Funds'}
+            {editTxnId ? 'Edit Transaction'
+              : mode === 'edit' ? 'Edit Holding'
+              : mode === 'add_to' ? 'Add More Units'
+              : 'Mutual Funds'}
           </h1>
           <p className="text-xs" style={{ color: '#9CA3AF' }}>
-            {mode === 'edit'   ? 'Update the details for this holding'
-             : mode === 'add_to' ? 'Add more units to an existing holding'
-             : 'Add and manage your mutual fund holdings'}
+            {editTxnId ? (editTxnData?.fundName ?? '…')
+              : mode === 'edit'   ? 'Update the details for this holding'
+              : mode === 'add_to' ? 'Add more units to an existing holding'
+              : 'Add and manage your mutual fund holdings'}
           </p>
         </div>
       </div>
 
       {toast && <ToastBanner toast={toast} onClose={() => setToast(null)} />}
+
+      {/* ── Edit Transaction mode ──────────────────────────────────────────── */}
+      {editTxnId ? (
+        <>
+          {editTxnLoading && (
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl mb-4 text-xs"
+              style={{ backgroundColor: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.15)', color: '#1B2A4A' }}>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />Loading transaction data…
+            </div>
+          )}
+          {editTxnError && !editTxnLoading && (
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl mb-4 text-xs"
+              style={{ backgroundColor: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)', color: '#DC2626' }}>
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />{editTxnError}
+              <button onClick={() => router.push('/portfolio/mutual-funds')} className="ml-auto underline flex-shrink-0">Back to portfolio</button>
+            </div>
+          )}
+          {editTxnData && !editTxnLoading && !editTxnError && (
+            <div className="wv-card p-5 space-y-4">
+              {/* Locked banner */}
+              <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
+                style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.08)' }}>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold"
+                  style={{ backgroundColor: editTxnData.txnType === 'sip' ? 'rgba(59,130,246,0.12)' : 'rgba(27,42,74,0.10)',
+                           color: editTxnData.txnType === 'sip' ? '#2563EB' : '#1B2A4A' }}>
+                  {editTxnData.txnType === 'sip' ? 'SIP' : 'Lump Sum'}
+                </span>
+                <span className="text-xs font-semibold flex-1" style={{ color: '#1A1A2E' }}>{editTxnData.fundName}</span>
+                <span className="text-[10px]" style={{ color: '#9CA3AF' }}>Fund &amp; portfolio locked</span>
+              </div>
+
+              {/* Editable fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs" style={{ color: '#6B7280' }}>Invested Amount (₹)</Label>
+                  <Input value={amount} onChange={(e) => { setAmount(e.target.value); setErrors(er => ({ ...er, amount: '' })); }}
+                    placeholder="50000" className="h-9 text-xs" type="number"
+                    style={errors.amount ? { borderColor: '#DC2626' } : {}} />
+                  <FieldError msg={errors.amount} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs" style={{ color: '#6B7280' }}>
+                    Purchase Date
+                    {isHistLoading && <Loader2 className="w-2.5 h-2.5 inline ml-1 animate-spin" style={{ color: '#9CA3AF' }} />}
+                  </Label>
+                  <Input type="date" value={purchaseDate}
+                    onChange={(e) => { handleDateChange(e.target.value); setErrors(er => ({ ...er, purchaseDate: '' })); }}
+                    className="h-9 text-xs" max={new Date().toISOString().split('T')[0]}
+                    style={errors.purchaseDate ? { borderColor: '#DC2626' } : {}} />
+                  <FieldError msg={errors.purchaseDate} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs" style={{ color: '#6B7280' }}>NAV at Purchase</Label>
+                  {histNavHint && (
+                    <p className="text-[10px]" style={{ color: '#059669' }}>
+                      NAV on {fmtNavDate(histNavHint.date)}: ₹{histNavHint.nav.toFixed(4)} (auto-filled)
+                    </p>
+                  )}
+                  <Input value={nav} onChange={(e) => { setNav(e.target.value); setErrors(er => ({ ...er, nav: '' })); }}
+                    placeholder="54.1200" className="h-9 text-xs" type="number" step="0.0001"
+                    style={errors.nav ? { borderColor: '#DC2626' } : {}} />
+                  <FieldError msg={errors.nav} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs" style={{ color: '#6B7280' }}>
+                    Units Allotted
+                    {applyStampDuty && <span className="ml-1 text-[10px]" style={{ color: '#059669' }}>after stamp duty</span>}
+                  </Label>
+                  <Input value={units} readOnly placeholder="= (Amount − Stamp Duty) ÷ NAV" className="h-9 text-xs"
+                    style={{ backgroundColor: units ? 'rgba(5,150,105,0.04)' : undefined }} />
+                  {applyStampDuty && units && (
+                    <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                      Stamp duty ₹{stampDutyAmt.toFixed(2)} · effective ₹{effectiveAmount.toFixed(2)}
+                    </p>
+                  )}
+                </div>
+                {editTxnData.folio && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs" style={{ color: '#6B7280' }}>Folio</Label>
+                    <Input value={editTxnData.folio} readOnly className="h-9 text-xs"
+                      style={{ backgroundColor: '#F7F5F0' }} />
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-1">
+                <Button onClick={handleSaveTransaction} disabled={isSaving}
+                  className="flex-1 h-9 text-xs font-semibold"
+                  style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>
+                  {isSaving
+                    ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Saving…</>
+                    : 'Update Transaction'}
+                </Button>
+                <Button variant="outline" onClick={() => router.push('/portfolio/mutual-funds')}
+                  className="h-9 text-xs" style={{ borderColor: '#E8E5DD', color: '#6B7280' }}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+      <>
 
       {/* Prefill loading / error / mode banners */}
       {prefillLoading && (
@@ -1388,6 +1578,9 @@ export default function MutualFundsPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      </>
+      )}
     </div>
   );
 }
