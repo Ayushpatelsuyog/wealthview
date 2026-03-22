@@ -7,7 +7,7 @@ import {
   Bitcoin, DollarSign, FileText, Landmark, Leaf,
   UserCheck, PiggyBank, Shield, Heart, Car, Home,
   Wallet, Gem, Building, Settings, ChevronDown,
-  ChevronRight, LayoutDashboard, Activity, PieChart, ArrowLeft,
+  ChevronRight, LayoutDashboard, Activity, PieChart, ArrowLeft, Plus,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -17,7 +17,7 @@ interface NavItem {
   label: string;
   href?: string;
   icon: React.ElementType;
-  badge?: string;
+  addHref?: string;   // optional "+" link shown next to the item
   children?: NavItem[];
 }
 
@@ -25,9 +25,9 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: 'EQUITY & FUNDS',
     items: [
-      { label: 'Indian Stocks',  href: '/add-assets/indian-stocks',  icon: TrendingUp, badge: '12' },
+      { label: 'Indian Stocks',  href: '/add-assets/indian-stocks',  icon: TrendingUp },
       { label: 'Global Stocks',  href: '/add-assets/global-stocks',  icon: Globe },
-      { label: 'Mutual Funds',   href: '/add-assets/mutual-funds',   icon: BarChart3,  badge: '8'  },
+      { label: 'Mutual Funds',   href: '/portfolio/mutual-funds',    icon: BarChart3, addHref: '/add-assets/mutual-funds' },
       { label: 'PMS',            href: '/add-assets/pms',            icon: Layers },
       { label: 'AIF',            href: '/add-assets/aif',            icon: Building2 },
     ],
@@ -35,7 +35,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: 'CRYPTO & FOREX',
     items: [
-      { label: 'Crypto', href: '/add-assets/crypto', icon: Bitcoin,    badge: '4' },
+      { label: 'Crypto', href: '/add-assets/crypto', icon: Bitcoin    },
       { label: 'Forex',  href: '/add-assets/forex',  icon: DollarSign },
     ],
   },
@@ -43,7 +43,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     title: 'FIXED INCOME',
     items: [
       { label: 'Bonds',          href: '/add-assets/bonds',          icon: FileText },
-      { label: 'Fixed Deposits', href: '/add-assets/fixed-deposits', icon: Landmark,  badge: '3' },
+      { label: 'Fixed Deposits', href: '/add-assets/fixed-deposits', icon: Landmark  },
       { label: 'PPF',            href: '/add-assets/ppf',            icon: Leaf },
       { label: 'EPF / VPF',      href: '/add-assets/epf-vpf',        icon: UserCheck },
       { label: 'Gratuity',       href: '/add-assets/gratuity',       icon: PiggyBank },
@@ -130,15 +130,19 @@ function NavRow({ item, depth = 0 }: { item: NavItem; depth?: number }) {
     lineHeight:     1.4,
   };
 
-  const badgeStyle: React.CSSProperties = {
-    fontSize:        9,
-    lineHeight:      1,
-    padding:         '2px 5px',
-    borderRadius:    6,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    color:           'rgba(255,255,255,0.45)',
+  const plusStyle: React.CSSProperties = {
+    width:           18,
+    height:          18,
+    display:         'flex',
+    alignItems:      'center',
+    justifyContent:  'center',
+    borderRadius:    4,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    color:           'rgba(255,255,255,0.35)',
     marginLeft:      'auto',
     flexShrink:      0,
+    textDecoration:  'none',
+    transition:      'background-color 0.15s, color 0.15s',
   };
 
   if (item.children) {
@@ -196,7 +200,18 @@ function NavRow({ item, depth = 0 }: { item: NavItem; depth?: number }) {
     >
       <item.icon style={iconStyle} />
       <span style={labelStyle}>{item.label}</span>
-      {item.badge && <span style={badgeStyle}>{item.badge}</span>}
+      {item.addHref && (
+        <Link
+          href={item.addHref}
+          style={plusStyle}
+          onClick={(e) => e.stopPropagation()}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'rgba(201,168,76,0.20)'; (e.currentTarget as HTMLAnchorElement).style.color = '#C9A84C'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.35)'; }}
+          title="Add new"
+        >
+          <Plus style={{ width: 10, height: 10 }} />
+        </Link>
+      )}
     </Link>
   );
 }

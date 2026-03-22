@@ -1,10 +1,41 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Bell, Search } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
+import { createClient } from '@/lib/supabase/client';
+
+interface UserProfile { name: string; role: string; familyName: string | null; initials: string }
+
+function getInitials(name: string): string {
+  return name.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase();
+}
 
 export function Header() {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data: u } = await supabase
+        .from('users')
+        .select('name, role, family_id, families(name)')
+        .eq('id', user.id)
+        .single();
+      if (!u) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const familyRecord = u.families as any;
+      const familyName = (familyRecord && !Array.isArray(familyRecord)) ? (familyRecord.name as string) : null;
+      setProfile({ name: u.name, role: u.role, familyName, initials: getInitials(u.name) });
+    });
+  }, []);
+
+  const displayName  = profile?.name ?? '…';
+  const displayRole  = profile ? `${profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}${profile.familyName ? ' · ' + profile.familyName : ''}` : '';
+  const initials     = profile?.initials ?? '?';
+
   return (
     <header
       className="h-14 flex items-center justify-between px-6 flex-shrink-0"
@@ -24,25 +55,16 @@ export function Header() {
       <div className="flex items-center gap-3">
         <button className="relative p-1.5 rounded-lg hover:bg-bg transition-colors">
           <Bell className="w-4 h-4" style={{ color: '#6B7280' }} />
-          <span
-            className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 flex items-center justify-center text-[9px] font-bold text-white rounded-full"
-            style={{ backgroundColor: '#C9A84C' }}
-          >
-            3
-          </span>
         </button>
 
         <div className="flex items-center gap-2.5 pl-3" style={{ borderLeft: '1px solid #E8E5DD' }}>
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-semibold leading-none" style={{ color: '#1A1A2E' }}>Rajesh Shah</p>
-            <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>Admin · Shah Family</p>
+            <p className="text-xs font-semibold leading-none" style={{ color: '#1A1A2E' }}>{displayName}</p>
+            {displayRole && <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>{displayRole}</p>}
           </div>
           <Avatar className="w-7 h-7">
-            <AvatarFallback
-              className="text-white text-[10px] font-bold"
-              style={{ backgroundColor: '#1B2A4A' }}
-            >
-              RS
+            <AvatarFallback className="text-white text-[10px] font-bold" style={{ backgroundColor: '#1B2A4A' }}>
+              {initials}
             </AvatarFallback>
           </Avatar>
         </div>

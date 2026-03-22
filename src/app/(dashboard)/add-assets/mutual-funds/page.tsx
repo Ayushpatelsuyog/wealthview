@@ -328,7 +328,7 @@ export default function MutualFundsPage() {
         setFolio(''); setSipAmount(''); setSipDate(''); setSipStart(''); setSipCount('');
         setErrors({});
       } else {
-        setTimeout(() => router.push('/portfolio'), 1200);
+        setTimeout(() => router.push('/portfolio/mutual-funds'), 1200);
       }
     } catch (e) {
       setToast({ type: 'error', message: String(e) });
@@ -654,7 +654,7 @@ export default function MutualFundsPage() {
                 variant="outline"
                 className="h-9 text-xs"
                 style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
-                onClick={() => router.push('/portfolio')}
+                onClick={() => router.push('/portfolio/mutual-funds')}
               >
                 Cancel
               </Button>
@@ -668,12 +668,14 @@ export default function MutualFundsPage() {
             <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Import Statement</p>
             <label className="flex flex-col items-center justify-center w-full h-40 rounded-xl border-2 border-dashed cursor-pointer hover:bg-bg transition-colors" style={{ borderColor: '#E8E5DD' }}>
               <Upload className="w-8 h-8 mb-2" style={{ color: '#9CA3AF' }} />
-              <p className="text-sm font-medium" style={{ color: '#6B7280' }}>Drop your statement here</p>
-              <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>CAMS PDF, KFintech PDF, .csv, .xlsx</p>
-              <input type="file" className="hidden" accept=".pdf,.csv,.xlsx" />
+              <p className="text-sm font-medium" style={{ color: '#6B7280' }}>Drop your CAS statement here</p>
+              <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>PDF or CSV · CAMS or KFintech</p>
+              <input type="file" className="hidden" accept=".pdf,.csv" />
             </label>
             <div className="mt-4 p-3 rounded-xl text-xs" style={{ backgroundColor: '#F7F5F0', color: '#6B7280' }}>
-              Supported formats: CAMS CAS PDF · KFintech CAS PDF · Zerodha Coin CSV · Groww Statement CSV
+              Upload your CAMS or KFintech CAS statement (PDF or CSV) — download it from{' '}
+              <a href="https://www.mfcentral.com" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: '#1B2A4A' }}>mfcentral.com</a>{' '}
+              for free.
             </div>
           </div>
         </TabsContent>
@@ -684,20 +686,21 @@ export default function MutualFundsPage() {
             <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Connect Platform APIs</p>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { name: 'MFCentral',       color: '#1B2A4A', letter: 'M', desc: 'Fetch from MFCentral portal',  status: 'Ready', statusBg: 'rgba(5,150,105,0.1)', statusColor: '#059669' },
-                { name: 'Kuvera',          color: '#5C6BC0', letter: 'K', desc: 'Import via Kuvera account',    status: 'Ready', statusBg: 'rgba(5,150,105,0.1)', statusColor: '#059669' },
-                { name: 'Coin by Zerodha', color: '#2E8B8B', letter: 'C', desc: 'Zerodha Coin integration',     status: 'Soon',  statusBg: '#F5EDD6',             statusColor: '#C9A84C' },
-                { name: 'Groww',           color: '#00D09C', letter: 'G', desc: 'Groww mutual funds sync',      status: 'Soon',  statusBg: '#F5EDD6',             statusColor: '#C9A84C' },
+                { name: 'MFCentral',       color: '#1B2A4A', letter: 'M', desc: 'Fetch from MFCentral portal' },
+                { name: 'Kuvera',          color: '#5C6BC0', letter: 'K', desc: 'Import via Kuvera account'   },
+                { name: 'Coin by Zerodha', color: '#2E8B8B', letter: 'C', desc: 'Zerodha Coin integration'    },
+                { name: 'Groww',           color: '#00D09C', letter: 'G', desc: 'Groww mutual funds sync'     },
               ].map((api) => (
                 <div key={api.name} className="p-4 rounded-xl border" style={{ borderColor: '#E8E5DD' }}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: api.color }}>{api.letter}</div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: api.statusBg, color: api.statusColor }}>{api.status}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#F5EDD6', color: '#C9A84C' }}>Coming Soon</span>
                   </div>
                   <p className="text-xs font-semibold mb-0.5" style={{ color: '#1A1A2E' }}>{api.name}</p>
-                  <p className="text-[11px] mb-3" style={{ color: '#9CA3AF' }}>{api.desc}</p>
-                  <Button disabled={api.status === 'Soon'} className="w-full h-7 text-[11px]" style={{ backgroundColor: api.status === 'Ready' ? '#1B2A4A' : '#F7F5F0', color: api.status === 'Ready' ? 'white' : '#9CA3AF' }}>
-                    {api.status === 'Ready' ? 'Connect' : 'Coming Soon'}
+                  <p className="text-[11px] mb-1" style={{ color: '#9CA3AF' }}>{api.desc}</p>
+                  <p className="text-[10px] mb-3" style={{ color: '#D1D5DB' }}>Requires licensed AA integration</p>
+                  <Button disabled className="w-full h-7 text-[11px]" style={{ backgroundColor: '#F7F5F0', color: '#9CA3AF' }}>
+                    Coming Soon
                   </Button>
                 </div>
               ))}

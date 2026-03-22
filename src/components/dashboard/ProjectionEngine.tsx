@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { formatLargeINR } from '@/lib/utils/formatters';
+import type { DashboardSnapshot } from '@/lib/types/dashboard';
 
 function calcProjection(current: number, equity: number, debt: number, gold: number, sipL: number) {
   const sip = sipL * 100000;
@@ -15,12 +17,6 @@ function calcProjection(current: number, equity: number, debt: number, gold: num
     points.push({ year: y, portfolio: Math.round(portfolio), invested: Math.round(invested), inflows: Math.round(sip * y) });
   }
   return points;
-}
-
-function fmt(v: number) {
-  if (v >= 10000000) return `₹${(v / 10000000).toFixed(2)}Cr`;
-  if (v >= 100000)   return `₹${(v / 100000).toFixed(2)}L`;
-  return `₹${v.toLocaleString('en-IN')}`;
 }
 
 interface SliderRowProps {
@@ -64,20 +60,25 @@ function CustomTooltip({ active, payload, label }: TTProps) {
           <span style={{ color: '#6B7280' }}>
             {p.name === 'portfolio' ? 'Projected NW' : p.name === 'invested' ? 'Invested Capital' : 'FD/Ins Inflows'}:
           </span>
-          <span className="font-semibold" style={{ color: '#1A1A2E' }}>{fmt(p.value)}</span>
+          <span className="font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(p.value)}</span>
         </div>
       ))}
     </div>
   );
 }
 
-export function ProjectionEngine() {
+interface Props { snapshot: DashboardSnapshot }
+
+export function ProjectionEngine({ snapshot }: Props) {
+  const startingNetWorth = snapshot.netWorth;
+  const hasData = snapshot.hasRealData;
+
   const [equity, setEquity] = useState(12);
   const [debt,   setDebt]   = useState(7);
   const [gold,   setGold]   = useState(8);
-  const [sip,    setSip]    = useState(15);
+  const [sip,    setSip]    = useState(hasData ? Math.round((snapshot.monthlySipOutflow || 0) / 100000) || 5 : 15);
 
-  const data = useMemo(() => calcProjection(84732500, equity, debt, gold, sip), [equity, debt, gold, sip]);
+  const data = useMemo(() => calcProjection(startingNetWorth, equity, debt, gold, sip), [startingNetWorth, equity, debt, gold, sip]);
 
   const yr3  = data[3]?.portfolio  ?? 0;
   const yr5  = data[5]?.portfolio  ?? 0;
@@ -86,17 +87,29 @@ export function ProjectionEngine() {
 
   return (
     <div className="wv-card p-5">
-      <h3 className="section-heading text-sm mb-5">Projection Engine</h3>
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="section-heading text-sm">Projection Engine</h3>
+        {hasData && startingNetWorth > 0 && (
+          <span className="text-[11px]" style={{ color: '#9CA3AF' }}>
+            Starting from {formatLargeINR(startingNetWorth)}
+          </span>
+        )}
+      </div>
+      {!hasData && (
+        <p className="text-[11px] mb-4" style={{ color: '#9CA3AF' }}>
+          Add investments to project from your actual net worth. Currently projecting from ₹0.
+        </p>
+      )}
 
       {/* Sliders */}
-      <div className="grid grid-cols-2 gap-x-6 gap-y-3 mb-5">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3 mb-5 mt-4">
         <SliderRow label="Equity Return" unit="%" min={6}  max={20} step={0.5} value={equity} onChange={setEquity} />
         <SliderRow label="Debt Return"   unit="%" min={4}  max={10} step={0.5} value={debt}   onChange={setDebt}   />
         <SliderRow label="Gold Return"   unit="%" min={2}  max={14} step={0.5} value={gold}   onChange={setGold}   />
         <SliderRow label="Annual SIP"    unit="₹" min={0}  max={50} step={1}   value={sip}    onChange={setSip}    />
       </div>
 
-      {/* Custom legend */}
+      {/* Legend */}
       <div className="flex items-center gap-5 mb-3">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#C9A84C' }} />
@@ -123,7 +136,7 @@ export function ProjectionEngine() {
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#F0EDE6" />
           <XAxis dataKey="year" tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} label={{ value: 'Years', position: 'insideBottom', offset: -2, fontSize: 10, fill: '#9CA3AF' }} />
-          <YAxis tickFormatter={(v) => `₹${(v / 10000000).toFixed(1)}Cr`} tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} width={58} />
+          <YAxis tickFormatter={(v) => formatLargeINR(v)} tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} width={70} />
           <Tooltip content={<CustomTooltip />} />
           <Area type="monotone" dataKey="invested" stroke="#F5EDD6" strokeWidth={1} fill="#F5EDD6" fillOpacity={1} />
           <Line type="monotone" dataKey="inflows"   stroke="#2E8B8B" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
@@ -141,7 +154,7 @@ export function ProjectionEngine() {
         ].map((item) => (
           <div key={item.label} className="text-center p-3 rounded-xl" style={{ backgroundColor: '#F7F5F0' }}>
             <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: '#9CA3AF' }}>{item.label}</p>
-            <p className="font-display text-sm font-semibold" style={{ color: '#1B2A4A' }}>{fmt(item.value)}</p>
+            <p className="font-display text-sm font-semibold" style={{ color: '#1B2A4A' }}>{formatLargeINR(item.value)}</p>
           </div>
         ))}
       </div>

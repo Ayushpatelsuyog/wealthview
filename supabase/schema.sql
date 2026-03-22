@@ -201,29 +201,51 @@ ALTER TABLE alerts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
+-- SECURITY DEFINER HELPER
+-- Reads the current user's family_id without triggering RLS on
+-- the users table, preventing infinite recursion in policies.
+-- ============================================================
+CREATE OR REPLACE FUNCTION get_my_family_id()
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT family_id FROM users WHERE id = auth.uid();
+$$;
+
+-- ============================================================
 -- RLS POLICIES (all tables exist by this point)
 -- ============================================================
 
 -- families
 CREATE POLICY "families_select" ON families
   FOR SELECT USING (
-    created_by = auth.uid() OR
-    id IN (SELECT family_id FROM users WHERE id = auth.uid())
+    created_by = auth.uid()
+    OR id = get_my_family_id()
   );
 
 CREATE POLICY "families_insert" ON families
   FOR INSERT WITH CHECK (created_by = auth.uid());
 
+-- Admin-only update: must be the admin of this specific family
 CREATE POLICY "families_update" ON families
   FOR UPDATE USING (
-    id IN (SELECT family_id FROM users WHERE id = auth.uid() AND role = 'admin')
+    id = get_my_family_id()
+    AND EXISTS (
+      SELECT 1 FROM users
+      WHERE id = auth.uid() AND role = 'admin'
+    )
   );
 
 -- users
+-- Own row is always visible (no subquery, no recursion).
+-- Family members visible via the SECURITY DEFINER lookup.
 CREATE POLICY "users_select" ON users
   FOR SELECT USING (
-    id = auth.uid() OR
-    family_id IN (SELECT family_id FROM users WHERE id = auth.uid())
+    id = auth.uid()
+    OR family_id = get_my_family_id()
   );
 
 CREATE POLICY "users_insert" ON users
@@ -235,22 +257,21 @@ CREATE POLICY "users_update" ON users
 -- portfolios
 CREATE POLICY "portfolios_family_access" ON portfolios
   FOR ALL USING (
-    family_id IN (SELECT family_id FROM users WHERE id = auth.uid())
+    family_id = get_my_family_id()
   );
 
 -- brokers
 CREATE POLICY "brokers_family_access" ON brokers
   FOR ALL USING (
-    family_id IN (SELECT family_id FROM users WHERE id = auth.uid())
+    family_id = get_my_family_id()
   );
 
 -- holdings
 CREATE POLICY "holdings_portfolio_access" ON holdings
   FOR ALL USING (
     portfolio_id IN (
-      SELECT id FROM portfolios WHERE family_id IN (
-        SELECT family_id FROM users WHERE id = auth.uid()
-      )
+      SELECT id FROM portfolios
+      WHERE family_id = get_my_family_id()
     )
   );
 
@@ -258,11 +279,10 @@ CREATE POLICY "holdings_portfolio_access" ON holdings
 CREATE POLICY "transactions_holding_access" ON transactions
   FOR ALL USING (
     holding_id IN (
-      SELECT h.id FROM holdings h
+      SELECT h.id
+      FROM holdings h
       JOIN portfolios p ON h.portfolio_id = p.id
-      WHERE p.family_id IN (
-        SELECT family_id FROM users WHERE id = auth.uid()
-      )
+      WHERE p.family_id = get_my_family_id()
     )
   );
 
@@ -270,16 +290,15 @@ CREATE POLICY "transactions_holding_access" ON transactions
 CREATE POLICY "manual_assets_portfolio_access" ON manual_assets
   FOR ALL USING (
     portfolio_id IN (
-      SELECT id FROM portfolios WHERE family_id IN (
-        SELECT family_id FROM users WHERE id = auth.uid()
-      )
+      SELECT id FROM portfolios
+      WHERE family_id = get_my_family_id()
     )
   );
 
 -- insurance_policies
 CREATE POLICY "insurance_family_access" ON insurance_policies
   FOR ALL USING (
-    family_id IN (SELECT family_id FROM users WHERE id = auth.uid())
+    family_id = get_my_family_id()
   );
 
 -- price_cache
@@ -297,7 +316,7 @@ CREATE POLICY "benchmarks_read" ON benchmarks
 -- advisory_logs
 CREATE POLICY "advisory_family_access" ON advisory_logs
   FOR ALL USING (
-    family_id IN (SELECT family_id FROM users WHERE id = auth.uid())
+    family_id = get_my_family_id()
   );
 
 -- alerts
@@ -305,12 +324,20 @@ CREATE POLICY "alerts_owner_access" ON alerts
   FOR ALL USING (user_id = auth.uid());
 
 -- audit_log
+-- Own records always visible.
+-- Admins can also see all records belonging to their family members.
 CREATE POLICY "audit_log_admin_access" ON audit_log
   FOR SELECT USING (
-    user_id = auth.uid() OR
-    auth.uid() IN (
-      SELECT id FROM users WHERE role = 'admin'
-      AND family_id IN (SELECT family_id FROM users WHERE id = auth.uid())
+    user_id = auth.uid()
+    OR (
+      EXISTS (
+        SELECT 1 FROM users
+        WHERE id = auth.uid() AND role = 'admin'
+      )
+      AND user_id IN (
+        SELECT id FROM users
+        WHERE family_id = get_my_family_id()
+      )
     )
   );
 
