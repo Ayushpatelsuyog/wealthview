@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Plus, TrendingUp, TrendingDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
+import { navCacheGet, navCacheSet } from '@/lib/utils/nav-cache';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,6 +17,7 @@ interface MemberRow {
 
 interface RawHolding {
   asset_type: string;
+  symbol: string;
   quantity: number;
   avg_buy_price: number;
   metadata: Record<string, unknown>;
@@ -63,17 +65,24 @@ interface AssetRow {
   hasData: boolean;
 }
 
-function buildRows(holdings: RawHolding[], filterUserId: string | null): AssetRow[] {
+function buildRows(holdings: RawHolding[], filterUserId: string | null, navMap: Map<string, number>): AssetRow[] {
   const filtered = filterUserId
     ? holdings.filter(h => h.portfolios?.user_id === filterUserId)
     : holdings;
 
   // aggregate by asset_type
-  const byType = new Map<string, { count: number; invested: number }>();
+  const byType = new Map<string, { count: number; invested: number; currentValue: number }>();
   for (const h of filtered) {
-    const existing = byType.get(h.asset_type) ?? { count: 0, invested: 0 };
+    const existing = byType.get(h.asset_type) ?? { count: 0, invested: 0, currentValue: 0 };
+    const qty = h.quantity ?? 0;
+    const invested = qty * (h.avg_buy_price ?? 0);
+    // For MF: use live NAV if available; otherwise fall back to invested
+    const currentValue = (h.asset_type === 'mutual_fund' && navMap.has(h.symbol))
+      ? qty * navMap.get(h.symbol)!
+      : invested;
     existing.count += 1;
-    existing.invested += (h.quantity ?? 0) * (h.avg_buy_price ?? 0);
+    existing.invested += invested;
+    existing.currentValue += currentValue;
     byType.set(h.asset_type, existing);
   }
 
@@ -81,18 +90,10 @@ function buildRows(holdings: RawHolding[], filterUserId: string | null): AssetRo
     const agg = byType.get(config.key);
     const invested = agg?.invested ?? 0;
     const count = agg?.count ?? 0;
-    const currentValue = invested; // use invested as current value (no live prices on summary)
+    const currentValue = agg?.currentValue ?? 0;
     const pnl = currentValue - invested;
     const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
-    return {
-      config,
-      holdings: count,
-      invested,
-      currentValue,
-      pnl,
-      pnlPct,
-      hasData: count > 0,
-    };
+    return { config, holdings: count, invested, currentValue, pnl, pnlPct, hasData: count > 0 };
   });
 }
 
@@ -124,6 +125,8 @@ export default function PortfolioPage() {
   const [selectedMemberId, setSelectedMemberId] = useState<string>('');
   const [holdings, setHoldings] = useState<RawHolding[]>([]);
   const [loading, setLoading] = useState(true);
+  const [navLoading, setNavLoading] = useState(false);
+  const [navMap, setNavMap] = useState<Map<string, number>>(new Map());
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -160,27 +163,52 @@ export default function PortfolioPage() {
       }
 
       // Load holdings with portfolio info
+      let loadedHoldings: RawHolding[] = [];
       try {
         const { data: holdingsData, error: hErr } = await supabase
           .from('holdings')
-          .select('asset_type, quantity, avg_buy_price, metadata, portfolios(user_id)');
+          .select('asset_type, symbol, quantity, avg_buy_price, metadata, portfolios(user_id)');
         if (hErr && !holdingsData) {
           setError('Failed to load portfolio data');
         } else if (holdingsData) {
-          setHoldings(holdingsData as unknown as RawHolding[]);
+          loadedHoldings = holdingsData as unknown as RawHolding[];
+          setHoldings(loadedHoldings);
         }
       } catch {
         setError('Failed to load portfolio data');
       }
 
       setLoading(false);
+
+      // Auto-fetch live NAVs for MF holdings
+      const mfSymbols = Array.from(new Set(
+        loadedHoldings.filter(h => h.asset_type === 'mutual_fund' && h.symbol).map(h => h.symbol)
+      ));
+      if (mfSymbols.length > 0) {
+        setNavLoading(true);
+        const results = await Promise.allSettled(mfSymbols.map(async sym => {
+          const cached = navCacheGet(sym);
+          if (cached) return { sym, nav: cached.nav };
+          const res = await fetch(`/api/mf/nav?scheme_code=${sym}`);
+          if (!res.ok) return { sym, nav: null };
+          const { nav, navDate } = await res.json();
+          navCacheSet(sym, nav, navDate ?? '');
+          return { sym, nav: nav as number };
+        }));
+        const map = new Map<string, number>();
+        results.forEach(r => {
+          if (r.status === 'fulfilled' && r.value.nav != null) map.set(r.value.sym, r.value.nav);
+        });
+        setNavMap(map);
+        setNavLoading(false);
+      }
     }
     load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filterUserId = viewMode === 'individual' ? (selectedMemberId || null) : null;
-  const rows = buildRows(holdings, filterUserId);
+  const rows = buildRows(holdings, filterUserId, navMap);
   const stats = computeStats(rows);
 
   const totalHoldings = rows.reduce((s, r) => s + r.holdings, 0);
@@ -263,7 +291,9 @@ export default function PortfolioPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <p className="text-xs text-gray-500 mb-1">Total Net Worth</p>
-          <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(stats.netWorth)}</p>
+          {navLoading
+            ? <div className="h-6 w-24 rounded animate-pulse bg-gray-100 mt-1" />
+            : <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(stats.netWorth)}</p>}
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <p className="text-xs text-gray-500 mb-1">Total Invested</p>
@@ -271,21 +301,27 @@ export default function PortfolioPage() {
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <p className="text-xs text-gray-500 mb-1">Total P&amp;L</p>
-          <div className="flex items-center gap-1">
-            {pnlPositive
-              ? <TrendingUp className="w-4 h-4" style={{ color: '#059669' }} />
-              : <TrendingDown className="w-4 h-4" style={{ color: '#DC2626' }} />}
-            <p className="text-lg font-bold" style={{ color: pnlPositive ? '#059669' : '#DC2626' }}>
-              {pnlPositive ? '+' : ''}{formatLargeINR(stats.pnl)}
-            </p>
-          </div>
+          {navLoading
+            ? <div className="h-6 w-24 rounded animate-pulse bg-gray-100 mt-1" />
+            : <div className="flex items-center gap-1">
+                {pnlPositive
+                  ? <TrendingUp className="w-4 h-4" style={{ color: '#059669' }} />
+                  : <TrendingDown className="w-4 h-4" style={{ color: '#DC2626' }} />}
+                <p className="text-lg font-bold" style={{ color: pnlPositive ? '#059669' : '#DC2626' }}>
+                  {pnlPositive ? '+' : ''}{formatLargeINR(stats.pnl)}
+                </p>
+              </div>}
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <p className="text-xs text-gray-500 mb-1">Overall P&amp;L %</p>
-          <p className="text-lg font-bold" style={{ color: pnlPositive ? '#059669' : '#DC2626' }}>
-            {pnlPositive ? '+' : ''}{stats.pnlPct.toFixed(2)}%
-          </p>
-          <p className="text-[10px] text-gray-400 mt-0.5">XIRR: N/A</p>
+          {navLoading
+            ? <div className="h-6 w-20 rounded animate-pulse bg-gray-100 mt-1" />
+            : <>
+                <p className="text-lg font-bold" style={{ color: pnlPositive ? '#059669' : '#DC2626' }}>
+                  {pnlPositive ? '+' : ''}{stats.pnlPct.toFixed(2)}%
+                </p>
+                <p className="text-[10px] text-gray-400 mt-0.5">XIRR: N/A</p>
+              </>}
         </div>
       </div>
 
@@ -336,11 +372,15 @@ export default function PortfolioPage() {
                     {zero ? '—' : formatLargeINR(row.invested)}
                   </td>
                   <td className="px-3 py-3 text-right" style={{ color: zero ? '#D1D5DB' : '#374151' }}>
-                    {zero ? '—' : formatLargeINR(row.currentValue)}
+                    {zero ? '—' : navLoading && row.config.key === 'mutual_fund'
+                      ? <span className="inline-block w-16 h-4 rounded animate-pulse bg-gray-100" />
+                      : formatLargeINR(row.currentValue)}
                   </td>
                   <td className="px-3 py-3 text-right">
                     {zero ? (
                       <span style={{ color: '#D1D5DB' }}>—</span>
+                    ) : navLoading && row.config.key === 'mutual_fund' ? (
+                      <span className="inline-block w-12 h-4 rounded animate-pulse bg-gray-100" />
                     ) : (
                       <span style={{ color: rowPnlPos ? '#059669' : '#DC2626' }}>
                         {rowPnlPos ? '+' : ''}{formatLargeINR(row.pnl)}
@@ -350,6 +390,8 @@ export default function PortfolioPage() {
                   <td className="px-3 py-3 text-right">
                     {zero ? (
                       <span style={{ color: '#D1D5DB' }}>—</span>
+                    ) : navLoading && row.config.key === 'mutual_fund' ? (
+                      <span className="inline-block w-10 h-4 rounded animate-pulse bg-gray-100" />
                     ) : (
                       <span style={{ color: rowPnlPos ? '#059669' : '#DC2626' }}>
                         {rowPnlPos ? '+' : ''}{row.pnlPct.toFixed(2)}%

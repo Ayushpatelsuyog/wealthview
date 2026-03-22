@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   TrendingUp, Globe, BarChart3, Layers, Building2,
   Bitcoin, DollarSign, FileText, Landmark, Leaf,
-  UserCheck, PiggyBank, Shield, Heart, Car, Home,
+  UserCheck, PiggyBank, Shield, Heart,
   Wallet, Gem, Building, Settings, ChevronDown,
   ChevronRight, LayoutDashboard, Activity, PieChart, ArrowLeft, Plus,
 } from 'lucide-react';
@@ -27,7 +27,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     items: [
       { label: 'Indian Stocks',  href: '/add-assets/indian-stocks',  icon: TrendingUp },
       { label: 'Global Stocks',  href: '/add-assets/global-stocks',  icon: Globe },
-      { label: 'Mutual Funds',   href: '/portfolio/mutual-funds',    icon: BarChart3, addHref: '/add-assets/mutual-funds' },
+      { label: 'Mutual Funds',   href: '/portfolio/mutual-funds',    icon: BarChart3 },
       { label: 'PMS',            href: '/add-assets/pms',            icon: Layers },
       { label: 'AIF',            href: '/add-assets/aif',            icon: Building2 },
     ],
@@ -53,17 +53,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: 'INSURANCE',
     items: [
-      {
-        label: 'Life & Health', icon: Heart,
-        children: [
-          { label: 'Life Term',       href: '/add-assets/insurance?type=life_term',       icon: Shield },
-          { label: 'Life Guaranteed', href: '/add-assets/insurance?type=life_guaranteed', icon: Shield },
-          { label: 'Life ULIP',       href: '/add-assets/insurance?type=life_ulip',       icon: Shield },
-          { label: 'Health',          href: '/add-assets/insurance?type=health',          icon: Heart  },
-          { label: 'Vehicle',         href: '/add-assets/insurance?type=vehicle',         icon: Car    },
-          { label: 'Property',        href: '/add-assets/insurance?type=property',        icon: Home   },
-        ],
-      },
+      { label: 'Life & Health', href: '/add-assets/insurance', icon: Heart },
     ],
   },
   {

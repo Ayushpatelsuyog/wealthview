@@ -11,6 +11,7 @@ import { HoldingDetailSheet } from '@/components/portfolio/HoldingDetailSheet';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR, formatPercentage } from '@/lib/utils/formatters';
 import { calculateXIRR } from '@/lib/utils/calculations';
+import { navCacheGet, navCacheSet } from '@/lib/utils/nav-cache';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -193,21 +194,26 @@ export default function MutualFundsPortfolioPage() {
     setHoldings(rows);
     setLoading(false);
 
-    // Fetch NAVs
+    // Fetch NAVs for all unique symbols (auto on page load)
     const unique = Array.from(new Set(rows.map(r => r.symbol)));
-    await Promise.allSettled(unique.map(sym => fetchNav(sym, rows)));
+    await Promise.allSettled(unique.map(sym => fetchNav(sym)));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function fetchNav(symbol: string, base?: HoldingRow[]) {
+  async function fetchNav(symbol: string) {
     try {
-      const res = await fetch(`/api/mf/nav?scheme_code=${symbol}`);
-      if (!res.ok) throw new Error();
-      const { nav: currentNav, navDate } = await res.json();
+      // Check 5-minute client-side cache first
+      const cached = navCacheGet(symbol);
+      const currentNav  = cached?.nav    ?? await (async () => {
+        const res = await fetch(`/api/mf/nav?scheme_code=${symbol}`);
+        if (!res.ok) throw new Error();
+        const { nav, navDate: nd } = await res.json();
+        navCacheSet(symbol, nav, nd);
+        return nav;
+      })();
+      const navDate = cached?.navDate ?? navCacheGet(symbol)?.navDate ?? '';
 
-      setHoldings(prev => {
-        const src = base ?? prev;
-        return src.map(h => {
-          if (h.symbol !== symbol) return { ...h, navLoading: false };
+      setHoldings(prev => prev.map(h => {
+          if (h.symbol !== symbol) return h;   // only update matching symbol
           const currentValue = Number(h.quantity) * currentNav;
           const gainLoss     = currentValue - h.investedValue;
           const gainLossPct  = h.investedValue > 0 ? (gainLoss / h.investedValue) * 100 : 0;
@@ -224,8 +230,7 @@ export default function MutualFundsPortfolioPage() {
             }
           }
           return { ...h, currentNav, navDate, navLoading: false, currentValue, gainLoss, gainLossPct, xirr };
-        });
-      });
+        }));
     } catch {
       setHoldings(prev => prev.map(h => h.symbol === symbol ? { ...h, navLoading: false } : h));
     }
