@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -176,39 +176,129 @@ function calcPnL(
 }
 
 function RedemptionForm({
-  holdingId, maxUnits, currentNav, buyTxns, editingTxn, onSuccess, onCancel,
+  holdingId, symbol, maxUnits, currentNav, buyTxns, editingTxn, onSuccess, onCancel,
 }: {
-  holdingId: string; maxUnits: number; currentNav: number | null;
+  holdingId: string; symbol: string; maxUnits: number; currentNav: number | null;
   buyTxns: Transaction[];
   editingTxn?: Transaction | null;
   onSuccess: () => void; onCancel: () => void;
 }) {
   const supabase = createClient();
-  const [units,    setUnits]    = useState(editingTxn ? String(editingTxn.quantity) : '');
-  const [sellNav,  setSellNav]  = useState(editingTxn ? String(editingTxn.price) : (currentNav?.toFixed(4) ?? ''));
-  const [sellDate, setSellDate] = useState(editingTxn?.date ?? new Date().toISOString().split('T')[0]);
-  const [reason,   setReason]   = useState(editingTxn?.notes ?? '');
-  const [saving,   setSaving]   = useState(false);
-  const [err,      setErr]      = useState('');
 
-  // When editing, available units = current + already-sold units (since we'll delete the old txn)
+  const initUnits = editingTxn ? String(editingTxn.quantity) : '';
+  const initNav   = editingTxn ? String(editingTxn.price) : (currentNav?.toFixed(4) ?? '');
+  const initDate  = editingTxn?.date ?? new Date().toISOString().split('T')[0];
+  const initAmt   = editingTxn
+    ? (Number(editingTxn.quantity) * Number(editingTxn.price)).toFixed(2)
+    : '';
+
+  const [mode,        setMode]        = useState<'units' | 'amount'>('units');
+  const [units,       setUnits]       = useState(initUnits);
+  const [sellNav,     setSellNav]     = useState(initNav);
+  const [amount,      setAmount]      = useState(initAmt);
+  const [sellDate,    setSellDate]    = useState(initDate);
+  const [reason,      setReason]      = useState(editingTxn?.notes ?? '');
+  const [saving,      setSaving]      = useState(false);
+  const [err,         setErr]         = useState('');
+  const [navFetching, setNavFetching] = useState(false);
+  const [navHint,     setNavHint]     = useState('');
+  // which field is currently auto-calculated (green tint)
+  const [derivedField, setDerivedField] = useState<'units' | 'nav' | 'amount' | null>(
+    editingTxn ? 'amount' : null
+  );
+  // prevent the date-change effect from running on mount when editing
+  const didMount = useRef(false);
+
   const effectiveMaxUnits = editingTxn ? maxUnits + Number(editingTxn.quantity) : maxUnits;
 
+  // ── Auto-fetch NAV when date changes ────────────────────────────────────────
+  useEffect(() => {
+    if (!symbol) return;
+    // Skip initial mount when editing (NAV already pre-filled)
+    if (editingTxn && !didMount.current) { didMount.current = true; return; }
+    didMount.current = true;
+
+    setNavFetching(true);
+    const today = new Date().toISOString().split('T')[0];
+    const url = sellDate === today
+      ? `/api/mf/nav?scheme_code=${symbol}`
+      : `/api/mf/nav-history?scheme_code=${symbol}&date=${sellDate}`;
+
+    fetch(url)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.nav != null) {
+          const navStr = Number(data.nav).toFixed(4);
+          setSellNav(navStr);
+          // Format "DD-MM-YYYY" → "DD MMM YYYY"
+          let dateLabel = sellDate;
+          if (data.actualDate) {
+            const [d, m, y] = data.actualDate.split('-');
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            dateLabel = `${d} ${months[parseInt(m) - 1]} ${y}`;
+          }
+          setNavHint(`NAV as on ${dateLabel} (auto-fetched)`);
+          // Recalc the dependent field
+          const n = Number(data.nav);
+          const u = parseFloat(units);
+          const a = parseFloat(amount);
+          if (u > 0) { setAmount((u * n).toFixed(2)); setDerivedField('amount'); }
+          else if (a > 0) { setUnits((a / n).toFixed(4)); setDerivedField('units'); }
+        }
+      })
+      .catch(() => {})
+      .finally(() => setNavFetching(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sellDate, symbol]);
+
+  // ── Field change handlers (any two → calc third) ─────────────────────────────
+  function handleUnitsChange(val: string) {
+    setUnits(val);
+    const u = parseFloat(val), n = parseFloat(sellNav);
+    if (u > 0 && n > 0) { setAmount((u * n).toFixed(2)); setDerivedField('amount'); }
+    else { setDerivedField(null); }
+  }
+
+  function handleNavChange(val: string) {
+    setSellNav(val);
+    setNavHint(''); // user is overriding the auto-fetched value
+    const n = parseFloat(val), u = parseFloat(units), a = parseFloat(amount);
+    if (n > 0 && u > 0) { setAmount((u * n).toFixed(2)); setDerivedField('amount'); }
+    else if (n > 0 && a > 0) { setUnits((a / n).toFixed(4)); setDerivedField('units'); }
+    else { setDerivedField(null); }
+  }
+
+  function handleAmountChange(val: string) {
+    setAmount(val);
+    const a = parseFloat(val), n = parseFloat(sellNav);
+    if (a > 0 && n > 0) { setUnits((a / n).toFixed(4)); setDerivedField('units'); }
+    else if (a > 0 && parseFloat(units) > 0) {
+      const uv = parseFloat(units);
+      setSellNav((a / uv).toFixed(4)); setNavHint(''); setDerivedField('nav');
+    } else { setDerivedField(null); }
+  }
+
+  // ── Derived calculations ──────────────────────────────────────────────────────
   const u = parseFloat(units) || 0;
   const n = parseFloat(sellNav) || 0;
-  const redeemValue = u * n;
-  const stt = redeemValue * 0.001;  // 0.001% (equity MFs)
-  const exitLoad = u > 0 && n > 0 && sellDate ? calcExitLoad(u, sellDate, buyTxns) : 0;
-  const pnl = u > 0 && n > 0 && sellDate ? calcPnL(u, n, sellDate, buyTxns) : null;
-  const netProceeds = redeemValue - stt - exitLoad;
+  const redeemValue  = u * n;
+  const stt          = redeemValue * 0.001;
+  const exitLoad     = u > 0 && n > 0 && sellDate ? calcExitLoad(u, sellDate, buyTxns) : 0;
+  const pnl          = u > 0 && n > 0 && sellDate ? calcPnL(u, n, sellDate, buyTxns) : null;
+  const netProceeds  = redeemValue - stt - exitLoad;
   const isFullRedeem = u >= effectiveMaxUnits - 0.0001;
 
+  const autoStyle = {
+    backgroundColor: 'rgba(5,150,105,0.07)',
+    borderColor: 'rgba(5,150,105,0.35)',
+  };
+
+  // ── Submit ────────────────────────────────────────────────────────────────────
   async function submit() {
     if (!u || u <= 0 || u > effectiveMaxUnits) { setErr(`Enter up to ${effectiveMaxUnits.toFixed(4)} units`); return; }
-    if (!n || n <= 0)                  { setErr('Enter a valid sell NAV'); return; }
+    if (!n || n <= 0) { setErr('Enter a valid sell NAV'); return; }
     setSaving(true); setErr('');
 
-    // If editing: delete old transaction first (API will restore units)
     if (editingTxn) {
       const delRes = await fetch('/api/mf/delete-transaction', {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' },
@@ -223,7 +313,6 @@ function RedemptionForm({
       notes: reason || null,
     });
     if (error) { setErr(error.message); setSaving(false); return; }
-    // Recalculate holding quantity: fetch current (post-delete) and subtract new sell
     const { data: hld } = await supabase.from('holdings').select('quantity').eq('id', holdingId).single();
     const newQty = Math.max(0, Number(hld?.quantity ?? 0) - u);
     await supabase.from('holdings').update({ quantity: newQty }).eq('id', holdingId);
@@ -233,41 +322,108 @@ function RedemptionForm({
   return (
     <div className="rounded-xl border p-4 space-y-3"
       style={{ borderColor: 'rgba(220,38,38,0.25)', backgroundColor: 'rgba(220,38,38,0.02)' }}>
-      <p className="text-xs font-semibold" style={{ color: '#DC2626' }}>{editingTxn ? 'Edit Redemption' : 'Record Redemption'}</p>
+
+      {/* Header + mode toggle */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold" style={{ color: '#DC2626' }}>
+          {editingTxn ? 'Edit Redemption' : 'Record Redemption'}
+        </p>
+        <div className="flex gap-0.5 p-0.5 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.06)' }}>
+          {(['units', 'amount'] as const).map(m => (
+            <button key={m} type="button" onClick={() => setMode(m)}
+              className="px-2.5 py-1 rounded-md text-[10px] font-medium transition-all"
+              style={mode === m
+                ? { backgroundColor: '#DC2626', color: 'white' }
+                : { color: '#6B7280' }}>
+              {m === 'units' ? 'By Units' : 'By Amount'}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {err && <p className="text-[11px]" style={{ color: '#DC2626' }}>{err}</p>}
+
+      {/* Three fields: Units · NAV · Amount */}
       <div className="grid grid-cols-3 gap-2">
+
+        {/* Units */}
         <div className="space-y-1">
-          <Label className="text-[10px]" style={{ color: '#6B7280' }}>Units to Redeem</Label>
+          <Label className="text-[10px] flex items-center gap-1" style={{ color: '#6B7280' }}>
+            Units to Redeem
+            {derivedField === 'units' && (
+              <span className="font-semibold text-[9px]" style={{ color: '#059669' }}>AUTO</span>
+            )}
+          </Label>
           <div className="flex gap-1">
-            <Input value={units} onChange={e => setUnits(e.target.value)}
-              placeholder={`Max ${effectiveMaxUnits.toFixed(4)}`} type="number" step="0.0001" className="h-8 text-xs flex-1" />
-            <button onClick={() => setUnits(effectiveMaxUnits.toFixed(4))}
+            <Input value={units} onChange={e => handleUnitsChange(e.target.value)}
+              placeholder={`Max ${effectiveMaxUnits.toFixed(4)}`}
+              type="number" step="0.0001"
+              className="h-8 text-xs flex-1"
+              style={derivedField === 'units' ? autoStyle : {}} />
+            <button type="button" onClick={() => handleUnitsChange(effectiveMaxUnits.toFixed(4))}
               className="px-2 rounded text-[10px] font-medium flex-shrink-0"
               style={{ backgroundColor: 'rgba(220,38,38,0.08)', color: '#DC2626', border: '1px solid rgba(220,38,38,0.2)' }}>
               All
             </button>
           </div>
+          {derivedField === 'units' && (
+            <p className="text-[10px]" style={{ color: '#059669' }}>Auto-calculated</p>
+          )}
         </div>
+
+        {/* Sell NAV */}
         <div className="space-y-1">
-          <Label className="text-[10px]" style={{ color: '#6B7280' }}>Sell NAV (₹)</Label>
-          <Input value={sellNav} onChange={e => setSellNav(e.target.value)}
-            type="number" step="0.0001" className="h-8 text-xs" />
+          <Label className="text-[10px] flex items-center gap-1" style={{ color: '#6B7280' }}>
+            Sell NAV (₹)
+            {navFetching && <Loader2 className="w-2.5 h-2.5 animate-spin" style={{ color: '#9CA3AF' }} />}
+          </Label>
+          <Input value={sellNav} onChange={e => handleNavChange(e.target.value)}
+            type="number" step="0.0001"
+            className="h-8 text-xs" />
+          {navHint && !navFetching && (
+            <p className="text-[10px]" style={{ color: '#059669' }}>{navHint}</p>
+          )}
         </div>
+
+        {/* Amount */}
+        <div className="space-y-1">
+          <Label className="text-[10px] flex items-center gap-1" style={{ color: '#6B7280' }}>
+            {mode === 'amount' ? 'Amount Received (₹)' : 'Gross Amount (₹)'}
+            {derivedField === 'amount' && (
+              <span className="font-semibold text-[9px]" style={{ color: '#059669' }}>AUTO</span>
+            )}
+          </Label>
+          <Input value={amount} onChange={e => handleAmountChange(e.target.value)}
+            placeholder="Units × NAV"
+            type="number" step="0.01"
+            className="h-8 text-xs"
+            style={derivedField === 'amount' ? autoStyle : {}} />
+          {derivedField === 'amount' && (
+            <p className="text-[10px]" style={{ color: '#059669' }}>Auto-calculated</p>
+          )}
+        </div>
+      </div>
+
+      {/* Date + Reason */}
+      <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
           <Label className="text-[10px]" style={{ color: '#6B7280' }}>Redemption Date</Label>
           <Input value={sellDate} onChange={e => setSellDate(e.target.value)}
             type="date" className="h-8 text-xs" max={new Date().toISOString().split('T')[0]} />
         </div>
+        <div className="space-y-1">
+          <Label className="text-[10px]" style={{ color: '#6B7280' }}>Reason (optional)</Label>
+          <Input value={reason} onChange={e => setReason(e.target.value)}
+            placeholder="e.g. Goal completion" className="h-8 text-xs" />
+        </div>
       </div>
-      <Input value={reason} onChange={e => setReason(e.target.value)}
-        placeholder="Reason (optional)" className="h-8 text-xs" />
 
       {/* Charges & P&L breakdown */}
       {u > 0 && n > 0 && (
         <div className="rounded-lg p-3 space-y-1.5"
           style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
           <div className="flex justify-between text-[11px]">
-            <span style={{ color: '#6B7280' }}>Redemption value</span>
+            <span style={{ color: '#6B7280' }}>Gross redemption value</span>
             <span className="font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(redeemValue)}</span>
           </div>
           <div className="flex justify-between text-[11px]">
@@ -280,8 +436,7 @@ function RedemptionForm({
               <span style={{ color: '#DC2626' }}>−{formatLargeINR(exitLoad)}</span>
             </div>
           )}
-          <div className="flex justify-between text-[11px] border-t pt-1.5"
-            style={{ borderColor: '#E8E5DD' }}>
+          <div className="flex justify-between text-[11px] border-t pt-1.5" style={{ borderColor: '#E8E5DD' }}>
             <span className="font-semibold" style={{ color: '#6B7280' }}>Net proceeds</span>
             <span className="font-bold" style={{ color: '#059669' }}>{formatLargeINR(netProceeds)}</span>
           </div>
@@ -1170,7 +1325,7 @@ export function HoldingDetailSheet({
           {showRedeem && (
             <div className="px-6 py-4 border-b" style={{ borderColor: '#E8E5DD' }}>
               <RedemptionForm
-                holdingId={h.id} maxUnits={Number(h.quantity)} currentNav={h.currentNav}
+                holdingId={h.id} symbol={h.symbol} maxUnits={Number(h.quantity)} currentNav={h.currentNav}
                 buyTxns={h.transactions.filter(t => t.type === 'buy' || t.type === 'sip')}
                 onSuccess={() => { setShowRedeem(false); setRedeemDone(true); onHoldingChanged(); }}
                 onCancel={() => setShowRedeem(false)}
@@ -1221,7 +1376,7 @@ export function HoldingDetailSheet({
               {editingTxn && editingTxn.type === 'sell' && (
                 <div className="px-6 py-4 border-b" style={{ borderColor: '#FDE68A', backgroundColor: '#FFFBEB' }}>
                   <RedemptionForm
-                    holdingId={h.id}
+                    holdingId={h.id} symbol={h.symbol}
                     maxUnits={Number(h.quantity)}
                     currentNav={h.currentNav}
                     buyTxns={h.transactions.filter(t => t.type === 'buy' || t.type === 'sip')}
