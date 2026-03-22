@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
     currentNav,
     holderDetails,
     sipMetadata,
+    sipMonthlyBreakdown,
   } = body;
 
   // ── 1. Validate required fields ───────────────────────────────────────────
@@ -145,24 +146,59 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: holdingErr?.message ?? 'Holding insert failed (RLS?)' }, { status: 500 });
   }
 
-  // ── 7. Create transaction ─────────────────────────────────────────────────
-  const { data: txn, error: txnErr } = await supabase
-    .from('transactions')
-    .insert({
-      holding_id: holding.id,
-      type:       isSIP ? 'sip' : 'buy',
-      quantity:   units,
-      price:      purchaseNav,
-      date:       purchaseDate,
-      fees:       fees ?? parseFloat((investedAmount * 0.00005).toFixed(2)),
-      notes:      folio ? `Folio: ${folio}` : (isSIP ? 'SIP purchase' : 'Lump sum purchase'),
-    })
-    .select('id')
-    .single();
+  // ── 7. Create transaction(s) ──────────────────────────────────────────────
+  // For SIPs with a monthly breakdown, insert one row per installment
+  const hasBreakdown = isSIP && Array.isArray(sipMonthlyBreakdown) && sipMonthlyBreakdown.length > 0;
 
-  if (txnErr) {
-    return NextResponse.json({ error: txnErr.message }, { status: 500 });
+  if (hasBreakdown) {
+    type BreakdownItem = { date: string; nav: number; units_purchased: number; stamp_duty?: number };
+    type SipGroup = { sipNumber: number; sipAmount: number; sipStart: string; sipDate: string; breakdown: BreakdownItem[] };
+
+    // Accept either per-SIP array of groups, or flat array (legacy)
+    const isGrouped = !!(sipMonthlyBreakdown[0] as SipGroup)?.breakdown;
+    const groups: SipGroup[] = isGrouped
+      ? sipMonthlyBreakdown as SipGroup[]
+      : [{ sipNumber: 1, sipAmount: parseFloat(sipAmount ?? 0), sipStart: purchaseDate, sipDate: '1st', breakdown: sipMonthlyBreakdown as BreakdownItem[] }];
+
+    const allTxnRows: object[] = [];
+    for (const sip of groups) {
+      const amtFmt = Number(sip.sipAmount).toLocaleString('en-IN');
+      const label  = `SIP #${sip.sipNumber} - ₹${amtFmt}/month (started ${sip.sipStart})`;
+      for (const inst of sip.breakdown) {
+        allTxnRows.push({
+          holding_id: holding.id,
+          type:       'sip',
+          quantity:   inst.units_purchased,
+          price:      inst.nav,
+          date:       inst.date,
+          fees:       inst.stamp_duty ?? 0,
+          notes:      label,
+        });
+      }
+    }
+
+    if (allTxnRows.length > 0) {
+      const { error: txnErr } = await supabase.from('transactions').insert(allTxnRows);
+      if (txnErr) return NextResponse.json({ error: txnErr.message }, { status: 500 });
+    }
+  } else {
+    // Single summary transaction (lump sum, or SIP without breakdown)
+    const { error: txnErr } = await supabase
+      .from('transactions')
+      .insert({
+        holding_id: holding.id,
+        type:       isSIP ? 'sip' : 'buy',
+        quantity:   units,
+        price:      purchaseNav,
+        date:       purchaseDate,
+        fees:       fees ?? parseFloat((investedAmount * 0.00005).toFixed(2)),
+        notes:      folio ? `Folio: ${folio}` : (isSIP ? 'SIP purchase' : 'Lump sum purchase'),
+      });
+
+    if (txnErr) {
+      return NextResponse.json({ error: txnErr.message }, { status: 500 });
+    }
   }
 
-  return NextResponse.json({ holdingId: holding.id, transactionId: txn.id });
+  return NextResponse.json({ holdingId: holding.id });
 }

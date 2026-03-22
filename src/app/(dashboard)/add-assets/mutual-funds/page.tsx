@@ -40,7 +40,7 @@ interface SipBlock {
   currentValue: number | null;
   pnl: number | null;
   xirr: number | null;
-  breakdown: { date: string; nav: number; units_purchased: number; amount: number }[];
+  breakdown: { date: string; nav: number; units_purchased: number; amount: number; stamp_duty: number; effective_amount: number }[];
   showBreakdown: boolean;
   manualOverride: boolean;
   // manual overrides
@@ -70,7 +70,7 @@ interface SipCalcResult {
   current_value: number;
   pnl: number;
   xirr: number | null;
-  monthly_breakdown: { date: string; nav: number; units_purchased: number; amount: number }[];
+  monthly_breakdown: { date: string; nav: number; units_purchased: number; amount: number; stamp_duty: number; effective_amount: number }[];
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -798,6 +798,16 @@ export default function MutualFundsPage() {
           }),
         },
         holderDetails: holderMeta,
+        // Per-SIP structured breakdown for individual transaction rows
+        sipMonthlyBreakdown: sipBlocks.some(b => b.breakdown.length > 0)
+          ? sipBlocks.map((b, i) => ({
+              sipNumber: i + 1,
+              sipAmount: parseFloat(b.sipAmount),
+              sipDate:   b.sipDate,
+              sipStart:  b.sipStart,
+              breakdown: b.breakdown,
+            }))
+          : undefined,
       };
     } else {
       payload = {

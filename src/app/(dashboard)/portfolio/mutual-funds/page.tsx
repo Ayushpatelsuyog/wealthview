@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   RefreshCw, PlusCircle, Loader2, AlertCircle, TrendingUp, TrendingDown,
-  ChevronDown, ChevronUp, MoreHorizontal, Search, Download, History,
+  MoreHorizontal, Search, Download, History,
 } from 'lucide-react';
 import { ImportHistory } from '@/components/portfolio/ImportHistory';
 import { HoldingDetailSheet } from '@/components/portfolio/HoldingDetailSheet';
@@ -14,7 +14,7 @@ import { calculateXIRR } from '@/lib/utils/calculations';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Transaction { id: string; date: string; price: number; quantity: number; type: string; fees: number }
+interface Transaction { id: string; date: string; price: number; quantity: number; type: string; fees: number; notes?: string }
 
 interface RawHolding {
   id: string;
@@ -125,7 +125,6 @@ export default function MutualFundsPortfolioPage() {
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState<string | null>(null);
   const [navRefreshing, setNavRefreshing] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [memberNames, setMemberNames] = useState<Record<string, string>>({});
   const [detailId, setDetailId]     = useState<string | null>(null);
 
@@ -158,7 +157,7 @@ export default function MutualFundsPortfolioPage() {
         id, symbol, name, quantity, avg_buy_price, metadata,
         portfolios(id, name, type, user_id),
         brokers(id, name, platform_type),
-        transactions(id, date, price, quantity, type, fees)
+        transactions(id, date, price, quantity, type, fees, notes)
       `)
       .eq('asset_type', 'mutual_fund')
       .order('created_at', { ascending: false });
@@ -502,7 +501,6 @@ export default function MutualFundsPortfolioPage() {
                   {filtered.length === 0 ? (
                     <tr><td colSpan={12} className="px-4 py-8 text-center text-xs" style={{ color: '#9CA3AF' }}>No funds match the current filters</td></tr>
                   ) : filtered.map((h) => {
-                    const isExpanded = expandedId === h.id;
                     const rowBg = h.gainLoss != null
                       ? h.gainLoss > 0 ? 'rgba(5,150,105,0.02)' : h.gainLoss < 0 ? 'rgba(220,38,38,0.02)' : 'transparent'
                       : 'transparent';
@@ -514,20 +512,17 @@ export default function MutualFundsPortfolioPage() {
                           key={h.id}
                           style={{ borderBottom: '1px solid #F7F5F0', backgroundColor: rowBg, cursor: 'pointer' }}
                           className="hover:bg-[#FAFAF8] transition-colors"
-                          onClick={() => setExpandedId(isExpanded ? null : h.id)}
+                          onClick={() => setDetailId(h.id)}
                         >
                           {/* Fund name */}
                           <td className="px-4 py-3" style={{ maxWidth: 260 }}>
-                            <div className="flex items-center gap-2">
-                              {isExpanded ? <ChevronUp className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#9CA3AF' }} /> : <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#9CA3AF' }} />}
-                              <div>
-                                <p className="font-medium leading-tight" style={{ color: '#1A1A2E', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</p>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                  {cat && (
-                                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: catStyle(cat).bg, color: catStyle(cat).text }}>{cat}</span>
-                                  )}
-                                  {h.metadata?.folio ? <span className="text-[10px]" style={{ color: '#D1D5DB' }}>Folio: {String(h.metadata.folio)}</span> : null}
-                                </div>
+                            <div>
+                              <p className="font-medium leading-tight" style={{ color: '#1A1A2E', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</p>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                {cat && (
+                                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: catStyle(cat).bg, color: catStyle(cat).text }}>{cat}</span>
+                                )}
+                                {h.metadata?.folio ? <span className="text-[10px]" style={{ color: '#D1D5DB' }}>Folio: {String(h.metadata.folio)}</span> : null}
                               </div>
                             </div>
                           </td>
@@ -585,50 +580,6 @@ export default function MutualFundsPortfolioPage() {
                           </td>
                         </tr>
 
-                        {/* Expanded row: transactions */}
-                        {isExpanded && (
-                          <tr key={`${h.id}-expanded`} style={{ backgroundColor: '#FAFAF8' }}>
-                            <td colSpan={12} className="px-6 pb-4 pt-2">
-                              <div className="border rounded-xl overflow-hidden" style={{ borderColor: '#E8E5DD' }}>
-                                <div className="px-4 py-2.5 flex items-center justify-between" style={{ backgroundColor: '#F7F5F0', borderBottom: '1px solid #E8E5DD' }}>
-                                  <p className="text-[11px] font-semibold" style={{ color: '#1B2A4A' }}>Transaction History</p>
-                                  {h.metadata?.is_sip ? (
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: '#F5EDD6', color: '#C9A84C' }}>
-                                      SIP · ₹{Number(h.metadata.sip_amount).toLocaleString('en-IN')}/mo
-                                    </span>
-                                  ) : null}
-                                </div>
-                                {(h.transactions ?? []).length === 0 ? (
-                                  <p className="px-4 py-3 text-xs" style={{ color: '#9CA3AF' }}>No transactions recorded</p>
-                                ) : (
-                                  <table className="w-full text-xs">
-                                    <thead>
-                                      <tr style={{ borderBottom: '1px solid #E8E5DD' }}>
-                                        {['Date', 'Type', 'Units', 'NAV', 'Amount', 'Fees'].map(c => (
-                                          <th key={c} className="text-left px-4 py-2 font-medium" style={{ color: '#9CA3AF' }}>{c}</th>
-                                        ))}
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {[...h.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(t => (
-                                        <tr key={t.id} style={{ borderBottom: '1px solid #F7F5F0' }}>
-                                          <td className="px-4 py-2" style={{ color: '#6B7280' }}>{new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                                          <td className="px-4 py-2">
-                                            <span className="uppercase text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: t.type === 'sell' ? 'rgba(220,38,38,0.08)' : 'rgba(5,150,105,0.08)', color: t.type === 'sell' ? '#DC2626' : '#059669' }}>{t.type}</span>
-                                          </td>
-                                          <td className="px-4 py-2" style={{ color: '#6B7280' }}>{Number(t.quantity).toFixed(4)}</td>
-                                          <td className="px-4 py-2" style={{ color: '#6B7280' }}>₹{Number(t.price).toFixed(4)}</td>
-                                          <td className="px-4 py-2 font-medium" style={{ color: '#1A1A2E' }}>{formatLargeINR(Number(t.quantity) * Number(t.price))}</td>
-                                          <td className="px-4 py-2" style={{ color: '#9CA3AF' }}>{Number(t.fees) > 0 ? `₹${Number(t.fees).toFixed(2)}` : '—'}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
                       </>
                     );
                   })}
