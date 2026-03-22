@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronUp, MoreHorizontal, Search, Download, History,
 } from 'lucide-react';
 import { ImportHistory } from '@/components/portfolio/ImportHistory';
+import { HoldingDetailSheet } from '@/components/portfolio/HoldingDetailSheet';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR, formatPercentage } from '@/lib/utils/formatters';
 import { calculateXIRR } from '@/lib/utils/calculations';
@@ -69,37 +70,46 @@ const CAT_COLORS: Record<string, { bg: string; text: string }> = {
 };
 function catStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: '#F3F4F6', text: '#6B7280' }; }
 
-function ActionMenu({ holdingId, onDelete }: { holdingId: string; onDelete: (id: string) => void }) {
+function ActionMenu({
+  holdingId, onDelete, onViewDetails, onAddMore,
+}: {
+  holdingId: string;
+  onDelete: (id: string) => void;
+  onViewDetails: (id: string) => void;
+  onAddMore: (id: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const actions = [
+    { label: 'View details', action: () => { onViewDetails(holdingId); setOpen(false); } },
+    { label: 'Edit',         action: () => { router.push(`/add-assets/mutual-funds?edit=${holdingId}`); setOpen(false); } },
+    { label: 'Add units',    action: () => { onAddMore(holdingId); setOpen(false); } },
+    { label: 'Sell / Redeem', action: () => { onViewDetails(holdingId); setOpen(false); } },
+    { label: 'Delete',       action: () => { onDelete(holdingId); setOpen(false); }, danger: true },
+  ];
   return (
     <div className="relative">
-      <button
-        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-        className="p-1 rounded hover:bg-gray-100 transition-colors"
-      >
+      <button onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+        className="p-1 rounded hover:bg-gray-100 transition-colors">
         <MoreHorizontal className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
       </button>
       {open && (
-        <div
-          className="absolute right-0 z-20 bg-white rounded-xl shadow-lg border py-1 min-w-[130px]"
-          style={{ borderColor: '#E8E5DD', top: '100%' }}
-        >
-          {[
-            { label: 'Add units',     action: () => router.push('/add-assets/mutual-funds') },
-            { label: 'View details',  action: () => {} },
-            { label: 'Delete',        action: () => { onDelete(holdingId); setOpen(false); }, danger: true },
-          ].map(({ label, action, danger }) => (
-            <button
-              key={label}
-              onClick={(e) => { e.stopPropagation(); action(); setOpen(false); }}
-              className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 transition-colors"
-              style={{ color: danger ? '#DC2626' : '#1A1A2E' }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <>
+          {/* backdrop */}
+          <div className="fixed inset-0" style={{ zIndex: 9990 }} onClick={() => setOpen(false)} />
+          <div className="absolute right-0 bg-white rounded-xl border py-1 min-w-[150px]"
+            style={{ borderColor: '#E8E5DD', top: '100%', zIndex: 9999,
+                     boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+            {actions.map(({ label, action, danger }) => (
+              <button key={label}
+                onClick={(e) => { e.stopPropagation(); action(); }}
+                className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 transition-colors"
+                style={{ color: danger ? '#DC2626' : '#1A1A2E' }}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -117,6 +127,7 @@ export default function MutualFundsPortfolioPage() {
   const [navRefreshing, setNavRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [memberNames, setMemberNames] = useState<Record<string, string>>({});
+  const [detailId, setDetailId]     = useState<string | null>(null);
 
   // Filter + sort state
   const [filterBroker,   setFilterBroker]   = useState('All');
@@ -304,7 +315,7 @@ export default function MutualFundsPortfolioPage() {
       `"${h.name}"`,
       h.brokers?.name ?? '',
       h.portfolios?.name ?? '',
-      Number(h.quantity).toFixed(3),
+      Number(h.quantity).toFixed(4),
       Number(h.avg_buy_price).toFixed(4),
       h.investedValue.toFixed(2),
       h.currentNav?.toFixed(4) ?? '',
@@ -523,7 +534,7 @@ export default function MutualFundsPortfolioPage() {
                           {/* Broker */}
                           <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#6B7280' }}>{h.brokers?.name ?? '—'}</td>
                           {/* Units */}
-                          <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#6B7280' }}>{Number(h.quantity).toFixed(3)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#6B7280' }}>{Number(h.quantity).toFixed(4)}</td>
                           {/* Avg NAV */}
                           <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#6B7280' }}>₹{Number(h.avg_buy_price).toFixed(4)}</td>
                           {/* Invested */}
@@ -565,7 +576,12 @@ export default function MutualFundsPortfolioPage() {
                           <td className="px-4 py-3 whitespace-nowrap text-[11px]" style={{ color: '#9CA3AF' }}>{h.portfolios?.name ?? '—'}</td>
                           {/* Actions */}
                           <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                            <ActionMenu holdingId={h.id} onDelete={deleteHolding} />
+                            <ActionMenu
+                              holdingId={h.id}
+                              onDelete={deleteHolding}
+                              onViewDetails={(id) => setDetailId(id)}
+                              onAddMore={(id) => router.push(`/add-assets/mutual-funds?fund=${holdings.find(x=>x.id===id)?.symbol}`)}
+                            />
                           </td>
                         </tr>
 
@@ -600,7 +616,7 @@ export default function MutualFundsPortfolioPage() {
                                           <td className="px-4 py-2">
                                             <span className="uppercase text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: t.type === 'sell' ? 'rgba(220,38,38,0.08)' : 'rgba(5,150,105,0.08)', color: t.type === 'sell' ? '#DC2626' : '#059669' }}>{t.type}</span>
                                           </td>
-                                          <td className="px-4 py-2" style={{ color: '#6B7280' }}>{Number(t.quantity).toFixed(3)}</td>
+                                          <td className="px-4 py-2" style={{ color: '#6B7280' }}>{Number(t.quantity).toFixed(4)}</td>
                                           <td className="px-4 py-2" style={{ color: '#6B7280' }}>₹{Number(t.price).toFixed(4)}</td>
                                           <td className="px-4 py-2 font-medium" style={{ color: '#1A1A2E' }}>{formatLargeINR(Number(t.quantity) * Number(t.price))}</td>
                                           <td className="px-4 py-2" style={{ color: '#9CA3AF' }}>{Number(t.fees) > 0 ? `₹${Number(t.fees).toFixed(2)}` : '—'}</td>
@@ -685,6 +701,15 @@ export default function MutualFundsPortfolioPage() {
           onHoldingsChanged={loadHoldings}
         />
       </div>
+
+      {/* ── Holding detail sheet ────────────────────────────────────────────────── */}
+      <HoldingDetailSheet
+        holding={detailId ? (holdings.find(h => h.id === detailId) ?? null) : null}
+        open={!!detailId}
+        onClose={() => setDetailId(null)}
+        onDeleted={(id) => { setHoldings(prev => prev.filter(h => h.id !== id)); setDetailId(null); }}
+        onHoldingChanged={loadHoldings}
+      />
     </div>
   );
 }

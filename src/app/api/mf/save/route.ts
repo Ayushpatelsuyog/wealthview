@@ -37,6 +37,8 @@ export async function POST(req: NextRequest) {
     brokerName = 'Other',
     brokerPlatformId = 'other',
     currentNav,
+    holderDetails,
+    sipMetadata,
   } = body;
 
   // ── 1. Validate required fields ───────────────────────────────────────────
@@ -132,6 +134,8 @@ export async function POST(req: NextRequest) {
         sip_amount:  sipAmount ?? null,
         current_nav: currentNav ?? null,
         amfi_code:   schemeCode,
+        ...(holderDetails ?? {}),
+        ...(sipMetadata   ?? {}),
       },
     })
     .select('id')

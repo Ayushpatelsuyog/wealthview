@@ -49,10 +49,23 @@ export function formatRelativeDate(date: string | Date): string {
   return formatDistanceToNow(new Date(date), { addSuffix: true });
 }
 
-export function formatQuantity(quantity: number, decimals: number = 3): string {
+export function formatQuantity(quantity: number, decimals: number = 4): string {
   return quantity.toLocaleString('en-IN', {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
+  });
+}
+
+/** NAV displayed to 4 decimal places — e.g. ₹48.2035 */
+export function formatNav(nav: number): string {
+  return `₹${nav.toFixed(4)}`;
+}
+
+/** Units displayed to 4 decimal places — e.g. 207.5283 */
+export function formatUnits(units: number): string {
+  return units.toLocaleString('en-IN', {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
   });
 }
 

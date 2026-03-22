@@ -82,8 +82,8 @@ function calcTotals(txns: ParsedTransaction[]): Pick<ParsedFund,'totalUnits'|'in
       totalUnits -= t.units;
     }
   }
-  totalUnits = Math.max(0, totalUnits);
-  const avgNav = totalUnits > 0 ? investedAmount / totalUnits : 0;
+  totalUnits = Math.round(Math.max(0, totalUnits) * 10000) / 10000;
+  const avgNav = totalUnits > 0 ? Math.round((investedAmount / totalUnits) * 10000) / 10000 : 0;
   return { totalUnits, investedAmount, avgNav };
 }
 

@@ -147,7 +147,7 @@ export default function IndianStocksPage() {
               <Input value={query} onChange={(e) => { setQuery(e.target.value); setShowDrop(true); setSelected(null); }} onFocus={() => setShowDrop(true)} placeholder="Search symbol or company name..." className="h-9 text-xs pr-8" />
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#9CA3AF' }} />
               {showDrop && filtered.length > 0 && (
-                <div className="absolute z-50 top-full mt-1 left-0 right-0 rounded-xl border shadow-card-hover overflow-hidden bg-white" style={{ borderColor: '#E8E5DD' }}>
+                <div className="absolute top-full mt-1 left-0 right-0 rounded-xl border bg-white" style={{ borderColor: '#E8E5DD', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
                   {filtered.map((s) => (
                     <button key={s.symbol} className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-bg text-left border-b last:border-0" style={{ borderColor: '#F0EDE6' }}
                       onClick={() => { setSelected(s); setQuery(`${s.symbol} — ${s.name}`); setBuyPrice(s.price.toString()); setShowDrop(false); }}>

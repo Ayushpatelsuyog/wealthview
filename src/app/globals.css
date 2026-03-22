@@ -85,6 +85,20 @@
   }
 }
 
+/* ── Z-index stacking layer fixes ──────────────────────────────────────────
+   Radix UI portals render outside the normal DOM tree but can still be
+   clipped by transformed/overflow-hidden ancestors. Force every overlay
+   to live well above the page content. */
+[data-radix-popper-content-wrapper],
+[data-radix-select-content],
+[data-radix-dropdown-menu-content],
+[data-radix-dialog-overlay],
+[data-radix-dialog-content],
+[data-radix-popover-content],
+[data-radix-tooltip-content] {
+  z-index: 9999 !important;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
