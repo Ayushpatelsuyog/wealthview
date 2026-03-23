@@ -76,21 +76,22 @@ const CAT_COLORS: Record<string, { bg: string; text: string }> = {
 function catStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: '#F3F4F6', text: '#6B7280' }; }
 
 function ActionMenu({
-  holdingId, onDelete, onViewDetails, onAddMore,
+  holdingId, onDelete, onViewDetails, onAddMore, onSellRedeem,
 }: {
   holdingId: string;
   onDelete: (id: string) => void;
   onViewDetails: (id: string) => void;
   onAddMore: (id: string) => void;
+  onSellRedeem: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const actions = [
-    { label: 'View details', action: () => { onViewDetails(holdingId); setOpen(false); } },
-    { label: 'Edit',         action: () => { router.push(`/add-assets/mutual-funds?edit=${holdingId}`); setOpen(false); } },
-    { label: 'Add units',    action: () => { onAddMore(holdingId); setOpen(false); } },
-    { label: 'Sell / Redeem', action: () => { onViewDetails(holdingId); setOpen(false); } },
-    { label: 'Delete',       action: () => { onDelete(holdingId); setOpen(false); }, danger: true },
+    { label: 'View details',  action: () => { onViewDetails(holdingId);  setOpen(false); } },
+    { label: 'Edit',          action: () => { router.push(`/add-assets/mutual-funds?edit=${holdingId}`); setOpen(false); } },
+    { label: 'Add units',     action: () => { onAddMore(holdingId);      setOpen(false); } },
+    { label: 'Sell / Redeem', action: () => { onSellRedeem(holdingId);   setOpen(false); } },
+    { label: 'Delete',        action: () => { onDelete(holdingId);       setOpen(false); }, danger: true },
   ];
   return (
     <div className="relative">
@@ -277,6 +278,7 @@ export default function MutualFundsPortfolioPage() {
   const [navRefreshing, setNavRefreshing] = useState(false);
   const [memberNames, setMemberNames] = useState<Record<string, string>>({});
   const [detailId, setDetailId]     = useState<string | null>(null);
+  const [openAsRedeem, setOpenAsRedeem] = useState(false);
 
   // Filter + sort state — multi-select sets
   const [filterBrokers,    setFilterBrokers]    = useState<Set<string>>(new Set());
@@ -815,8 +817,9 @@ export default function MutualFundsPortfolioPage() {
                             <ActionMenu
                               holdingId={h.id}
                               onDelete={deleteHolding}
-                              onViewDetails={(id) => setDetailId(id)}
+                              onViewDetails={(id) => { setOpenAsRedeem(false); setDetailId(id); }}
                               onAddMore={(id) => router.push(`/add-assets/mutual-funds?add_to=${id}`)}
+                              onSellRedeem={(id) => { setOpenAsRedeem(true); setDetailId(id); }}
                             />
                           </td>
                         </tr>
@@ -883,8 +886,9 @@ export default function MutualFundsPortfolioPage() {
       <HoldingDetailSheet
         holding={detailId ? (holdings.find(h => h.id === detailId) ?? null) : null}
         open={!!detailId}
-        onClose={() => setDetailId(null)}
-        onDeleted={(id) => { setHoldings(prev => prev.filter(h => h.id !== id)); setDetailId(null); }}
+        initialView={openAsRedeem ? 'redeem' : undefined}
+        onClose={() => { setDetailId(null); setOpenAsRedeem(false); }}
+        onDeleted={(id) => { setHoldings(prev => prev.filter(h => h.id !== id)); setDetailId(null); setOpenAsRedeem(false); }}
         onHoldingChanged={loadHoldings}
       />
     </div>

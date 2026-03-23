@@ -613,9 +613,10 @@ function DividendForm({
 type RecalcState = 'idle' | 'loading' | 'confirm' | 'saving' | 'done';
 
 export function HoldingDetailSheet({
-  holding, open, onClose, onDeleted, onHoldingChanged,
+  holding, open, initialView, onClose, onDeleted, onHoldingChanged,
 }: {
   holding: HoldingDetail | null; open: boolean;
+  initialView?: 'redeem';
   onClose: () => void; onDeleted: (id: string) => void; onHoldingChanged: () => void;
 }) {
   const router   = useRouter();
@@ -655,8 +656,15 @@ export function HoldingDetailSheet({
       setView('detail'); setTxnDeleteConfirmId(null); setTxnDeleteError('');
       setSipToggleIdx(null); setSipToggleErr('');
       setEditingTxn(null); setEditingCat(false);
+      setShowRedeem(false); setShowDividend(false);
+    } else {
+      // If opened via "Sell / Redeem", jump straight to the redemption form
+      if (initialView === 'redeem') {
+        setShowRedeem(true);
+        setShowDividend(false);
+      }
     }
-  }, [open]);
+  }, [open, initialView]);
 
   // ── SIP groups from transactions ────────────────────────────────────────────
   const sipGroups = useMemo(() => {
