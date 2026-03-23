@@ -732,11 +732,42 @@ export default function MutualFundsPortfolioPage() {
           {/* ── Holdings table ──────────────────────────────────────────────────────── */}
           <div className="wv-card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+              {/* min-width forces horizontal scroll rather than column overflow */}
+              <table className="text-xs" style={{ tableLayout: 'fixed', width: '100%', minWidth: 960 }}>
+                <colgroup>
+                  <col style={{ width: '26%' }} /> {/* Fund — widest, wraps */}
+                  <col style={{ width: '9%'  }} /> {/* Broker — wraps to 2 lines */}
+                  <col style={{ width: '7%'  }} /> {/* Units */}
+                  <col style={{ width: '7%'  }} /> {/* Avg NAV */}
+                  <col style={{ width: '8%'  }} /> {/* Invested */}
+                  <col style={{ width: '7%'  }} /> {/* Current NAV */}
+                  <col style={{ width: '8%'  }} /> {/* Current Value */}
+                  <col style={{ width: '8%'  }} /> {/* P&L */}
+                  <col style={{ width: '5%'  }} /> {/* P&L % */}
+                  <col style={{ width: '5%'  }} /> {/* XIRR */}
+                  <col style={{ width: '7%'  }} /> {/* Portfolio */}
+                  <col style={{ width: '3%'  }} /> {/* Actions */}
+                </colgroup>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #E8E5DD', backgroundColor: '#F7F5F0' }}>
-                    {['Fund', 'Broker', 'Units', 'Avg NAV', 'Invested', 'Current NAV', 'Current Value', 'P&L', 'P&L %', 'XIRR', 'Portfolio', ''].map((h) => (
-                      <th key={h} className="text-left px-4 py-2.5 font-medium whitespace-nowrap" style={{ color: '#9CA3AF' }}>{h}</th>
+                    {[
+                      { label: 'Fund',          align: 'left'  },
+                      { label: 'Broker',        align: 'left'  },
+                      { label: 'Units',         align: 'right' },
+                      { label: 'Avg NAV',       align: 'right' },
+                      { label: 'Invested',      align: 'right' },
+                      { label: 'Current NAV',   align: 'right' },
+                      { label: 'Current Value', align: 'right' },
+                      { label: 'P&L',           align: 'right' },
+                      { label: 'P&L %',         align: 'right' },
+                      { label: 'XIRR',          align: 'right' },
+                      { label: 'Portfolio',     align: 'left'  },
+                      { label: '',              align: 'left'  },
+                    ].map(({ label, align }) => (
+                      <th key={label} className="py-2.5 font-medium whitespace-nowrap"
+                        style={{ color: '#9CA3AF', paddingLeft: 8, paddingRight: 8, textAlign: align as 'left' | 'right' }}>
+                        {label}
+                      </th>
                     ))}
                   </tr>
                 </thead>
@@ -757,63 +788,66 @@ export default function MutualFundsPortfolioPage() {
                           className="hover:bg-[#FAFAF8] transition-colors"
                           onClick={() => setDetailId(h.id)}
                         >
-                          {/* Fund name */}
-                          <td className="px-4 py-3" style={{ maxWidth: 260 }}>
-                            <div>
-                              <p className="font-medium leading-tight" style={{ color: '#1A1A2E', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</p>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                {cat && (
-                                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: catStyle(cat).bg, color: catStyle(cat).text }}>{cat}</span>
-                                )}
-                                {h.metadata?.folio ? <span className="text-[10px]" style={{ color: '#D1D5DB' }}>Folio: {String(h.metadata.folio)}</span> : null}
-                              </div>
+                          {/* Fund name — wraps freely, no truncation */}
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12 }}>
+                            <p className="leading-snug" style={{ color: '#1A1A2E', fontWeight: 500, whiteSpace: 'normal', wordBreak: 'break-word' }}>{h.name}</p>
+                            {h.metadata?.fund_house != null && (
+                              <p className="text-[10px] mt-0.5 leading-tight" style={{ color: '#9CA3AF' }}>{String(h.metadata.fund_house)}</p>
+                            )}
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              {cat && (
+                                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: catStyle(cat).bg, color: catStyle(cat).text }}>{cat}</span>
+                              )}
+                              {h.metadata?.folio != null && (
+                                <span className="text-[10px]" style={{ color: '#D1D5DB' }}>Folio: {String(h.metadata.folio)}</span>
+                              )}
                             </div>
                           </td>
                           {/* Broker */}
-                          <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#6B7280' }}>{h.brokers?.name ?? '—'}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'normal', wordBreak: 'break-word' }}>{h.brokers?.name ?? '—'}</td>
                           {/* Units */}
-                          <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#6B7280' }}>{Number(h.quantity).toFixed(4)}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'nowrap', textAlign: 'right' }}>{Number(h.quantity).toFixed(4)}</td>
                           {/* Avg NAV */}
-                          <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#6B7280' }}>₹{Number(h.avg_buy_price).toFixed(4)}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'nowrap', textAlign: 'right' }}>₹{Number(h.avg_buy_price).toFixed(4)}</td>
                           {/* Invested */}
-                          <td className="px-4 py-3 font-medium whitespace-nowrap" style={{ color: '#1A1A2E' }}>{formatLargeINR(h.investedValue)}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#1A1A2E', fontWeight: 500, whiteSpace: 'nowrap', textAlign: 'right' }}>{formatLargeINR(h.investedValue)}</td>
                           {/* Current NAV */}
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
                             {h.navLoading
                               ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#9CA3AF' }} />
                               : h.currentNav ? <span style={{ color: '#1A1A2E' }}>₹{h.currentNav.toFixed(4)}</span> : <span style={{ color: '#9CA3AF' }}>—</span>
                             }
                           </td>
                           {/* Current value */}
-                          <td className="px-4 py-3 font-medium whitespace-nowrap" style={{ color: '#1A1A2E' }}>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#1A1A2E', fontWeight: 500, whiteSpace: 'nowrap', textAlign: 'right' }}>
                             {h.currentValue ? formatLargeINR(h.currentValue) : '—'}
                           </td>
                           {/* P&L */}
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
                             {h.gainLoss != null ? (
-                              <span className="font-semibold text-xs" style={{ color: h.gainLoss >= 0 ? '#059669' : '#DC2626' }}>
+                              <span className="font-semibold" style={{ color: h.gainLoss >= 0 ? '#059669' : '#DC2626' }}>
                                 {h.gainLoss >= 0 ? '+' : ''}{formatLargeINR(h.gainLoss)}
                               </span>
                             ) : '—'}
                           </td>
                           {/* P&L % */}
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
                             {h.gainLossPct != null ? (
-                              <span className="font-semibold text-xs" style={{ color: h.gainLossPct >= 0 ? '#059669' : '#DC2626' }}>
+                              <span className="font-semibold" style={{ color: h.gainLossPct >= 0 ? '#059669' : '#DC2626' }}>
                                 {h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}%
                               </span>
                             ) : '—'}
                           </td>
                           {/* XIRR */}
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
                             {h.xirr != null ? (
                               <span style={{ color: h.xirr >= 0 ? '#059669' : '#DC2626' }}>{formatPercentage(h.xirr * 100)}</span>
                             ) : <span style={{ color: '#9CA3AF' }}>—</span>}
                           </td>
                           {/* Portfolio */}
-                          <td className="px-4 py-3 whitespace-nowrap text-[11px]" style={{ color: '#9CA3AF' }}>{h.portfolios?.name ?? '—'}</td>
+                          <td className="text-[11px]" style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#9CA3AF', whiteSpace: 'nowrap' }}>{h.portfolios?.name ?? '—'}</td>
                           {/* Actions */}
-                          <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12 }} onClick={e => e.stopPropagation()}>
                             <ActionMenu
                               holdingId={h.id}
                               onDelete={deleteHolding}

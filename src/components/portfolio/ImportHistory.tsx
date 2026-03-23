@@ -276,10 +276,11 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p
-                      className="text-xs font-semibold truncate"
+                      className="text-xs font-semibold"
                       style={{
                         color: '#1A1A2E',
                         textDecoration: isUndone ? 'line-through' : 'none',
+                        wordBreak: 'break-all',
                       }}
                     >
                       {batch.source_filename}
@@ -366,8 +367,8 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
                           const invested = Number(h.quantity) * Number(h.avg_buy_price);
                           return (
                             <tr key={h.id} style={{ borderBottom: '1px solid #F7F5F0' }}>
-                              <td className="px-4 py-2.5" style={{ maxWidth: 280 }}>
-                                <p className="font-medium truncate" style={{ color: '#1A1A2E' }}>{h.name}</p>
+                              <td className="px-4 py-2.5">
+                                <p className="font-medium" style={{ color: '#1A1A2E', whiteSpace: 'normal', wordBreak: 'break-word' }}>{h.name}</p>
                                 {h.metadata?.folio ? (
                                   <p className="text-[10px] mt-0.5" style={{ color: '#D1D5DB' }}>
                                     Folio: {String(h.metadata.folio)}
