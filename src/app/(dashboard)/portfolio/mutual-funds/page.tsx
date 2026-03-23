@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   RefreshCw, PlusCircle, Loader2, AlertCircle, TrendingUp, TrendingDown,
-  MoreHorizontal, Search, Download, History,
+  MoreHorizontal, Search, Download,
 } from 'lucide-react';
-import { ImportHistory } from '@/components/portfolio/ImportHistory';
 import { HoldingDetailSheet } from '@/components/portfolio/HoldingDetailSheet';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR, formatPercentage } from '@/lib/utils/formatters';
@@ -61,13 +61,17 @@ function _PnlBadge({ value, pct }: { value: number; pct: number }) {
 }
 
 const CAT_COLORS: Record<string, { bg: string; text: string }> = {
-  Equity:     { bg: 'rgba(27,42,74,0.08)',   text: '#1B2A4A' },
-  ELSS:       { bg: '#F5EDD6',               text: '#C9A84C' },
-  Hybrid:     { bg: 'rgba(46,139,139,0.08)', text: '#2E8B8B' },
-  Debt:       { bg: 'rgba(5,150,105,0.08)',  text: '#059669' },
-  Liquid:     { bg: 'rgba(5,150,105,0.08)',  text: '#059669' },
-  Gilt:       { bg: 'rgba(5,150,105,0.08)',  text: '#059669' },
-  'Index/ETF':{ bg: 'rgba(27,42,74,0.08)',   text: '#1B2A4A' },
+  Equity:               { bg: 'rgba(27,42,74,0.08)',    text: '#1B2A4A' },
+  ELSS:                 { bg: '#F5EDD6',                text: '#C9A84C' },
+  Hybrid:               { bg: 'rgba(46,139,139,0.08)',  text: '#2E8B8B' },
+  Debt:                 { bg: 'rgba(5,150,105,0.08)',   text: '#059669' },
+  Liquid:               { bg: 'rgba(5,150,105,0.08)',   text: '#059669' },
+  Gilt:                 { bg: 'rgba(5,150,105,0.08)',   text: '#059669' },
+  'Index/ETF':          { bg: 'rgba(27,42,74,0.08)',    text: '#1B2A4A' },
+  Commodity:            { bg: 'rgba(201,168,76,0.15)',  text: '#92620A' },
+  International:        { bg: 'rgba(99,102,241,0.10)',  text: '#4338CA' },
+  'Sectoral/Thematic':  { bg: 'rgba(234,88,12,0.10)',   text: '#C2410C' },
+  Arbitrage:            { bg: 'rgba(46,139,139,0.08)',  text: '#2E8B8B' },
 };
 function catStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: '#F3F4F6', text: '#6B7280' }; }
 
@@ -112,6 +116,151 @@ function ActionMenu({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// ─── Allocation Charts ─────────────────────────────────────────────────────────
+
+interface PieEntry { name: string; value: number }
+
+function fmt(v: number): string {
+  if (v >= 10_000_000) return `₹${(v / 10_000_000).toFixed(2)}Cr`;
+  if (v >= 100_000)    return `₹${(v / 100_000).toFixed(2)}L`;
+  if (v >= 1_000)      return `₹${(v / 1_000).toFixed(1)}K`;
+  return `₹${Math.round(v)}`;
+}
+
+function DonutChart({
+  title,
+  data,
+  getColor,
+}: {
+  title: string;
+  data: PieEntry[];
+  getColor: (name: string, index: number) => string;
+}) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+
+  if (data.length === 0) {
+    return (
+      <div className="wv-card flex flex-col" style={{ padding: 16, overflow: 'hidden', minHeight: 220 }}>
+        <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>
+          {title} <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(Market Value)</span>
+        </p>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-xs" style={{ color: '#9CA3AF' }}>No data</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="wv-card" style={{ padding: 16, overflow: 'hidden' }}>
+      <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>
+        {title} <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(Market Value)</span>
+      </p>
+
+      {/* Donut — fixed 150×150, centered */}
+      <div style={{ width: 150, height: 150, margin: '0 auto 12px' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={46}
+              outerRadius={70}
+              paddingAngle={data.length > 1 ? 2 : 0}
+              dataKey="value"
+              strokeWidth={0}
+            >
+              {data.map((entry, i) => (
+                <Cell key={entry.name} fill={getColor(entry.name, i)} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value) => [fmt(Number(value)), '']}
+              contentStyle={{
+                fontSize: 11, borderRadius: 8,
+                border: '1px solid #E8E5DD',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              }}
+              itemStyle={{ color: '#1A1A2E' }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Legend — stacked vertically, fully contained */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        {data.map((entry, i) => {
+          const pct = total > 0 ? (entry.value / total * 100).toFixed(1) : '0';
+          const color = getColor(entry.name, i);
+          return (
+            <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+              <span style={{ flexShrink: 0, width: 8, height: 8, borderRadius: 2, backgroundColor: color, display: 'inline-block' }} />
+              <span style={{ flex: 1, fontSize: 11, color: '#4B5563', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {entry.name}
+              </span>
+              <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#1A1A2E', fontVariantNumeric: 'tabular-nums' }}>
+                {fmt(entry.value)}
+              </span>
+              <span style={{ flexShrink: 0, fontSize: 10, color: '#9CA3AF', width: 36, textAlign: 'right' }}>
+                {pct}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const PORTFOLIO_PALETTE = ['#7C3AED', '#2563EB', '#059669', '#EA580C', '#DB2777', '#D97706', '#0891B2'];
+
+function AllocationCharts({
+  brokerData,
+  categoryData,
+  portfolioData,
+  brokerPalette,
+}: {
+  brokerData: PieEntry[];
+  categoryData: PieEntry[];
+  portfolioData: PieEntry[];
+  brokerPalette: string[];
+}) {
+  const catSolid: Record<string, string> = {
+    Equity:              '#1B2A4A',
+    ELSS:                '#C9A84C',
+    Hybrid:              '#2E8B8B',
+    Debt:                '#059669',
+    Liquid:              '#10B981',
+    Gilt:                '#34D399',
+    'Index/ETF':         '#3B82F6',
+    Commodity:           '#D97706',
+    International:       '#6366F1',
+    'Sectoral/Thematic': '#EA580C',
+    Arbitrage:           '#14B8A6',
+  };
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+      <DonutChart
+        title="Allocation by Broker"
+        data={brokerData}
+        getColor={(_, i) => brokerPalette[i % brokerPalette.length]}
+      />
+      <DonutChart
+        title="Allocation by Category"
+        data={categoryData}
+        getColor={(name) => catSolid[name] ?? '#6B7280'}
+      />
+      <DonutChart
+        title="Allocation by Portfolio"
+        data={portfolioData}
+        getColor={(_, i) => PORTFOLIO_PALETTE[i % PORTFOLIO_PALETTE.length]}
+      />
     </div>
   );
 }
@@ -325,6 +474,43 @@ export default function MutualFundsPortfolioPage() {
 
   const showBrokerComparison = brokerStats.length >= 2;
 
+  // ── Pie chart data (from filtered, uses live current value) ─────────────
+
+  const BROKER_PALETTE = ['#1B2A4A', '#2E8B8B', '#C9A84C', '#059669', '#7C3AED', '#EA580C', '#2563EB', '#DB2777'];
+
+  const brokerPieData = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach(h => {
+      const key = h.brokers?.name ?? 'Unknown';
+      map[key] = (map[key] ?? 0) + (h.currentValue ?? h.investedValue);
+    });
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [filtered]);
+
+  const categoryPieData = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach(h => {
+      const key = String(h.metadata?.category ?? 'Equity');
+      map[key] = (map[key] ?? 0) + (h.currentValue ?? h.investedValue);
+    });
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [filtered]);
+
+  const portfolioPieData = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach(h => {
+      const key = h.portfolios?.name ?? 'My Portfolio';
+      map[key] = (map[key] ?? 0) + (h.currentValue ?? h.investedValue);
+    });
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [filtered]);
+
   // ── Export CSV ───────────────────────────────────────────────────────────
 
   function exportCsv() {
@@ -533,6 +719,14 @@ export default function MutualFundsPortfolioPage() {
             )}
           </div>
 
+          {/* ── Allocation charts ───────────────────────────────────────────────────── */}
+          <AllocationCharts
+            brokerData={brokerPieData}
+            categoryData={categoryPieData}
+            portfolioData={portfolioPieData}
+            brokerPalette={BROKER_PALETTE}
+          />
+
           {/* ── Holdings table ──────────────────────────────────────────────────────── */}
           <div className="wv-card overflow-hidden">
             <div className="overflow-x-auto">
@@ -684,21 +878,6 @@ export default function MutualFundsPortfolioPage() {
           )}
         </>
       )}
-
-      {/* ── Import History ──────────────────────────────────────────────────────── */}
-      <div className="wv-card p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <History className="w-4 h-4" style={{ color: '#9CA3AF' }} />
-          <h3 className="text-sm font-semibold" style={{ color: '#1B2A4A' }}>Import History</h3>
-          <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: '#F7F5F0', color: '#9CA3AF' }}>
-            CAS bulk imports only
-          </span>
-        </div>
-        <ImportHistory
-          memberNames={memberNames}
-          onHoldingsChanged={loadHoldings}
-        />
-      </div>
 
       {/* ── Holding detail sheet ────────────────────────────────────────────────── */}
       <HoldingDetailSheet

@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   TrendingUp, TrendingDown, Loader2, X,
-  ChevronDown, ChevronUp, BarChart3, Plus, Trash2, Edit, RefreshCw, AlertCircle,
+  ChevronDown, ChevronUp, BarChart3, Plus, Trash2, Edit, RefreshCw, AlertCircle, Pencil,
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
 
@@ -69,15 +70,24 @@ const TXN_CONFIG: Record<string, { label: string; bg: string; text: string; sign
 };
 
 const CAT_COLORS: Record<string, { bg: string; text: string }> = {
-  Equity:      { bg: 'rgba(27,42,74,0.10)',   text: '#1B2A4A' },
-  ELSS:        { bg: '#F5EDD6',               text: '#C9A84C' },
-  Hybrid:      { bg: 'rgba(46,139,139,0.10)', text: '#2E8B8B' },
-  Debt:        { bg: 'rgba(5,150,105,0.10)',  text: '#059669' },
-  Liquid:      { bg: 'rgba(5,150,105,0.10)',  text: '#059669' },
-  Gilt:        { bg: 'rgba(5,150,105,0.10)',  text: '#059669' },
-  'Index/ETF': { bg: 'rgba(27,42,74,0.10)',   text: '#1B2A4A' },
+  Equity:               { bg: 'rgba(27,42,74,0.10)',    text: '#1B2A4A' },
+  ELSS:                 { bg: '#F5EDD6',                text: '#C9A84C' },
+  Hybrid:               { bg: 'rgba(46,139,139,0.10)',  text: '#2E8B8B' },
+  Debt:                 { bg: 'rgba(5,150,105,0.10)',   text: '#059669' },
+  Liquid:               { bg: 'rgba(5,150,105,0.10)',   text: '#059669' },
+  Gilt:                 { bg: 'rgba(5,150,105,0.10)',   text: '#059669' },
+  'Index/ETF':          { bg: 'rgba(27,42,74,0.10)',    text: '#1B2A4A' },
+  Commodity:            { bg: 'rgba(201,168,76,0.20)',  text: '#92620A' },
+  International:        { bg: 'rgba(99,102,241,0.12)',  text: '#4338CA' },
+  'Sectoral/Thematic':  { bg: 'rgba(234,88,12,0.12)',   text: '#C2410C' },
+  Arbitrage:            { bg: 'rgba(46,139,139,0.10)',  text: '#2E8B8B' },
 };
 function catStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: '#F3F4F6', text: '#6B7280' }; }
+
+const ALL_CATEGORIES = [
+  'Equity', 'Debt', 'Hybrid', 'ELSS', 'Index/ETF', 'Liquid', 'Gilt',
+  'Commodity', 'International', 'Sectoral/Thematic', 'Arbitrage',
+];
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -636,11 +646,15 @@ export function HoldingDetailSheet({
   const [sipToggling,        setSipToggling]        = useState(false);
   const [sipToggleErr,       setSipToggleErr]       = useState('');
 
+  // Category override
+  const [editingCat,    setEditingCat]    = useState(false);
+  const [savingCat,     setSavingCat]     = useState(false);
+
   useEffect(() => {
     if (!open) {
       setView('detail'); setTxnDeleteConfirmId(null); setTxnDeleteError('');
       setSipToggleIdx(null); setSipToggleErr('');
-      setEditingTxn(null);
+      setEditingTxn(null); setEditingCat(false);
     }
   }, [open]);
 
@@ -734,6 +748,18 @@ export function HoldingDetailSheet({
     await supabase.from('holdings').delete().eq('id', h.id);
     onDeleted(h.id);
     onClose();
+  }
+
+  // ── Category override ───────────────────────────────────────────────────────
+  async function saveCategory(newCat: string) {
+    setSavingCat(true);
+    await supabase
+      .from('holdings')
+      .update({ metadata: { ...((holding?.metadata ?? {}) as Record<string, unknown>), category: newCat } })
+      .eq('id', h.id);
+    setSavingCat(false);
+    setEditingCat(false);
+    onHoldingChanged();
   }
 
   // ── Delete single transaction ──────────────────────────────────────────────
@@ -899,10 +925,46 @@ export function HoldingDetailSheet({
           style={{ borderColor: '#2F3E5C', backgroundColor: '#1B2A4A' }}>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1.5">
-                {cat && (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                    style={{ backgroundColor: catStyle(cat).bg, color: catStyle(cat).text }}>{cat}</span>
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                {/* Category badge — click pencil to override */}
+                {editingCat ? (
+                  <div className="flex items-center gap-1.5">
+                    <Select
+                      defaultValue={cat || 'Equity'}
+                      onValueChange={(v) => { saveCategory(v); }}
+                    >
+                      <SelectTrigger
+                        className="h-6 text-[10px] px-2 py-0 rounded-full border-0 font-semibold focus:ring-0"
+                        style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', minWidth: 120 }}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ALL_CATEGORIES.map(c => (
+                          <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {savingCat
+                      ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: 'rgba(255,255,255,0.6)' }} />
+                      : <button onClick={() => setEditingCat(false)}
+                          className="text-[11px] leading-none px-1.5 py-0.5 rounded transition-colors hover:bg-white/10"
+                          style={{ color: 'rgba(255,255,255,0.6)' }}>✕</button>
+                    }
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setEditingCat(true)}
+                    className="flex items-center gap-1 group"
+                    title="Change category"
+                  >
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'white' }}>
+                      {cat || 'Uncategorised'}
+                    </span>
+                    <Pencil className="w-2.5 h-2.5 flex-shrink-0 transition-opacity opacity-40 group-hover:opacity-80"
+                      style={{ color: 'white' }} />
+                  </button>
                 )}
                 {isSIP && (
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"

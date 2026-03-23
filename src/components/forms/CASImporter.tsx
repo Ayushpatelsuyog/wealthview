@@ -24,6 +24,7 @@ interface CASImporterProps {
   members:     FamilyMember[];
   portfolios:  Portfolio[];
   memberId:    string;    // currently selected member
+  onImported?: () => void;
 }
 
 interface EnrichedFund extends ParsedFund {
@@ -59,7 +60,7 @@ function StatusBadge({ status }: { status: 'ready' | 'needs_review' }) {
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export function CASImporter({ familyId, members, portfolios, memberId }: CASImporterProps) {
+export function CASImporter({ familyId, members, portfolios, memberId, onImported }: CASImporterProps) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   // ── Step: 1 = upload, 2 = preview+assign, 3 = done ────────────────────────
@@ -252,6 +253,7 @@ export function CASImporter({ familyId, members, portfolios, memberId }: CASImpo
       const result = await res.json();
       setImportResult(result);
       setStep(3);
+      if (result.imported > 0) onImported?.();
     } catch (e) {
       setImportResult({
         imported: 0, totalFunds: toImport.length,

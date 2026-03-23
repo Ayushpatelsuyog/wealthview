@@ -10,13 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   BarChart3, Upload, Link as LinkIcon, Check, ChevronDown, ChevronUp,
   Loader2, AlertCircle, X, TrendingUp, TrendingDown, Plus, Trash2,
-  User, ChevronRight,
+  User, ChevronRight, History,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
 import { calculateXIRR }  from '@/lib/utils/calculations';
 import { BrokerSelector } from '@/components/forms/BrokerSelector';
 import { CASImporter }    from '@/components/forms/CASImporter';
+import { ImportHistory }  from '@/components/portfolio/ImportHistory';
 import { useHoldingPrefill } from '@/hooks/use-holding-prefill';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -79,34 +80,62 @@ const DEFAULT_PORTFOLIOS = ['Long-term Growth', 'Retirement', 'Tax Saving'];
 const SIP_DATES = ['1st','5th','10th','15th','20th','25th','28th'];
 
 const CAT_COLORS: Record<string, { bg: string; text: string }> = {
-  Equity:     { bg: 'rgba(27,42,74,0.08)',   text: '#1B2A4A' },
-  ELSS:       { bg: '#F5EDD6',               text: '#C9A84C' },
-  Hybrid:     { bg: 'rgba(46,139,139,0.08)', text: '#2E8B8B' },
-  Debt:       { bg: 'rgba(5,150,105,0.08)',  text: '#059669' },
-  Liquid:     { bg: 'rgba(5,150,105,0.08)',  text: '#059669' },
-  Gilt:       { bg: 'rgba(5,150,105,0.08)',  text: '#059669' },
-  'Index/ETF':{ bg: 'rgba(27,42,74,0.08)',   text: '#1B2A4A' },
+  Equity:               { bg: 'rgba(27,42,74,0.08)',    text: '#1B2A4A' },
+  ELSS:                 { bg: '#F5EDD6',                text: '#C9A84C' },
+  Hybrid:               { bg: 'rgba(46,139,139,0.08)',  text: '#2E8B8B' },
+  Debt:                 { bg: 'rgba(5,150,105,0.08)',   text: '#059669' },
+  Liquid:               { bg: 'rgba(5,150,105,0.08)',   text: '#059669' },
+  Gilt:                 { bg: 'rgba(5,150,105,0.08)',   text: '#059669' },
+  'Index/ETF':          { bg: 'rgba(27,42,74,0.08)',    text: '#1B2A4A' },
+  Commodity:            { bg: 'rgba(201,168,76,0.15)',  text: '#92620A' },
+  International:        { bg: 'rgba(99,102,241,0.10)',  text: '#4338CA' },
+  'Sectoral/Thematic':  { bg: 'rgba(234,88,12,0.10)',   text: '#C2410C' },
+  Arbitrage:            { bg: 'rgba(46,139,139,0.08)',  text: '#2E8B8B' },
 };
 
 function getCatStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: '#F3F4F6', text: '#6B7280' }; }
 
 // Refine AMFI API category using fund name keywords
+// Order matters: more specific checks before generic fallbacks
 function detectCategory(schemeName: string, apiCategory: string): string {
   const n = schemeName.toUpperCase();
-  if (/\bELSS\b|TAX\s*SAVER|TAX\s*SAVING|80C/.test(n))             return 'ELSS';
-  if (/\bINDEX\b|\bNIFTY\b|\bSENSEX\b|\bETF\b|\bNAVDAQ\b|\bS&P\b|\bNASDAQ\b/.test(n)) return 'Index/ETF';
-  if (/\bLIQUID\b|\bOVERNIGHT\b|\bMONEY\s*MARKET\b/.test(n))        return 'Liquid';
-  if (/\bGILT\b|\bG-SEC\b|\bGOVT\b|\bSOVEREIGN\b/.test(n))          return 'Gilt';
-  if (/\bHYBRID\b|\bBALANCED\b|\bAGGRESSIVE\b|\bCONSERVATIVE\b|\bARBITRAGE\b|\bBAF\b|\bDAA\b/.test(n)) return 'Hybrid';
-  if (/\bDEBT\b|\bBOND\b|\bCREDIT\b|\bDURATION\b|\bINCOME\b|\bCORPORATE\b|\bFIXED\s*INCOME\b/.test(n)) return 'Debt';
-  // Fall back to normalised API category
+
+  // ── Tax-saving ──────────────────────────────────────────────────────────────
+  if (/\bELSS\b|TAX\s*SAVER|TAX\s*SAVING|\b80C\b/.test(n)) return 'ELSS';
+
+  // ── Commodity (Gold / Silver / Precious Metals) — before Index/ETF ─────────
+  if (/\bGOLD\b|\bSILVER\b|\bCOMMODIT|\bPRECIOUS\s*METAL|\bGOLD\s*BEES\b|\bGOLD\s*ETF\b|\bGOLD\s*FUND\b|\bGOLD\s*SAVINGS\b/.test(n)) return 'Commodity';
+
+  // ── International / Global / Feeder funds ──────────────────────────────────
+  if (/\bINTERNATIONAL\b|\bGLOBAL\b|\bUS\s*EQUITY\b|\bNASDAQ\b|\bNAVDAQ\b|\bS&P\b|\bFEEDER\b|\bFOF\b|\bFUND\s*OF\s*FUND/.test(n)) return 'International';
+
+  // ── Index / Passive (after Gold & International so "Gold BeES" doesn't hit here) ──
+  if (/\bINDEX\b|\bNIFTY\b|\bSENSEX\b|\bETF\b/.test(n)) return 'Index/ETF';
+
+  // ── Sectoral / Thematic ─────────────────────────────────────────────────────
+  if (/\bSECTORAL\b|\bTHEMATIC\b|\bINFRASTRUCTUR|\bPHARMA\b|\bHEALTH(CARE)?\b|\bIT\s*FUND\b|\bTECHNOLOG|\bCONSUMPTION\b|\bESG\b|\bPSU\b|\bBSE\s*PSEB|\bENERGY\b|\bAUTO\b|\bBANKING\s*FUND\b|\bINNOVATION\b|\bMANUFACTURING\b/.test(n)) return 'Sectoral/Thematic';
+
+  // ── Debt sub-types ──────────────────────────────────────────────────────────
+  if (/\bOVERNIGHT\b/.test(n))                                    return 'Debt';
+  if (/\bLIQUID\b|\bMONEY\s*MARKET\b/.test(n))                    return 'Liquid';
+  if (/\bGILT\b|\bG-?SEC\b|\bSOVEREIGN\b/.test(n))               return 'Gilt';
+  if (/\bDEBT\b|\bBOND\b|\bCREDIT\s*RISK\b|\bDURATION\b|\bINCOME\b|\bCORPORATE\s*BOND\b|\bFIXED\s*INCOME\b|\bBANKING\s*&?\s*PSU\b|\bULTRA\s*SHORT\b|\bLOW\s*DURATION\b|\bSHORT\s*DURATION\b|\bMEDIUM\s*DURATION\b|\bLONG\s*DURATION\b/.test(n)) return 'Debt';
+
+  // ── Hybrid ──────────────────────────────────────────────────────────────────
+  if (/\bHYBRID\b|\bBALANCED\b|\bAGGRESSIVE\b|\bCONSERVATIVE\b|\bARBITRAGE\b|\bBAF\b|\bDAA\b|\bMULTI\s*ASSET\b/.test(n)) return 'Hybrid';
+
+  // ── Fall back to normalised API category ───────────────────────────────────
   const ac = apiCategory.toUpperCase();
-  if (ac.includes('ELSS'))               return 'ELSS';
-  if (ac.includes('INDEX') || ac.includes('ETF')) return 'Index/ETF';
-  if (ac.includes('LIQUID') || ac.includes('OVERNIGHT') || ac.includes('MONEY MARKET')) return 'Liquid';
-  if (ac.includes('GILT') || ac.includes('G-SEC')) return 'Gilt';
-  if (ac.includes('HYBRID') || ac.includes('BALANCED') || ac.includes('ARBITRAGE')) return 'Hybrid';
-  if (ac.includes('DEBT') || ac.includes('BOND') || ac.includes('INCOME') || ac.includes('CREDIT') || ac.includes('DURATION') || ac.includes('CORPORATE')) return 'Debt';
+  if (ac.includes('GOLD') || ac.includes('SILVER') || ac.includes('COMMODITY') || ac.includes('PRECIOUS METAL')) return 'Commodity';
+  if (ac.includes('INTERNATIONAL') || ac.includes('GLOBAL') || ac.includes('OVERSEAS') || ac.includes('FEEDER') || ac.includes('FOF')) return 'International';
+  if (ac.includes('ELSS'))                                             return 'ELSS';
+  if (ac.includes('INDEX') || ac.includes('ETF'))                     return 'Index/ETF';
+  if (ac.includes('SECTORAL') || ac.includes('THEMATIC'))             return 'Sectoral/Thematic';
+  if (ac.includes('OVERNIGHT') || ac.includes('LIQUID') || ac.includes('MONEY MARKET')) return 'Liquid';
+  if (ac.includes('GILT') || ac.includes('G-SEC') || ac.includes('SOVEREIGN')) return 'Gilt';
+  if (ac.includes('DEBT') || ac.includes('BOND') || ac.includes('INCOME') || ac.includes('CREDIT') || ac.includes('DURATION') || ac.includes('CORPORATE') || ac.includes('BANKING AND PSU') || ac.includes('BANKING & PSU')) return 'Debt';
+  if (ac.includes('HYBRID') || ac.includes('BALANCED') || ac.includes('ARBITRAGE') || ac.includes('MULTI ASSET')) return 'Hybrid';
+
   return 'Equity';
 }
 
@@ -174,26 +203,60 @@ function AutoTag({ label }: { label: string }) {
 // ─── Holder Fields Collapsible ────────────────────────────────────────────────
 
 function HolderSection({
-  holder, onChange, memberName,
+  holder, onChange, memberName, familyId,
 }: {
   holder: HolderFields;
   onChange: (h: HolderFields) => void;
   memberName: string;
+  familyId: string | null;
 }) {
+  const supabase = createClient();
   const [open, setOpen] = useState(false);
+  const [customBanks, setCustomBanks] = useState<string[]>([]);
+  // Explicit flag — true when "Other" is selected or existing holding has a custom bank
+  const [showCustomInput, setShowCustomInput] = useState(() =>
+    !!holder.bankName && !INDIAN_BANKS.includes(holder.bankName)
+  );
+  const customInputRef = useRef<HTMLInputElement>(null);
+
   const set = (k: keyof HolderFields) => (e: React.ChangeEvent<HTMLInputElement>) =>
     onChange({ ...holder, [k]: e.target.value });
 
-  const isOtherBank = !!holder.bankName && !INDIAN_BANKS.includes(holder.bankName);
-  const selectBankValue = isOtherBank ? 'Other' : holder.bankName;
+  // Load custom bank names saved in any family holding's metadata
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from('holdings').select('metadata');
+      const names = (data ?? [])
+        .map(h => (h.metadata as Record<string, unknown> | null)?.bank_name as string | undefined)
+        .filter((b): b is string => !!b && !INDIAN_BANKS.includes(b));
+      setCustomBanks(Array.from(new Set(names)));
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-focus the custom input whenever it becomes visible
+  useEffect(() => {
+    if (showCustomInput && open) {
+      const t = setTimeout(() => customInputRef.current?.focus(), 60);
+      return () => clearTimeout(t);
+    }
+  }, [showCustomInput, open]);
+
+  const allStandardBanks = [...INDIAN_BANKS, ...customBanks];
+  // "Other" is shown in dropdown if the bank doesn't match any known bank
+  const selectBankValue = showCustomInput ? 'Other' : holder.bankName;
 
   function handleBankSelect(v: string) {
-    if (v === 'Other') onChange({ ...holder, bankName: '' });
-    else onChange({ ...holder, bankName: v });
+    if (v === 'Other') {
+      setShowCustomInput(true);
+      onChange({ ...holder, bankName: '' });
+    } else {
+      setShowCustomInput(false);
+      onChange({ ...holder, bankName: v });
+    }
   }
 
   return (
-    <div className="mt-4 border rounded-xl overflow-hidden" style={{ borderColor: '#E8E5DD' }}>
+    <div className="mt-4 border rounded-xl" style={{ borderColor: '#E8E5DD' }}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -237,18 +300,28 @@ function HolderSection({
               <Input value={holder.email} onChange={set('email')}
                 placeholder="email@example.com" type="email" className="h-9 text-xs" />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 col-span-2">
               <Label className="text-xs" style={{ color: '#6B7280' }}>Bank Name</Label>
               <Select value={selectBankValue} onValueChange={handleBankSelect}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select bank" /></SelectTrigger>
                 <SelectContent>
-                  {INDIAN_BANKS.map((b) => <SelectItem key={b} value={b} className="text-xs">{b}</SelectItem>)}
-                  <SelectItem value="Other" className="text-xs">Other</SelectItem>
+                  {INDIAN_BANKS.map((b) => (
+                    <SelectItem key={b} value={b} className="text-xs">{b}</SelectItem>
+                  ))}
+                  {customBanks.map((b) => (
+                    <SelectItem key={b} value={b} className="text-xs">{b}</SelectItem>
+                  ))}
+                  <SelectItem value="Other" className="text-xs">Other…</SelectItem>
                 </SelectContent>
               </Select>
-              {isOtherBank && (
-                <Input value={holder.bankName} onChange={set('bankName')}
-                  placeholder="Enter bank name" className="h-9 text-xs mt-1" />
+              {showCustomInput && (
+                <Input
+                  ref={customInputRef}
+                  value={holder.bankName}
+                  onChange={set('bankName')}
+                  placeholder="Enter your bank name"
+                  className="h-9 text-xs mt-1"
+                />
               )}
             </div>
             <div className="space-y-1">
@@ -620,6 +693,7 @@ export default function MutualFundsPage() {
   const [errors,   setErrors]   = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [toast,    setToast]    = useState<Toast | null>(null);
+  const [importHistoryKey, setImportHistoryKey] = useState(0);
 
   // ── Edit single transaction mode ───────────────────────────────────────────
   const [editTxnId,      setEditTxnId]      = useState<string | null>(null);
@@ -1524,7 +1598,7 @@ export default function MutualFundsPage() {
             )}
 
             {/* Holder & Contact Details (both modes) */}
-            <HolderSection holder={holder} onChange={setHolder} memberName={memberName} />
+            <HolderSection holder={holder} onChange={setHolder} memberName={memberName} familyId={familyId} />
 
             {/* Action buttons */}
             <div className="flex items-center gap-3 mt-5">
@@ -1557,7 +1631,29 @@ export default function MutualFundsPage() {
         <TabsContent value="import">
           <div className="wv-card p-5">
             <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Import CAS Statement</p>
-            <CASImporter familyId={familyId} members={members} portfolios={dbPortfolios} memberId={member} />
+            <CASImporter
+              familyId={familyId}
+              members={members}
+              portfolios={dbPortfolios}
+              memberId={member}
+              onImported={() => setImportHistoryKey(k => k + 1)}
+            />
+          </div>
+
+          {/* ── Previous Imports ── */}
+          <div className="wv-card p-5 mt-4">
+            <div className="flex items-center gap-2 mb-4">
+              <History className="w-4 h-4" style={{ color: '#9CA3AF' }} />
+              <h3 className="text-sm font-semibold" style={{ color: '#1B2A4A' }}>Previous Imports</h3>
+              <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: '#F7F5F0', color: '#9CA3AF' }}>
+                CAS bulk imports only
+              </span>
+            </div>
+            <ImportHistory
+              key={importHistoryKey}
+              memberNames={Object.fromEntries(members.map(m => [m.id, m.name]))}
+              onHoldingsChanged={() => {}}
+            />
           </div>
         </TabsContent>
 
