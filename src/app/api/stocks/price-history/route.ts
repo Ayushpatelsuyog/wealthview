@@ -1,26 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { STOCKS_MAP } from '@/lib/data/stocks-list';
+import { cacheGet, cacheSet } from '@/lib/utils/price-cache';
 
-// Simulate historical price for a given date.
-// We use a deterministic formula so the same date always returns the same price.
-// Price grows roughly 14% per year (good equity assumption) going backwards in time.
+interface HistoryData {
+  timestamps: number[];
+  closes: number[];
+}
 
-function historicalPrice(basePrice: number, symbol: string, dateStr: string): number {
-  const today = new Date();
-  const date  = new Date(dateStr);
-  const msPerYear = 365.25 * 24 * 3600 * 1000;
-  const yearsAgo = (today.getTime() - date.getTime()) / msPerYear;
+async function fetchYahooHistory(symbol: string): Promise<HistoryData | null> {
+  const headers: Record<string, string> = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/json',
+  };
 
-  // Reverse compound: if current price = base, then historical = base / (1.14 ^ yearsAgo)
-  const annualReturn = 0.14;
-  const decayed = basePrice / Math.pow(1 + annualReturn, Math.max(0, yearsAgo));
+  for (const host of ['query1', 'query2']) {
+    try {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 10_000);
+      const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}.NS?interval=1d&range=2y`;
+      const res = await fetch(url, { headers, signal: controller.signal });
+      clearTimeout(tid);
+      if (!res.ok) continue;
 
-  // Add deterministic daily noise: hash of (symbol + date)
-  const seed = (symbol + dateStr).split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 0);
-  const noise = Math.sin(seed * 0.001) * 0.02 * decayed;
-  const price  = Math.max(1, decayed + noise);
+      const json = await res.json();
+      const result = json?.chart?.result?.[0];
+      if (!result) continue;
 
-  return parseFloat(price.toFixed(2));
+      const timestamps: number[] = result.timestamp ?? [];
+      const closes: number[] = result.indicators?.quote?.[0]?.close ?? [];
+
+      if (timestamps.length === 0 || closes.length === 0) continue;
+
+      console.log(`[Stock History] ✓ ${symbol}: ${timestamps.length} candles from ${host}`);
+      return { timestamps, closes };
+    } catch (err) {
+      console.warn(`[Stock History] Yahoo (${host}) error for ${symbol}:`, (err as Error).message);
+    }
+  }
+  return null;
+}
+
+function findClosestPrice(timestamps: number[], closes: number[], targetDate: string): number | null {
+  const targetMs = new Date(targetDate).getTime();
+  let bestIdx  = -1;
+  let bestDiff = Infinity;
+
+  for (let i = 0; i < timestamps.length; i++) {
+    const close = closes[i];
+    if (close == null || close <= 0) continue;
+    const diff = Math.abs(timestamps[i] * 1000 - targetMs);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestIdx  = i;
+    }
+  }
+
+  return bestIdx >= 0 ? Math.round(closes[bestIdx] * 100) / 100 : null;
 }
 
 export async function GET(req: NextRequest) {
@@ -36,9 +70,31 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'invalid date' }, { status: 400 });
   }
 
-  const stock = STOCKS_MAP.get(symbol);
-  const basePrice = stock?.basePrice ?? 500;
-  const price = historicalPrice(basePrice, symbol, dateStr);
+  // Cache full history per symbol (6h TTL — historical data changes rarely)
+  const cacheKey = `stock_history_${symbol}`;
+  let history = cacheGet<HistoryData>(cacheKey);
+
+  if (!history) {
+    history = await fetchYahooHistory(symbol);
+    if (history) {
+      cacheSet(cacheKey, history, 6 * 60 * 60 * 1000);
+    }
+  }
+
+  if (!history) {
+    return NextResponse.json({
+      error:   'history_unavailable',
+      message: `Could not fetch price history for ${symbol}. Yahoo Finance may be temporarily unavailable.`,
+    });
+  }
+
+  const price = findClosestPrice(history.timestamps, history.closes, dateStr);
+  if (!price) {
+    return NextResponse.json({
+      error:   'date_not_found',
+      message: `No price data found for ${symbol} on or near ${dateStr}`,
+    });
+  }
 
   return NextResponse.json({ symbol, date: dateStr, price });
 }

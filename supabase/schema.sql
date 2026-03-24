@@ -60,8 +60,11 @@ CREATE TABLE brokers (
   platform_type platform_type NOT NULL DEFAULT 'other',
   logo_color TEXT DEFAULT '#1B2A4A',
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  metadata JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- If updating an existing database, run:
+-- ALTER TABLE brokers ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
 
 CREATE TABLE import_batches (
   id             UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -102,8 +105,11 @@ CREATE TABLE transactions (
   date DATE NOT NULL,
   fees NUMERIC(20, 4) DEFAULT 0,
   notes TEXT,
+  metadata JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- If updating an existing database, run:
+-- ALTER TABLE transactions ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
 
 CREATE TABLE manual_assets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

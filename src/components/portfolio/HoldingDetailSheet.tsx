@@ -24,6 +24,7 @@ interface Transaction {
   type: string;
   fees: number;
   notes?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface HoldingDetail {
@@ -651,6 +652,9 @@ export function HoldingDetailSheet({
   const [editingCat,    setEditingCat]    = useState(false);
   const [savingCat,     setSavingCat]     = useState(false);
 
+  // NFO toggle (transaction-level)
+  const [nfoTogglingId, setNfoTogglingId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!open) {
       setView('detail'); setTxnDeleteConfirmId(null); setTxnDeleteError('');
@@ -767,6 +771,20 @@ export function HoldingDetailSheet({
       .eq('id', h.id);
     setSavingCat(false);
     setEditingCat(false);
+    onHoldingChanged();
+  }
+
+  // ── NFO toggle (transaction-level) ──────────────────────────────────────────
+  async function toggleTxnNfo(t: Transaction) {
+    setNfoTogglingId(t.id);
+    const newVal = !(t.metadata?.is_nfo === true);
+    const updates: Record<string, unknown> = {
+      metadata: { ...(t.metadata ?? {}), is_nfo: newVal },
+    };
+    // If marking as NFO, lock NAV/price to ₹10
+    if (newVal) updates.price = 10.0;
+    await supabase.from('transactions').update(updates).eq('id', t.id);
+    setNfoTogglingId(null);
     onHoldingChanged();
   }
 
@@ -978,9 +996,13 @@ export function HoldingDetailSheet({
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                     style={{ backgroundColor: 'rgba(201,168,76,0.25)', color: '#C9A84C' }}>SIP</span>
                 )}
-                {!!meta.is_nfo && (
+                {/* NFO badge — shown if any transaction is an NFO purchase */}
+                {(meta.is_nfo || h.transactions.some(t => t.metadata?.is_nfo === true)) && (
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                    style={{ backgroundColor: 'rgba(37,99,235,0.25)', color: '#93C5FD' }}>NFO</span>
+                    title="This holding has NFO transaction(s)"
+                    style={{ backgroundColor: 'rgba(37,99,235,0.25)', color: '#93C5FD' }}>
+                    NFO
+                  </span>
                 )}
                 <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>AMFI {h.symbol}</span>
               </div>
@@ -1282,10 +1304,18 @@ export function HoldingDetailSheet({
                                 {fmtDate(t.date)}
                               </td>
                               <td className="px-3 py-2">
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap"
-                                  style={{ backgroundColor: cfg.bg, color: cfg.text }}>
-                                  {label}
-                                </span>
+                                <div className="flex items-center gap-1">
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap"
+                                    style={{ backgroundColor: cfg.bg, color: cfg.text }}>
+                                    {label}
+                                  </span>
+                                  {t.metadata?.is_nfo === true && (
+                                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold"
+                                      style={{ backgroundColor: 'rgba(37,99,235,0.12)', color: '#2563EB' }}>
+                                      NFO
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                               <td className="px-3 py-2 font-semibold whitespace-nowrap"
                                 style={{ color: isBuy ? '#059669' : '#DC2626' }}>
@@ -1512,6 +1542,26 @@ export function HoldingDetailSheet({
                           </span>
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap flex-shrink-0"
                             style={{ backgroundColor: cfg.bg, color: cfg.text }}>{lbl}</span>
+                          {/* NFO toggle (buy/sip only) */}
+                          {(t.type === 'buy' || t.type === 'sip') && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleTxnNfo(t); }}
+                              disabled={nfoTogglingId === t.id}
+                              title={t.metadata?.is_nfo === true ? 'Unmark as NFO purchase' : 'Mark as NFO purchase (locks NAV to ₹10)'}
+                              className="flex-shrink-0 transition-opacity hover:opacity-80"
+                            >
+                              {nfoTogglingId === t.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#2563EB' }} />
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold"
+                                  style={t.metadata?.is_nfo === true
+                                    ? { backgroundColor: 'rgba(37,99,235,0.15)', color: '#2563EB' }
+                                    : { backgroundColor: '#F3F4F6', color: '#D1D5DB', border: '1px dashed #E5E7EB' }}>
+                                  NFO
+                                </span>
+                              )}
+                            </button>
+                          )}
                           <span className="text-[11px] font-semibold flex-1 text-right" style={{ color: '#1A1A2E' }}>
                             {formatLargeINR(amt)}
                           </span>

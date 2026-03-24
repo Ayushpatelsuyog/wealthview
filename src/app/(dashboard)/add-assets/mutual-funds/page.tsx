@@ -980,10 +980,13 @@ export default function MutualFundsPage() {
     };
 
     let payload: Record<string, unknown>;
+    // Use canonical name from NAV API if available (handles renamed funds)
+    const canonicalName = navData?.fundName ?? selectedFund!.schemeName;
+
     if (isSIP) {
       payload = {
         schemeCode:     selectedFund!.schemeCode,
-        schemeName:     selectedFund!.schemeName,
+        schemeName:     canonicalName,
         category:       selectedFund!.category,
         fundHouse:      navData?.fundHouse,
         purchaseDate:   sipBlocks[0].sipStart,
@@ -1018,7 +1021,7 @@ export default function MutualFundsPage() {
     } else {
       payload = {
         schemeCode:     selectedFund!.schemeCode,
-        schemeName:     selectedFund!.schemeName,
+        schemeName:     canonicalName,
         category:       selectedFund!.category,
         fundHouse:      navData?.fundHouse,
         purchaseDate,
@@ -1411,7 +1414,17 @@ export default function MutualFundsPage() {
                   ? <Loader2 className="w-4 h-4 mt-0.5 flex-shrink-0 animate-spin" style={{ color: '#059669' }} />
                   : <Check className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#059669' }} />}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold truncate" style={{ color: '#1A1A2E' }}>{selectedFund.schemeName}</p>
+                  {/* Show canonical name from NAV API if it differs from AMFI name */}
+                  {navData?.fundName && navData.fundName !== selectedFund.schemeName ? (
+                    <>
+                      <p className="text-xs font-semibold truncate" style={{ color: '#1A1A2E' }}>{navData.fundName}</p>
+                      <p className="text-[10px] mt-0.5 truncate" style={{ color: '#9CA3AF' }}>
+                        AMFI: {selectedFund.schemeName}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs font-semibold truncate" style={{ color: '#1A1A2E' }}>{selectedFund.schemeName}</p>
+                  )}
                   {navData ? (
                     <div className="flex items-center gap-3 mt-1">
                       <p className="text-[10px]" style={{ color: '#6B7280' }}>

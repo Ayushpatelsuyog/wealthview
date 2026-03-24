@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, User, Bell, Shield, Users, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Settings, User, Bell, Shield, Users, Eye, EyeOff, Loader2, Building2, ChevronDown, ChevronUp } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -29,6 +29,44 @@ interface FamilyRow {
   name: string;
   currency_default: string;
 }
+
+interface BrokerRow {
+  id: string;
+  name: string;
+  platform_type: string;
+  logo_color: string;
+  metadata: Record<string, unknown> | null;
+}
+
+interface CmlFields {
+  dp_id: string;
+  client_id: string;
+  bo_id: string;
+  trading_account: string;
+  first_holder: string;
+  second_holder: string;
+  nominee: string;
+  mobile: string;
+  email: string;
+  bank_name: string;
+  bank_last4: string;
+  ifsc: string;
+  address: string;
+  depository: string; // 'CDSL' | 'NSDL'
+}
+
+const BLANK_CML: CmlFields = {
+  dp_id: '', client_id: '', bo_id: '', trading_account: '',
+  first_holder: '', second_holder: '', nominee: '',
+  mobile: '', email: '', bank_name: '', bank_last4: '',
+  ifsc: '', address: '', depository: 'CDSL',
+};
+
+const INDIAN_BANKS_CML = [
+  'State Bank of India', 'HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Kotak Mahindra Bank',
+  'Punjab National Bank', 'Bank of Baroda', 'Canara Bank', 'Union Bank of India',
+  'IndusInd Bank', 'Yes Bank', 'IDFC First Bank', 'Federal Bank', 'South Indian Bank', 'Other',
+];
 
 interface Toast {
   type: 'success' | 'error';
@@ -164,14 +202,28 @@ export default function SettingsPage() {
   const [familySaving, setFamilySaving] = useState(false);
   const [members, setMembers] = useState<UserRow[]>([]);
 
+  // Distributors/Brokers
+  const [brokers, setBrokers] = useState<BrokerRow[]>([]);
+  const [brokerCml, setBrokerCml] = useState<Record<string, CmlFields>>({});
+  const [brokerSaving, setBrokerSaving] = useState<Record<string, boolean>>({});
+  const [expandedBroker, setExpandedBroker] = useState<string | null>(null);
+
   // UI
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [defaultTab, setDefaultTab] = useState('profile');
 
   function showToast(type: 'success' | 'error', message: string) {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3500);
   }
+
+  useEffect(() => {
+    // Read ?tab= from URL to auto-switch to the right tab
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    if (tabParam) setDefaultTab(tabParam);
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -221,6 +273,42 @@ export default function SettingsPage() {
               .eq('family_id', userData.family_id);
             if (membersData) setMembers(membersData as UserRow[]);
           } catch { /* ignore */ }
+
+          // Load brokers
+          try {
+            const { data: brokersData } = await supabase
+              .from('brokers')
+              .select('id, name, platform_type, logo_color, metadata')
+              .eq('family_id', userData.family_id)
+              .eq('is_active', true)
+              .order('name');
+            if (brokersData) {
+              const rows = brokersData as BrokerRow[];
+              setBrokers(rows);
+              // Initialize CML state from existing metadata
+              const cmlMap: Record<string, CmlFields> = {};
+              rows.forEach(b => {
+                const m = (b.metadata ?? {}) as Record<string, string>;
+                cmlMap[b.id] = {
+                  dp_id:           m.dp_id ?? '',
+                  client_id:       m.client_id ?? '',
+                  bo_id:           m.bo_id ?? '',
+                  trading_account: m.trading_account ?? '',
+                  first_holder:    m.first_holder ?? '',
+                  second_holder:   m.second_holder ?? '',
+                  nominee:         m.nominee ?? '',
+                  mobile:          m.mobile ?? '',
+                  email:           m.email ?? '',
+                  bank_name:       m.bank_name ?? '',
+                  bank_last4:      m.bank_last4 ?? '',
+                  ifsc:            m.ifsc ?? '',
+                  address:         m.address ?? '',
+                  depository:      m.depository ?? 'CDSL',
+                };
+              });
+              setBrokerCml(cmlMap);
+            }
+          } catch { /* ignore — metadata column may not exist yet */ }
         }
       }
       setLoading(false);
@@ -280,6 +368,26 @@ export default function SettingsPage() {
     else showToast('success', 'Member saved');
   }
 
+  async function saveBrokerCml(brokerId: string) {
+    const cml = brokerCml[brokerId];
+    if (!cml) return;
+    setBrokerSaving(s => ({ ...s, [brokerId]: true }));
+    const { error } = await supabase
+      .from('brokers')
+      .update({ metadata: cml as unknown as Record<string, unknown> })
+      .eq('id', brokerId);
+    setBrokerSaving(s => ({ ...s, [brokerId]: false }));
+    if (error) showToast('error', error.message);
+    else showToast('success', 'Distributor details saved');
+  }
+
+  function updateCml(brokerId: string, field: keyof CmlFields, value: string) {
+    setBrokerCml(prev => ({
+      ...prev,
+      [brokerId]: { ...(prev[brokerId] ?? BLANK_CML), [field]: value },
+    }));
+  }
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
@@ -311,13 +419,16 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="profile">
+      <Tabs defaultValue={defaultTab} key={defaultTab}>
         <TabsList className="mb-6">
           <TabsTrigger value="profile" className="gap-2">
             <User className="w-3.5 h-3.5" />Profile
           </TabsTrigger>
           <TabsTrigger value="family" className="gap-2">
             <Users className="w-3.5 h-3.5" />Family
+          </TabsTrigger>
+          <TabsTrigger value="distributors" className="gap-2">
+            <Building2 className="w-3.5 h-3.5" />Distributors
           </TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="w-3.5 h-3.5" />Alerts
@@ -432,6 +543,150 @@ export default function SettingsPage() {
                 </div>
               </Card>
             )}
+          </div>
+        </TabsContent>
+
+        {/* ─── Distributors Tab ────────────────────────────────────── */}
+        <TabsContent value="distributors">
+          <div className="space-y-4">
+            <Card className="p-6 border-0 shadow-sm space-y-4">
+              <div>
+                <h2 className="font-semibold text-gray-900">Distributor / Broker CML Details</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Store your Client Master List (CML) data per broker/distributor. These details auto-fill when adding stock transactions.
+                </p>
+              </div>
+              <Separator />
+              {brokers.length === 0 ? (
+                <p className="text-sm text-gray-400 py-4 text-center">No distributors added yet. Add brokers from the Add Assets pages.</p>
+              ) : (
+                <div className="space-y-3">
+                  {brokers.map(broker => {
+                    const cml = brokerCml[broker.id] ?? BLANK_CML;
+                    const isExpanded = expandedBroker === broker.id;
+                    const isSaving = brokerSaving[broker.id] ?? false;
+                    return (
+                      <div key={broker.id} className="border rounded-xl overflow-hidden" style={{ borderColor: '#E8E5DD' }}>
+                        {/* Header */}
+                        <button
+                          className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                          onClick={() => setExpandedBroker(isExpanded ? null : broker.id)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                              style={{ backgroundColor: broker.logo_color || '#1B2A4A' }}>
+                              {broker.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="text-left">
+                              <p className="text-sm font-medium text-gray-900">{broker.name}</p>
+                              <p className="text-xs text-gray-400 capitalize">{broker.platform_type.replace(/_/g, ' ')}</p>
+                            </div>
+                          </div>
+                          {isExpanded
+                            ? <ChevronUp className="w-4 h-4 text-gray-400" />
+                            : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                        </button>
+
+                        {/* CML Fields */}
+                        {isExpanded && (
+                          <div className="px-4 pb-4 space-y-4 border-t" style={{ borderColor: '#F0EDE6' }}>
+                            {/* Demat / DP Info */}
+                            <div className="mt-4">
+                              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#9CA3AF' }}>Demat Account</p>
+                              <div className="grid grid-cols-2 gap-3">
+                                {[
+                                  { key: 'dp_id' as keyof CmlFields, label: 'DP ID (Depository Participant ID)', ph: 'e.g. IN301549' },
+                                  { key: 'client_id' as keyof CmlFields, label: 'Client ID / Demat Account No.', ph: 'e.g. 12345678' },
+                                  { key: 'bo_id' as keyof CmlFields, label: 'BO ID (Beneficiary Owner ID)', ph: '16-digit BO ID' },
+                                  { key: 'trading_account' as keyof CmlFields, label: 'Trading Account Number', ph: 'Trading account no.' },
+                                ].map(f => (
+                                  <div key={f.key} className="space-y-1">
+                                    <Label className="text-xs">{f.label}</Label>
+                                    <Input value={cml[f.key]} onChange={e => updateCml(broker.id, f.key, e.target.value)}
+                                      placeholder={f.ph} className="h-8 text-xs" />
+                                  </div>
+                                ))}
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Depository</Label>
+                                  <div className="flex gap-3 mt-1">
+                                    {['CDSL', 'NSDL'].map(dep => (
+                                      <label key={dep} className="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name={`dep_${broker.id}`} value={dep}
+                                          checked={cml.depository === dep}
+                                          onChange={() => updateCml(broker.id, 'depository', dep)}
+                                          className="w-3.5 h-3.5" />
+                                        <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{dep}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Holder Info */}
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#9CA3AF' }}>Holder Details</p>
+                              <div className="grid grid-cols-2 gap-3">
+                                {[
+                                  { key: 'first_holder' as keyof CmlFields, label: 'First Holder Name', ph: 'Full name' },
+                                  { key: 'second_holder' as keyof CmlFields, label: 'Second Holder Name', ph: 'Full name (optional)' },
+                                  { key: 'nominee' as keyof CmlFields, label: 'Nominee Name', ph: 'Full name' },
+                                  { key: 'mobile' as keyof CmlFields, label: 'Mobile Number', ph: '9XXXXXXXXX' },
+                                  { key: 'email' as keyof CmlFields, label: 'Email', ph: 'email@example.com' },
+                                ].map(f => (
+                                  <div key={f.key} className="space-y-1">
+                                    <Label className="text-xs">{f.label}</Label>
+                                    <Input value={cml[f.key]} onChange={e => updateCml(broker.id, f.key, e.target.value)}
+                                      placeholder={f.ph} className="h-8 text-xs" />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Bank Info */}
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#9CA3AF' }}>Bank Details</p>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Bank Name</Label>
+                                  <Select value={cml.bank_name || ''} onValueChange={v => updateCml(broker.id, 'bank_name', v)}>
+                                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select bank" /></SelectTrigger>
+                                    <SelectContent>
+                                      {INDIAN_BANKS_CML.map(b => <SelectItem key={b} value={b} className="text-xs">{b}</SelectItem>)}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                {[
+                                  { key: 'bank_last4' as keyof CmlFields, label: 'Last 4 Digits of A/C', ph: '1234' },
+                                  { key: 'ifsc' as keyof CmlFields, label: 'IFSC Code', ph: 'SBIN0001234' },
+                                ].map(f => (
+                                  <div key={f.key} className="space-y-1">
+                                    <Label className="text-xs">{f.label}</Label>
+                                    <Input value={cml[f.key]} onChange={e => updateCml(broker.id, f.key, e.target.value)}
+                                      placeholder={f.ph} className="h-8 text-xs" />
+                                  </div>
+                                ))}
+                                <div className="space-y-1 col-span-2">
+                                  <Label className="text-xs">Correspondence Address</Label>
+                                  <Input value={cml.address} onChange={e => updateCml(broker.id, 'address', e.target.value)}
+                                    placeholder="Full address" className="h-8 text-xs" />
+                                </div>
+                              </div>
+                            </div>
+
+                            <Button onClick={() => saveBrokerCml(broker.id)} disabled={isSaving}
+                              size="sm" className="text-white text-xs" style={{ backgroundColor: '#1B2A4A' }}>
+                              {isSaving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                              Save CML Details
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
           </div>
         </TabsContent>
 

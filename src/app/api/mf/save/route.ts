@@ -229,6 +229,9 @@ export async function POST(req: NextRequest) {
     }
   } else {
     // Single summary transaction (lump sum, or SIP without breakdown)
+    const txnMeta: Record<string, unknown> = {};
+    if (!isSIP && isNFO) txnMeta.is_nfo = true;
+
     const { error: txnErr } = await supabase
       .from('transactions')
       .insert({
@@ -239,6 +242,7 @@ export async function POST(req: NextRequest) {
         date:       purchaseDate,
         fees:       fees ?? parseFloat((investedAmount * 0.00005).toFixed(2)),
         notes:      folio ? `Folio: ${folio}` : (isSIP ? 'SIP purchase' : 'Lump sum purchase'),
+        metadata:   txnMeta,
       });
 
     if (txnErr) {

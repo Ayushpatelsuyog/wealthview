@@ -8,7 +8,7 @@ import { Label }  from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  TrendingUp, TrendingDown, Upload, Link as LinkIcon, Check, ChevronDown, ChevronUp,
+  TrendingUp, TrendingDown, Upload, Link as LinkIcon, Check, ChevronDown,
   Loader2, AlertCircle, X, Plus, User, Building2, Search,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -40,16 +40,6 @@ interface StockPrice {
 interface FamilyMember { id: string; name: string }
 interface Portfolio    { id: string; name: string; type: string }
 interface Toast        { type: 'success' | 'error'; message: string }
-
-interface HolderFields {
-  firstHolder: string;
-  secondHolder: string;
-  nominee: string;
-  mobile: string;
-  email: string;
-  bankName: string;
-  bankLast4: string;
-}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -92,17 +82,6 @@ const SECTOR_COLORS: Record<string, string> = {
 function sectorColor(sector: string): string {
   return SECTOR_COLORS[sector] ?? '#6B7280';
 }
-
-const INDIAN_BANKS = [
-  'HDFC Bank','SBI','ICICI Bank','Kotak Mahindra','Axis Bank',
-  'Bank of Baroda','PNB','IndusInd','Yes Bank','IDFC First',
-  'Federal Bank','Canara Bank','Union Bank','Indian Bank','Bank of India',
-];
-
-const BLANK_HOLDER: HolderFields = {
-  firstHolder: '', secondHolder: '', nominee: '',
-  mobile: '', email: '', bankName: '', bankLast4: '',
-};
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -210,8 +189,6 @@ function IndianStocksFormContent() {
   const [stampDuty,       setStampDuty]       = useState('');
   const [exchangeCharges, setExchangeCharges] = useState('0');
   const [dpCharges,       setDpCharges]       = useState('0');
-  const [demat,           setDemat]           = useState('');
-
   // Bonus
   const [bonusRatio,  setBonusRatio]  = useState('');
   // Split
@@ -224,10 +201,6 @@ function IndianStocksFormContent() {
   const [divType,     setDivType]     = useState('Interim');
   const [exDate,      setExDate]      = useState('');
   const [payDate,     setPayDate]     = useState('');
-
-  // Holder details
-  const [showHolder, setShowHolder] = useState(false);
-  const [holder, setHolder] = useState<HolderFields>({ ...BLANK_HOLDER });
 
   // UI state
   const [saving,  setSaving]  = useState(false);
@@ -391,16 +364,6 @@ function IndianStocksFormContent() {
         brokerage, stt, gst, stampDuty, exchangeCharges, dpCharges,
         portfolioName:   finalPortfolio,
         brokerId,
-        demat,
-        holderDetails:   {
-          first_holder:  holder.firstHolder,
-          second_holder: holder.secondHolder,
-          nominee:       holder.nominee,
-          mobile:        holder.mobile,
-          email:         holder.email,
-          bank_name:     holder.bankName,
-          bank_last4:    holder.bankLast4,
-        },
         currentPrice: stockPrice?.price ?? null,
         bonusRatio,  splitRatio,  splitFactor,
         rightsRatio, rightsPrice,
@@ -723,13 +686,6 @@ function IndianStocksFormContent() {
                       />
                       <FieldError msg={errors.date} />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Demat Account / DP ID</Label>
-                      <Input
-                        value={demat} onChange={e => setDemat(e.target.value)}
-                        placeholder="IN301549…" className="h-9 text-xs"
-                      />
-                    </div>
                   </div>
 
                   {/* ISIN auto-filled */}
@@ -925,56 +881,19 @@ function IndianStocksFormContent() {
             </div>
           )}
 
-          {/* Holder Details (collapsible) */}
+          {/* Holder details are managed at the Distributor (broker) level */}
           {selectedStock && (
-            <div className="wv-card">
+            <div className="px-4 py-3 rounded-xl flex items-center gap-2 text-xs"
+              style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
+              <User className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#9CA3AF' }} />
+              <span style={{ color: '#6B7280' }}>Holder &amp; demat details are managed per distributor.</span>
               <button
-                className="w-full flex items-center justify-between px-5 py-4"
-                onClick={() => setShowHolder(!showHolder)}>
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4" style={{ color: '#9CA3AF' }} />
-                  <span className="text-xs font-medium" style={{ color: '#6B7280' }}>Holder &amp; Contact Details</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full"
-                    style={{ backgroundColor: '#F0EDE6', color: '#9CA3AF' }}>optional</span>
-                </div>
-                {showHolder
-                  ? <ChevronUp className="w-4 h-4" style={{ color: '#9CA3AF' }} />
-                  : <ChevronDown className="w-4 h-4" style={{ color: '#9CA3AF' }} />}
+                type="button"
+                onClick={() => router.push('/settings?tab=distributors')}
+                className="ml-1 text-[11px] font-semibold underline-offset-2 hover:underline"
+                style={{ color: '#C9A84C' }}>
+                Edit in Settings →
               </button>
-
-              {showHolder && (
-                <div className="px-5 pb-5 space-y-4 border-t" style={{ borderColor: '#F0EDE6' }}>
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    {[
-                      { label: 'First Holder', key: 'firstHolder', ph: 'Full name' },
-                      { label: 'Second Holder', key: 'secondHolder', ph: 'Full name' },
-                      { label: 'Nominee', key: 'nominee', ph: 'Full name' },
-                      { label: 'Mobile', key: 'mobile', ph: '9XXXXXXXXX' },
-                      { label: 'Email', key: 'email', ph: 'email@example.com' },
-                      { label: 'Bank Last 4 Digits', key: 'bankLast4', ph: '1234' },
-                    ].map(f => (
-                      <div key={f.key} className="space-y-1.5">
-                        <Label className="text-xs" style={{ color: '#6B7280' }}>{f.label}</Label>
-                        <Input
-                          value={holder[f.key as keyof HolderFields]}
-                          onChange={e => setHolder(h => ({ ...h, [f.key]: e.target.value }))}
-                          placeholder={f.ph} className="h-9 text-xs"
-                        />
-                      </div>
-                    ))}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Bank Name</Label>
-                      <Select value={holder.bankName} onValueChange={v => setHolder(h => ({ ...h, bankName: v }))}>
-                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select bank" /></SelectTrigger>
-                        <SelectContent>
-                          {INDIAN_BANKS.map(b => <SelectItem key={b} value={b} className="text-xs">{b}</SelectItem>)}
-                          <SelectItem value="Other" className="text-xs">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

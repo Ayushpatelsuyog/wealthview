@@ -14,7 +14,7 @@ import { calculateXIRR } from '@/lib/utils/calculations';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Transaction { id: string; date: string; price: number; quantity: number; type: string; fees: number; notes?: string }
+interface Transaction { id: string; date: string; price: number; quantity: number; type: string; fees: number; notes?: string; metadata?: Record<string, unknown> }
 
 interface RawHolding {
   id: string;
@@ -29,15 +29,17 @@ interface RawHolding {
 }
 
 interface HoldingRow extends RawHolding {
-  currentPrice:  number | null;
-  priceLoading:  boolean;
-  investedValue: number;
-  currentValue:  number | null;
-  gainLoss:      number | null;
-  gainLossPct:   number | null;
-  xirr:          number | null;
-  memberName:    string;
-  sector:        string;
+  currentPrice:    number | null;
+  priceLoading:    boolean;
+  priceUnavailable: boolean;
+  manualPrice:     number | null;  // user-entered fallback price (session only)
+  investedValue:   number;
+  currentValue:    number | null;
+  gainLoss:        number | null;
+  gainLossPct:     number | null;
+  xirr:            number | null;
+  memberName:      string;
+  sector:          string;
 }
 
 type SortKey = 'value' | 'pnlPct' | 'xirr' | 'name' | 'recent';
@@ -220,8 +222,10 @@ export default function IndianStocksPortfolioPage() {
   const [loading,        setLoading]        = useState(true);
   const [error,          setError]          = useState<string | null>(null);
   const [priceRefreshing,setPriceRefreshing]= useState(false);
+  const [toast,          setToast]          = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [detailId,       setDetailId]       = useState<string | null>(null);
   const [_memberNames,   setMemberNames]    = useState<Record<string, string>>({});
+  const [manualPriceInput, setManualPriceInput] = useState<Record<string, string>>({}); // symbol → input string
 
   // Filters
   const [filterBrokers,    setFilterBrokers]    = useState<Set<string>>(new Set());
@@ -261,7 +265,7 @@ export default function IndianStocksPortfolioPage() {
         id, symbol, name, quantity, avg_buy_price, metadata,
         portfolios(id, name, type, user_id),
         brokers(id, name, platform_type),
-        transactions(id, date, price, quantity, type, fees, notes)
+        transactions(id, date, price, quantity, type, fees, notes, metadata)
       `)
       .eq('asset_type', 'indian_stock')
       .gt('quantity', 0)  // only active holdings
@@ -274,7 +278,7 @@ export default function IndianStocksPortfolioPage() {
       const ownerId  = h.portfolios?.user_id ?? '';
       return {
         ...h,
-        currentPrice: null, priceLoading: true,
+        currentPrice: null, priceLoading: true, priceUnavailable: false, manualPrice: null,
         investedValue: invested,
         currentValue: null, gainLoss: null, gainLossPct: null, xirr: null,
         memberName: names[ownerId] ?? '',
@@ -285,46 +289,96 @@ export default function IndianStocksPortfolioPage() {
     setHoldings(rows);
     setLoading(false);
 
-    // Fetch prices for all unique symbols
+    // Batch-fetch all prices in a single request
     const unique = Array.from(new Set(rows.map(r => r.symbol)));
-    await Promise.allSettled(unique.map(sym => fetchPrice(sym)));
+    await fetchPriceBatch(unique, rows, false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function fetchPrice(symbol: string) {
-    try {
-      const res = await fetch(`/api/stocks/price?symbol=${symbol}`);
-      if (!res.ok) throw new Error();
-      const { price } = await res.json();
-      setHoldings(prev => prev.map(h => {
-        if (h.symbol !== symbol) return h;
-        const currentValue = Number(h.quantity) * price;
-        const gainLoss     = currentValue - h.investedValue;
-        const gainLossPct  = h.investedValue > 0 ? (gainLoss / h.investedValue) * 100 : 0;
-        let xirr: number | null = null;
-        const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip');
-        if (buyTxns.length > 0) {
-          const earliest = buyTxns.reduce((a, b) => new Date(a.date) < new Date(b.date) ? a : b);
-          const d0 = new Date(earliest.date);
-          if (new Date() > d0) {
-            try {
-              const r = calculateXIRR([-h.investedValue, currentValue], [d0, new Date()]);
-              if (isFinite(r)) xirr = r * 100;
-            } catch { /* skip */ }
-          }
+  function applyPrice(symbol: string, price: number) {
+    setHoldings(prev => prev.map(h => {
+      if (h.symbol !== symbol) return h;
+      const currentValue = Number(h.quantity) * price;
+      const gainLoss     = currentValue - h.investedValue;
+      const gainLossPct  = h.investedValue > 0 ? (gainLoss / h.investedValue) * 100 : 0;
+      let xirr: number | null = null;
+      const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip');
+      if (buyTxns.length > 0) {
+        const earliest = buyTxns.reduce((a, b) => new Date(a.date) < new Date(b.date) ? a : b);
+        const d0 = new Date(earliest.date);
+        if (new Date() > d0) {
+          try {
+            const r = calculateXIRR([-h.investedValue, currentValue], [d0, new Date()]);
+            if (isFinite(r)) xirr = r * 100;
+          } catch { /* skip */ }
         }
-        return { ...h, currentPrice: price, priceLoading: false, currentValue, gainLoss, gainLossPct, xirr };
-      }));
+      }
+      return { ...h, currentPrice: price, priceLoading: false, priceUnavailable: false, currentValue, gainLoss, gainLossPct, xirr };
+    }));
+  }
+
+  async function fetchPriceBatch(symbols: string[], baseRows?: HoldingRow[], nocache = false): Promise<number> {
+    const suffix = nocache ? '&nocache=1' : '';
+    try {
+      const res  = await fetch(`/api/stocks/price/batch?symbols=${symbols.join(',')}${suffix}`);
+      const json = await res.json();
+      const batchResults: Record<string, { price: number } | null> = json.results ?? {};
+      let succeeded = 0;
+      setHoldings(prev => {
+        const source = baseRows ?? prev;
+        return source.map(h => {
+          if (!symbols.includes(h.symbol)) return h;
+          const result = batchResults[h.symbol];
+          if (!result) return { ...h, priceLoading: false, priceUnavailable: true };
+          succeeded++;
+          const currentValue = Number(h.quantity) * result.price;
+          const gainLoss     = currentValue - h.investedValue;
+          const gainLossPct  = h.investedValue > 0 ? (gainLoss / h.investedValue) * 100 : 0;
+          let xirr: number | null = null;
+          const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip');
+          if (buyTxns.length > 0) {
+            const earliest = buyTxns.reduce((a, b) => new Date(a.date) < new Date(b.date) ? a : b);
+            const d0 = new Date(earliest.date);
+            if (new Date() > d0) {
+              try {
+                const r = calculateXIRR([-h.investedValue, currentValue], [d0, new Date()]);
+                if (isFinite(r)) xirr = r * 100;
+              } catch { /* skip */ }
+            }
+          }
+          return { ...h, currentPrice: result.price, priceLoading: false, priceUnavailable: false, currentValue, gainLoss, gainLossPct, xirr };
+        });
+      });
+      return succeeded;
     } catch {
-      setHoldings(prev => prev.map(h => h.symbol === symbol ? { ...h, priceLoading: false } : h));
+      setHoldings(prev => prev.map(h => symbols.includes(h.symbol) ? { ...h, priceLoading: false, priceUnavailable: true } : h));
+      return 0;
     }
+  }
+
+  async function fetchPrice(symbol: string, bypassCache = false): Promise<boolean> {
+    if (bypassCache) {
+      setHoldings(prev => prev.map(h => h.symbol === symbol ? { ...h, priceLoading: true, priceUnavailable: false } : h));
+    }
+    const count = await fetchPriceBatch([symbol], undefined, bypassCache);
+    return count > 0;
+  }
+
+  function submitManualPrice(symbol: string) {
+    const val = parseFloat(manualPriceInput[symbol] ?? '');
+    if (!isNaN(val) && val > 0) applyPrice(symbol, val);
   }
 
   useEffect(() => { loadHoldings(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function refreshAllPrices() {
     setPriceRefreshing(true);
-    await Promise.allSettled(Array.from(new Set(holdings.map(h => h.symbol))).map(s => fetchPrice(s)));
+    const unique = Array.from(new Set(holdings.map(h => h.symbol)));
+    const succeeded = await fetchPriceBatch(unique, undefined, true);
+    const total = unique.length;
     setPriceRefreshing(false);
+    setToast({ type: succeeded === total ? 'success' : 'error',
+      message: `Prices updated for ${succeeded} of ${total} stock${total !== 1 ? 's' : ''}` });
+    setTimeout(() => setToast(null), 4000);
   }
 
   async function deleteHolding(id: string) {
@@ -473,6 +527,14 @@ export default function IndianStocksPortfolioPage() {
 
   return (
     <div className="p-6 space-y-5">
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 text-xs font-semibold"
+          style={{ backgroundColor: toast.type === 'success' ? '#059669' : '#DC2626', color: 'white' }}>
+          {toast.message}
+        </div>
+      )}
+
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -709,15 +771,36 @@ export default function IndianStocksPortfolioPage() {
                     </div>
 
                     {/* CMP */}
-                    <div className="text-right">
+                    <div className="text-right" onClick={e => e.stopPropagation()}>
                       {h.priceLoading ? (
                         <Loader2 className="w-3 h-3 animate-spin ml-auto" style={{ color: '#C9A84C' }} />
-                      ) : h.currentPrice ? (
+                      ) : h.currentPrice !== null ? (
                         <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
                           ₹{h.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                         </p>
+                      ) : h.priceUnavailable ? (
+                        <div className="flex flex-col items-end gap-1">
+                          <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Unavailable</p>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              placeholder="Enter"
+                              value={manualPriceInput[h.symbol] ?? ''}
+                              onChange={e => setManualPriceInput(prev => ({ ...prev, [h.symbol]: e.target.value }))}
+                              onKeyDown={e => { if (e.key === 'Enter') submitManualPrice(h.symbol); }}
+                              className="w-16 h-6 text-[10px] text-right border rounded px-1 outline-none"
+                              style={{ borderColor: '#E8E5DD', color: '#1A1A2E' }}
+                            />
+                            <button
+                              onClick={() => submitManualPrice(h.symbol)}
+                              className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+                              style={{ backgroundColor: '#1B2A4A', color: 'white' }}>
+                              ✓
+                            </button>
+                          </div>
+                        </div>
                       ) : (
-                        <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>
+                        <p className="text-[10px]" style={{ color: '#DC2626' }}>Error</p>
                       )}
                     </div>
 

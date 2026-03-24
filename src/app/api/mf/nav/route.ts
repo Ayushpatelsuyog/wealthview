@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cacheGet, cacheSet, TTL } from '@/lib/utils/price-cache';
+import { cacheGet, cacheSet, cacheClear, TTL } from '@/lib/utils/price-cache';
 
 export interface MFNavData {
   schemeCode: number;
@@ -14,9 +14,14 @@ export async function GET(req: NextRequest) {
   const sc = req.nextUrl.searchParams.get('scheme_code');
   if (!sc) return NextResponse.json({ error: 'scheme_code required' }, { status: 400 });
 
+  const nocache = req.nextUrl.searchParams.get('nocache') === '1';
   const cacheKey = `mf_nav_${sc}`;
-  const cached = cacheGet<MFNavData>(cacheKey);
-  if (cached) return NextResponse.json(cached);
+  if (!nocache) {
+    const cached = cacheGet<MFNavData>(cacheKey);
+    if (cached) return NextResponse.json(cached);
+  } else {
+    cacheClear(cacheKey);
+  }
 
   try {
     const res = await fetch(`https://api.mfapi.in/mf/${sc}/latest`, {

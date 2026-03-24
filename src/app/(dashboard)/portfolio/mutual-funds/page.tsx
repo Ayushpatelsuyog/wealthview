@@ -11,11 +11,11 @@ import { HoldingDetailSheet } from '@/components/portfolio/HoldingDetailSheet';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR, formatPercentage } from '@/lib/utils/formatters';
 import { calculateXIRR } from '@/lib/utils/calculations';
-import { navCacheGet, navCacheSet } from '@/lib/utils/nav-cache';
+import { navCacheGet, navCacheSet, navCacheClearAll } from '@/lib/utils/nav-cache';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Transaction { id: string; date: string; price: number; quantity: number; type: string; fees: number; notes?: string }
+interface Transaction { id: string; date: string; price: number; quantity: number; type: string; fees: number; notes?: string; metadata?: Record<string, unknown> }
 
 interface RawHolding {
   id: string;
@@ -165,16 +165,6 @@ function SipBadge({ metadata }: { metadata: Record<string, unknown> }) {
     <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
       style={{ backgroundColor: 'rgba(201,168,76,0.15)', color: '#92620A' }}>
       {activeCount} active · {inactiveCount} stopped
-    </span>
-  );
-}
-
-function NfoBadge({ metadata }: { metadata: Record<string, unknown> }) {
-  if (!metadata.is_nfo) return null;
-  return (
-    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
-      style={{ backgroundColor: 'rgba(37,99,235,0.12)', color: '#2563EB' }}>
-      NFO
     </span>
   );
 }
@@ -371,6 +361,7 @@ export default function MutualFundsPortfolioPage() {
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState<string | null>(null);
   const [navRefreshing, setNavRefreshing] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [_memberNames, setMemberNames] = useState<Record<string, string>>({});
   const [detailId, setDetailId]     = useState<string | null>(null);
   const [openAsRedeem, setOpenAsRedeem] = useState(false);
@@ -418,7 +409,7 @@ export default function MutualFundsPortfolioPage() {
         id, symbol, name, quantity, avg_buy_price, metadata,
         portfolios(id, name, type, user_id),
         brokers(id, name, platform_type),
-        transactions(id, date, price, quantity, type, fees, notes)
+        transactions(id, date, price, quantity, type, fees, notes, metadata)
       `)
       .eq('asset_type', 'mutual_fund')
       .order('created_at', { ascending: false });
@@ -440,54 +431,93 @@ export default function MutualFundsPortfolioPage() {
     setHoldings(rows);
     setLoading(false);
 
-    // Fetch NAVs for all unique symbols (auto on page load)
+    // Batch-fetch NAVs for all unique symbols in a single request
     const unique = Array.from(new Set(rows.map(r => r.symbol)));
-    await Promise.allSettled(unique.map(sym => fetchNav(sym)));
+    await fetchNavBatch(unique, rows, false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function fetchNav(symbol: string) {
-    try {
-      // Check 5-minute client-side cache first
-      const cached = navCacheGet(symbol);
-      const currentNav  = cached?.nav    ?? await (async () => {
-        const res = await fetch(`/api/mf/nav?scheme_code=${symbol}`);
-        if (!res.ok) throw new Error();
-        const { nav, navDate: nd } = await res.json();
-        navCacheSet(symbol, nav, nd);
-        return nav;
-      })();
-      const navDate = cached?.navDate ?? navCacheGet(symbol)?.navDate ?? '';
+  function applyNavResults(
+    navMap: Record<string, { nav: number; navDate: string } | null>,
+    baseRows?: HoldingRow[],
+  ) {
+    setHoldings(prev => {
+      const source = baseRows ?? prev;
+      return source.map(h => {
+        const navResult = navMap[h.symbol];
+        if (!navResult) return { ...h, navLoading: false };
+        const currentNav  = navResult.nav;
+        const navDate     = navResult.navDate;
+        const currentValue = Number(h.quantity) * currentNav;
+        const gainLoss    = currentValue - h.investedValue;
+        const gainLossPct = h.investedValue > 0 ? (gainLoss / h.investedValue) * 100 : 0;
+        let xirr: number | null = null;
+        const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip');
+        if (buyTxns.length) {
+          const earliest = buyTxns.reduce((a, b) => new Date(a.date) < new Date(b.date) ? a : b);
+          const d0 = new Date(earliest.date);
+          if (new Date() > d0) {
+            try {
+              const r = calculateXIRR([-h.investedValue, currentValue], [d0, new Date()]);
+              if (isFinite(r)) xirr = r;
+            } catch { /* skip */ }
+          }
+        }
+        return { ...h, currentNav, navDate, navLoading: false, currentValue, gainLoss, gainLossPct, xirr };
+      });
+    });
+  }
 
-      setHoldings(prev => prev.map(h => {
-          if (h.symbol !== symbol) return h;   // only update matching symbol
-          const currentValue = Number(h.quantity) * currentNav;
-          const gainLoss     = currentValue - h.investedValue;
-          const gainLossPct  = h.investedValue > 0 ? (gainLoss / h.investedValue) * 100 : 0;
-          let xirr: number | null = null;
-          const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip');
-          if (buyTxns.length) {
-            const earliest = buyTxns.reduce((a, b) => new Date(a.date) < new Date(b.date) ? a : b);
-            const d0 = new Date(earliest.date);
-            if (new Date() > d0) {
-              try {
-                const r = calculateXIRR([-h.investedValue, currentValue], [d0, new Date()]);
-                if (isFinite(r)) xirr = r;
-              } catch { /* skip */ }
+  async function fetchNavBatch(symbols: string[], baseRows?: HoldingRow[], nocache = false): Promise<number> {
+    // Check client cache first for non-refresh fetches
+    const navMap: Record<string, { nav: number; navDate: string } | null> = {};
+    const toFetch: string[] = [];
+
+    if (!nocache) {
+      for (const sym of symbols) {
+        const cached = navCacheGet(sym);
+        if (cached) { navMap[sym] = cached; }
+        else { toFetch.push(sym); }
+      }
+    } else {
+      toFetch.push(...symbols);
+    }
+
+    if (toFetch.length > 0) {
+      const suffix = nocache ? '&nocache=1' : '';
+      try {
+        const res = await fetch(`/api/mf/nav/batch?scheme_codes=${toFetch.join(',')}${suffix}`);
+        if (res.ok) {
+          const json = await res.json();
+          const batchResults: Record<string, { nav: number; navDate: string; fundName: string; fundHouse: string } | null> = json.results ?? {};
+          for (const [sym, data] of Object.entries(batchResults)) {
+            if (data) {
+              navCacheSet(sym, data.nav, data.navDate);
+              navMap[sym] = { nav: data.nav, navDate: data.navDate };
+            } else {
+              navMap[sym] = null;
             }
           }
-          return { ...h, currentNav, navDate, navLoading: false, currentValue, gainLoss, gainLossPct, xirr };
-        }));
-    } catch {
-      setHoldings(prev => prev.map(h => h.symbol === symbol ? { ...h, navLoading: false } : h));
+        }
+      } catch { /* batch failed, navMap entries for toFetch remain missing */ }
     }
+
+    applyNavResults(navMap, baseRows);
+    return Object.values(navMap).filter(v => v !== null).length;
   }
 
   useEffect(() => { loadHoldings(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function refreshAllNavs() {
     setNavRefreshing(true);
-    await Promise.allSettled(Array.from(new Set(holdings.map(h => h.symbol))).map(s => fetchNav(s)));
+    navCacheClearAll();
+    setHoldings(prev => prev.map(h => ({ ...h, navLoading: true })));
+    const unique = Array.from(new Set(holdings.map(h => h.symbol)));
+    const succeeded = await fetchNavBatch(unique, undefined, true);
+    const total = unique.length;
     setNavRefreshing(false);
+    setToast({ type: succeeded === total ? 'success' : 'error',
+      message: `NAVs updated for ${succeeded} of ${total} holding${total !== 1 ? 's' : ''}` });
+    setTimeout(() => setToast(null), 4000);
   }
 
   async function deleteHolding(id: string) {
@@ -689,6 +719,14 @@ export default function MutualFundsPortfolioPage() {
 
   return (
     <div className="p-6 space-y-5 max-w-screen-xl mx-auto">
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 text-xs font-semibold transition-all"
+          style={{ backgroundColor: toast.type === 'success' ? '#059669' : '#DC2626', color: 'white' }}>
+          {toast.message}
+        </div>
+      )}
 
       {/* ── Page header ────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
@@ -909,7 +947,6 @@ export default function MutualFundsPortfolioPage() {
                                 <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: catStyle(cat).bg, color: catStyle(cat).text }}>{cat}</span>
                               )}
                               <SipBadge metadata={h.metadata} />
-                              <NfoBadge metadata={h.metadata} />
                               {h.metadata?.folio != null && (
                                 <span className="text-[10px]" style={{ color: '#D1D5DB' }}>Folio: {String(h.metadata.folio)}</span>
                               )}

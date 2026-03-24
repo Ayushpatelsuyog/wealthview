@@ -25,15 +25,60 @@
     --input: 38 20% 88%;
     --ring: 220 47% 19%;
     --radius: 0.75rem;
+
+    /* WealthView semantic tokens — light */
+    --wv-bg:             #F7F5F0;
+    --wv-surface:        #FFFFFF;
+    --wv-surface-2:      #F7F5F0;
+    --wv-text:           #1A1A2E;
+    --wv-text-secondary: #6B7280;
+    --wv-text-muted:     #9CA3AF;
+    --wv-border:         #E8E5DD;
+    --wv-header-bg:      #FFFFFF;
+    --wv-input-bg:       #F7F5F0;
+    --wv-scrollbar:      #D1C9B8;
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 20% 91%;
+    --card: 222 40% 15%;
+    --card-foreground: 210 20% 91%;
+    --popover: 222 40% 15%;
+    --popover-foreground: 210 20% 91%;
+    --primary: 220 47% 19%;
+    --primary-foreground: 0 0% 97%;
+    --secondary: 222 30% 20%;
+    --secondary-foreground: 210 20% 80%;
+    --muted: 222 30% 20%;
+    --muted-foreground: 215 15% 60%;
+    --accent: 40 55% 54%;
+    --accent-foreground: 240 25% 14%;
+    --destructive: 0 72% 51%;
+    --border: 222 25% 24%;
+    --input: 222 25% 24%;
+    --ring: 40 55% 54%;
+
+    /* WealthView semantic tokens — dark */
+    --wv-bg:             #0F1624;
+    --wv-surface:        #1A2234;
+    --wv-surface-2:      #1F2A3C;
+    --wv-text:           #E8E6E3;
+    --wv-text-secondary: #9CA3B8;
+    --wv-text-muted:     #6B7A92;
+    --wv-border:         #2A3547;
+    --wv-header-bg:      #1A2234;
+    --wv-input-bg:       #0F1624;
+    --wv-scrollbar:      #2A3547;
   }
 
   * {
-    border-color: #E8E5DD;
+    border-color: var(--wv-border);
   }
 
   body {
-    background-color: #F7F5F0;
-    color: #1A1A2E;
+    background-color: var(--wv-bg);
+    color: var(--wv-text);
     font-family: var(--font-dm-sans), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
@@ -60,7 +105,7 @@
     font-family: var(--font-playfair), Georgia, serif;
     font-size: 1rem;
     font-weight: 600;
-    color: #1A1A2E;
+    color: var(--wv-text);
   }
   .section-heading::after {
     content: '';
@@ -71,8 +116,8 @@
 
   /* Premium card */
   .wv-card {
-    background: #FFFFFF;
-    border: 1px solid #E8E5DD;
+    background: var(--wv-surface);
+    border: 1px solid var(--wv-border);
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
@@ -102,7 +147,7 @@
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d1c9b8; border-radius: 100px; }
+::-webkit-scrollbar-thumb { background: var(--wv-scrollbar); border-radius: 100px; }
 
 /* Range slider */
 input[type='range'] {

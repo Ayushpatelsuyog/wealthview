@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, Sun, Moon } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
+import { useTheme } from '@/lib/hooks/use-theme';
 
 interface UserProfile { name: string; role: string; familyName: string | null; initials: string }
 
@@ -14,6 +15,7 @@ function getInitials(name: string): string {
 
 export function Header() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const { isDark, toggle } = useTheme();
 
   useEffect(() => {
     const supabase = createClient();
@@ -39,28 +41,38 @@ export function Header() {
   return (
     <header
       className="h-14 flex items-center justify-between px-6 flex-shrink-0"
-      style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E8E5DD' }}
+      style={{ backgroundColor: 'var(--wv-header-bg)', borderBottom: '1px solid var(--wv-border)' }}
     >
       <div className="flex items-center gap-3 flex-1 max-w-sm">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" style={{ color: '#9CA3AF' }} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />
           <Input
             placeholder="Search holdings, funds..."
-            className="pl-8 h-8 text-xs border-border bg-bg focus-visible:ring-gold"
-            style={{ backgroundColor: '#F7F5F0', borderColor: '#E8E5DD' }}
+            className="pl-8 h-8 text-xs focus-visible:ring-gold"
+            style={{ backgroundColor: 'var(--wv-input-bg)', borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }}
           />
         </div>
       </div>
 
       <div className="flex items-center gap-3">
-        <button className="relative p-1.5 rounded-lg hover:bg-bg transition-colors">
-          <Bell className="w-4 h-4" style={{ color: '#6B7280' }} />
+        {/* Theme toggle */}
+        <button
+          onClick={toggle}
+          className="relative p-1.5 rounded-lg transition-colors"
+          style={{ color: 'var(--wv-text-secondary)' }}
+          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
 
-        <div className="flex items-center gap-2.5 pl-3" style={{ borderLeft: '1px solid #E8E5DD' }}>
+        <button className="relative p-1.5 rounded-lg transition-colors" style={{ color: 'var(--wv-text-secondary)' }}>
+          <Bell className="w-4 h-4" />
+        </button>
+
+        <div className="flex items-center gap-2.5 pl-3" style={{ borderLeft: '1px solid var(--wv-border)' }}>
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-semibold leading-none" style={{ color: '#1A1A2E' }}>{displayName}</p>
-            {displayRole && <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>{displayRole}</p>}
+            <p className="text-xs font-semibold leading-none" style={{ color: 'var(--wv-text)' }}>{displayName}</p>
+            {displayRole && <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{displayRole}</p>}
           </div>
           <Avatar className="w-7 h-7">
             <AvatarFallback className="text-white text-[10px] font-bold" style={{ backgroundColor: '#1B2A4A' }}>
