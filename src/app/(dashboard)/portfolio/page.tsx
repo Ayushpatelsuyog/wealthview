@@ -6,6 +6,7 @@ import { Loader2, Plus, TrendingUp, TrendingDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
 import { navCacheGet, navCacheSet } from '@/lib/utils/nav-cache';
+import { cacheGet, cacheSet, TTL } from '@/lib/utils/price-cache';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,7 +66,7 @@ interface AssetRow {
   hasData: boolean;
 }
 
-function buildRows(holdings: RawHolding[], filterUserId: string | null, navMap: Map<string, number>): AssetRow[] {
+function buildRows(holdings: RawHolding[], filterUserId: string | null, navMap: Map<string, number>, stockPriceMap: Map<string, number>): AssetRow[] {
   const filtered = filterUserId
     ? holdings.filter(h => h.portfolios?.user_id === filterUserId)
     : holdings;
@@ -76,10 +77,13 @@ function buildRows(holdings: RawHolding[], filterUserId: string | null, navMap: 
     const existing = byType.get(h.asset_type) ?? { count: 0, invested: 0, currentValue: 0 };
     const qty = h.quantity ?? 0;
     const invested = qty * (h.avg_buy_price ?? 0);
-    // For MF: use live NAV if available; otherwise fall back to invested
-    const currentValue = (h.asset_type === 'mutual_fund' && navMap.has(h.symbol))
-      ? qty * navMap.get(h.symbol)!
-      : invested;
+    // For MF: use live NAV; for Indian Stocks: use live price; otherwise fall back to invested
+    let currentValue = invested;
+    if (h.asset_type === 'mutual_fund' && navMap.has(h.symbol)) {
+      currentValue = qty * navMap.get(h.symbol)!;
+    } else if (h.asset_type === 'indian_stock' && stockPriceMap.has(h.symbol)) {
+      currentValue = qty * stockPriceMap.get(h.symbol)!;
+    }
     existing.count += 1;
     existing.invested += invested;
     existing.currentValue += currentValue;
@@ -127,6 +131,8 @@ export default function PortfolioPage() {
   const [loading, setLoading] = useState(true);
   const [navLoading, setNavLoading] = useState(false);
   const [navMap, setNavMap] = useState<Map<string, number>>(new Map());
+  const [stockPriceLoading, setStockPriceLoading] = useState(false);
+  const [stockPriceMap, setStockPriceMap] = useState<Map<string, number>>(new Map());
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -202,13 +208,37 @@ export default function PortfolioPage() {
         setNavMap(map);
         setNavLoading(false);
       }
+
+      // Auto-fetch live prices for Indian Stock holdings
+      const stockSymbols = Array.from(new Set(
+        loadedHoldings.filter(h => h.asset_type === 'indian_stock' && h.symbol).map(h => h.symbol)
+      ));
+      if (stockSymbols.length > 0) {
+        setStockPriceLoading(true);
+        const results = await Promise.allSettled(stockSymbols.map(async sym => {
+          const cacheKey = `stock_price_${sym}`;
+          const cached = cacheGet<number>(cacheKey);
+          if (cached != null) return { sym, price: cached };
+          const res = await fetch(`/api/stocks/price?symbol=${sym}`);
+          if (!res.ok) return { sym, price: null };
+          const { price } = await res.json();
+          cacheSet(cacheKey, price as number, TTL.STOCKS);
+          return { sym, price: price as number };
+        }));
+        const map = new Map<string, number>();
+        results.forEach(r => {
+          if (r.status === 'fulfilled' && r.value.price != null) map.set(r.value.sym, r.value.price);
+        });
+        setStockPriceMap(map);
+        setStockPriceLoading(false);
+      }
     }
     load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filterUserId = viewMode === 'individual' ? (selectedMemberId || null) : null;
-  const rows = buildRows(holdings, filterUserId, navMap);
+  const rows = buildRows(holdings, filterUserId, navMap, stockPriceMap);
   const stats = computeStats(rows);
 
   const totalHoldings = rows.reduce((s, r) => s + r.holdings, 0);
@@ -291,7 +321,7 @@ export default function PortfolioPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <p className="text-xs text-gray-500 mb-1">Total Net Worth</p>
-          {navLoading
+          {navLoading || stockPriceLoading
             ? <div className="h-6 w-24 rounded animate-pulse bg-gray-100 mt-1" />
             : <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(stats.netWorth)}</p>}
         </div>
@@ -301,7 +331,7 @@ export default function PortfolioPage() {
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <p className="text-xs text-gray-500 mb-1">Total P&amp;L</p>
-          {navLoading
+          {navLoading || stockPriceLoading
             ? <div className="h-6 w-24 rounded animate-pulse bg-gray-100 mt-1" />
             : <div className="flex items-center gap-1">
                 {pnlPositive
@@ -314,7 +344,7 @@ export default function PortfolioPage() {
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <p className="text-xs text-gray-500 mb-1">Overall P&amp;L %</p>
-          {navLoading
+          {navLoading || stockPriceLoading
             ? <div className="h-6 w-20 rounded animate-pulse bg-gray-100 mt-1" />
             : <>
                 <p className="text-lg font-bold" style={{ color: pnlPositive ? '#059669' : '#DC2626' }}>
@@ -372,14 +402,15 @@ export default function PortfolioPage() {
                     {zero ? '—' : formatLargeINR(row.invested)}
                   </td>
                   <td className="px-3 py-3 text-right" style={{ color: zero ? '#D1D5DB' : '#374151' }}>
-                    {zero ? '—' : navLoading && row.config.key === 'mutual_fund'
-                      ? <span className="inline-block w-16 h-4 rounded animate-pulse bg-gray-100" />
-                      : formatLargeINR(row.currentValue)}
+                    {zero ? '—'
+                      : (navLoading && row.config.key === 'mutual_fund') || (stockPriceLoading && row.config.key === 'indian_stock')
+                        ? <span className="inline-block w-16 h-4 rounded animate-pulse bg-gray-100" />
+                        : formatLargeINR(row.currentValue)}
                   </td>
                   <td className="px-3 py-3 text-right">
                     {zero ? (
                       <span style={{ color: '#D1D5DB' }}>—</span>
-                    ) : navLoading && row.config.key === 'mutual_fund' ? (
+                    ) : (navLoading && row.config.key === 'mutual_fund') || (stockPriceLoading && row.config.key === 'indian_stock') ? (
                       <span className="inline-block w-12 h-4 rounded animate-pulse bg-gray-100" />
                     ) : (
                       <span style={{ color: rowPnlPos ? '#059669' : '#DC2626' }}>
@@ -390,7 +421,7 @@ export default function PortfolioPage() {
                   <td className="px-3 py-3 text-right">
                     {zero ? (
                       <span style={{ color: '#D1D5DB' }}>—</span>
-                    ) : navLoading && row.config.key === 'mutual_fund' ? (
+                    ) : (navLoading && row.config.key === 'mutual_fund') || (stockPriceLoading && row.config.key === 'indian_stock') ? (
                       <span className="inline-block w-10 h-4 rounded animate-pulse bg-gray-100" />
                     ) : (
                       <span style={{ color: rowPnlPos ? '#059669' : '#DC2626' }}>

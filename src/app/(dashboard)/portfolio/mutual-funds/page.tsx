@@ -121,6 +121,64 @@ function ActionMenu({
   );
 }
 
+// ─── SIP Badge ─────────────────────────────────────────────────────────────────
+
+function SipBadge({ metadata }: { metadata: Record<string, unknown> }) {
+  if (!metadata.is_sip) return null;
+
+  const sips = Array.isArray(metadata.sips)
+    ? (metadata.sips as Array<{ status?: string }>)
+    : [];
+
+  if (sips.length === 0) {
+    return (
+      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+        style={{ backgroundColor: 'rgba(5,150,105,0.12)', color: '#059669' }}>
+        SIP
+      </span>
+    );
+  }
+
+  const activeCount   = sips.filter(s => s.status !== 'inactive').length;
+  const inactiveCount = sips.length - activeCount;
+
+  if (activeCount === 0) {
+    return (
+      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+        style={{ backgroundColor: '#F3F4F6', color: '#9CA3AF', textDecoration: 'line-through' }}>
+        SIP
+      </span>
+    );
+  }
+
+  if (inactiveCount === 0) {
+    const label = activeCount > 1 ? `${activeCount} SIPs` : 'SIP';
+    return (
+      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+        style={{ backgroundColor: 'rgba(5,150,105,0.12)', color: '#059669' }}>
+        {label}
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+      style={{ backgroundColor: 'rgba(201,168,76,0.15)', color: '#92620A' }}>
+      {activeCount} active · {inactiveCount} stopped
+    </span>
+  );
+}
+
+function NfoBadge({ metadata }: { metadata: Record<string, unknown> }) {
+  if (!metadata.is_nfo) return null;
+  return (
+    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+      style={{ backgroundColor: 'rgba(37,99,235,0.12)', color: '#2563EB' }}>
+      NFO
+    </span>
+  );
+}
+
 // ─── Allocation Charts ─────────────────────────────────────────────────────────
 
 interface PieEntry { name: string; value: number }
@@ -136,10 +194,12 @@ function DonutChart({
   title,
   data,
   getColor,
+  modeLabel,
 }: {
   title: string;
   data: PieEntry[];
   getColor: (name: string, index: number) => string;
+  modeLabel: string;
 }) {
   const total = data.reduce((s, d) => s + d.value, 0);
 
@@ -147,7 +207,7 @@ function DonutChart({
     return (
       <div className="wv-card flex flex-col" style={{ padding: 16, overflow: 'hidden', minHeight: 220 }}>
         <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>
-          {title} <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(Market Value)</span>
+          {title} <span style={{ color: '#9CA3AF', fontWeight: 400 }}>({modeLabel})</span>
         </p>
         <div className="flex-1 flex items-center justify-center">
           <p className="text-xs" style={{ color: '#9CA3AF' }}>No data</p>
@@ -159,7 +219,7 @@ function DonutChart({
   return (
     <div className="wv-card" style={{ padding: 16, overflow: 'hidden' }}>
       <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>
-        {title} <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(Market Value)</span>
+        {title} <span style={{ color: '#9CA3AF', fontWeight: 400 }}>({modeLabel})</span>
       </p>
 
       {/* Donut — fixed 150×150, centered */}
@@ -221,16 +281,25 @@ function DonutChart({
 const PORTFOLIO_PALETTE = ['#7C3AED', '#2563EB', '#059669', '#EA580C', '#DB2777', '#D97706', '#0891B2'];
 
 function AllocationCharts({
-  brokerData,
-  categoryData,
-  portfolioData,
+  brokerDataMarket,
+  brokerDataInvested,
+  categoryDataMarket,
+  categoryDataInvested,
+  portfolioDataMarket,
+  portfolioDataInvested,
   brokerPalette,
 }: {
-  brokerData: PieEntry[];
-  categoryData: PieEntry[];
-  portfolioData: PieEntry[];
+  brokerDataMarket: PieEntry[];
+  brokerDataInvested: PieEntry[];
+  categoryDataMarket: PieEntry[];
+  categoryDataInvested: PieEntry[];
+  portfolioDataMarket: PieEntry[];
+  portfolioDataInvested: PieEntry[];
   brokerPalette: string[];
 }) {
+  const [mode, setMode] = useState<'market' | 'invested'>('market');
+  const modeLabel = mode === 'market' ? 'Market Value' : 'Invested';
+
   const catSolid: Record<string, string> = {
     Equity:              '#1B2A4A',
     ELSS:                '#C9A84C',
@@ -246,22 +315,48 @@ function AllocationCharts({
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-      <DonutChart
-        title="Allocation by Broker"
-        data={brokerData}
-        getColor={(_, i) => brokerPalette[i % brokerPalette.length]}
-      />
-      <DonutChart
-        title="Allocation by Category"
-        data={categoryData}
-        getColor={(name) => catSolid[name] ?? '#6B7280'}
-      />
-      <DonutChart
-        title="Allocation by Portfolio"
-        data={portfolioData}
-        getColor={(_, i) => PORTFOLIO_PALETTE[i % PORTFOLIO_PALETTE.length]}
-      />
+    <div>
+      {/* Toggle */}
+      <div className="flex items-center gap-1 mb-3 p-1 rounded-full border border-gray-200 bg-white w-fit">
+        <button
+          onClick={() => setMode('market')}
+          className="px-3 py-1 rounded-full text-[11px] font-medium transition-all"
+          style={mode === 'market'
+            ? { backgroundColor: '#1B2A4A', color: '#fff' }
+            : { color: '#6B7280' }}
+        >
+          Market Value
+        </button>
+        <button
+          onClick={() => setMode('invested')}
+          className="px-3 py-1 rounded-full text-[11px] font-medium transition-all"
+          style={mode === 'invested'
+            ? { backgroundColor: '#1B2A4A', color: '#fff' }
+            : { color: '#6B7280' }}
+        >
+          Invested
+        </button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+        <DonutChart
+          title="Allocation by Distributor"
+          data={mode === 'market' ? brokerDataMarket : brokerDataInvested}
+          getColor={(_, i) => brokerPalette[i % brokerPalette.length]}
+          modeLabel={modeLabel}
+        />
+        <DonutChart
+          title="Allocation by Category"
+          data={mode === 'market' ? categoryDataMarket : categoryDataInvested}
+          getColor={(name) => catSolid[name] ?? '#6B7280'}
+          modeLabel={modeLabel}
+        />
+        <DonutChart
+          title="Allocation by Portfolio"
+          data={mode === 'market' ? portfolioDataMarket : portfolioDataInvested}
+          getColor={(_, i) => PORTFOLIO_PALETTE[i % PORTFOLIO_PALETTE.length]}
+          modeLabel={modeLabel}
+        />
+      </div>
     </div>
   );
 }
@@ -276,7 +371,7 @@ export default function MutualFundsPortfolioPage() {
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState<string | null>(null);
   const [navRefreshing, setNavRefreshing] = useState(false);
-  const [memberNames, setMemberNames] = useState<Record<string, string>>({});
+  const [_memberNames, setMemberNames] = useState<Record<string, string>>({});
   const [detailId, setDetailId]     = useState<string | null>(null);
   const [openAsRedeem, setOpenAsRedeem] = useState(false);
 
@@ -486,9 +581,13 @@ export default function MutualFundsPortfolioPage() {
       const key = h.brokers?.name ?? 'Unknown';
       map[key] = (map[key] ?? 0) + (h.currentValue ?? h.investedValue);
     });
-    return Object.entries(map)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [filtered]);
+
+  const brokerPieDataInvested = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach(h => { const key = h.brokers?.name ?? 'Unknown'; map[key] = (map[key] ?? 0) + h.investedValue; });
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [filtered]);
 
   const categoryPieData = useMemo(() => {
@@ -497,9 +596,13 @@ export default function MutualFundsPortfolioPage() {
       const key = String(h.metadata?.category ?? 'Equity');
       map[key] = (map[key] ?? 0) + (h.currentValue ?? h.investedValue);
     });
-    return Object.entries(map)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [filtered]);
+
+  const categoryPieDataInvested = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach(h => { const key = String(h.metadata?.category ?? 'Equity'); map[key] = (map[key] ?? 0) + h.investedValue; });
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [filtered]);
 
   const portfolioPieData = useMemo(() => {
@@ -508,9 +611,13 @@ export default function MutualFundsPortfolioPage() {
       const key = h.portfolios?.name ?? 'My Portfolio';
       map[key] = (map[key] ?? 0) + (h.currentValue ?? h.investedValue);
     });
-    return Object.entries(map)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [filtered]);
+
+  const portfolioPieDataInvested = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach(h => { const key = h.portfolios?.name ?? 'My Portfolio'; map[key] = (map[key] ?? 0) + h.investedValue; });
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [filtered]);
 
   // ── Export CSV ───────────────────────────────────────────────────────────
@@ -679,7 +786,7 @@ export default function MutualFundsPortfolioPage() {
             {/* Broker pills — always show if >1 broker */}
             {brokers.length > 1 && (
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: '#9CA3AF' }}>Broker</span>
+                <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: '#9CA3AF' }}>Distributor</span>
                 {brokers.filter(b => b !== 'All').map(b => (
                   <Pill key={b} label={b} active={filterBrokers.has(b)}
                     onClick={() => toggleSet(filterBrokers, setFilterBrokers, b)} />
@@ -723,9 +830,12 @@ export default function MutualFundsPortfolioPage() {
 
           {/* ── Allocation charts ───────────────────────────────────────────────────── */}
           <AllocationCharts
-            brokerData={brokerPieData}
-            categoryData={categoryPieData}
-            portfolioData={portfolioPieData}
+            brokerDataMarket={brokerPieData}
+            brokerDataInvested={brokerPieDataInvested}
+            categoryDataMarket={categoryPieData}
+            categoryDataInvested={categoryPieDataInvested}
+            portfolioDataMarket={portfolioPieData}
+            portfolioDataInvested={portfolioPieDataInvested}
             brokerPalette={BROKER_PALETTE}
           />
 
@@ -752,7 +862,7 @@ export default function MutualFundsPortfolioPage() {
                   <tr style={{ borderBottom: '1px solid #E8E5DD', backgroundColor: '#F7F5F0' }}>
                     {[
                       { label: 'Fund',          align: 'left'  },
-                      { label: 'Broker',        align: 'left'  },
+                      { label: 'Distributor',   align: 'left'  },
                       { label: 'Units',         align: 'right' },
                       { label: 'Avg NAV',       align: 'right' },
                       { label: 'Invested',      align: 'right' },
@@ -798,13 +908,15 @@ export default function MutualFundsPortfolioPage() {
                               {cat && (
                                 <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: catStyle(cat).bg, color: catStyle(cat).text }}>{cat}</span>
                               )}
+                              <SipBadge metadata={h.metadata} />
+                              <NfoBadge metadata={h.metadata} />
                               {h.metadata?.folio != null && (
                                 <span className="text-[10px]" style={{ color: '#D1D5DB' }}>Folio: {String(h.metadata.folio)}</span>
                               )}
                             </div>
                           </td>
                           {/* Broker */}
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'normal', wordBreak: 'break-word' }}>{h.brokers?.name ?? '—'}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'normal', wordBreak: 'break-word' }} title="Distributor">{h.brokers?.name ?? '—'}</td>
                           {/* Units */}
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'nowrap', textAlign: 'right' }}>{Number(h.quantity).toFixed(4)}</td>
                           {/* Avg NAV */}
@@ -883,12 +995,12 @@ export default function MutualFundsPortfolioPage() {
           {/* ── Broker comparison ───────────────────────────────────────────────────── */}
           {showBrokerComparison && (
             <div className="wv-card p-5">
-              <h3 className="section-heading text-sm mb-4">Broker Performance</h3>
+              <h3 className="section-heading text-sm mb-4">Distributor Performance</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr style={{ borderBottom: '1px solid #E8E5DD' }}>
-                      {['Broker', 'Funds', 'Invested', 'Current Value', 'P&L', 'P&L %'].map(h => (
+                      {['Distributor', 'Funds', 'Invested', 'Current Value', 'P&L', 'P&L %'].map(h => (
                         <th key={h} className="text-left px-3 py-2 font-medium" style={{ color: '#9CA3AF' }}>{h}</th>
                       ))}
                     </tr>

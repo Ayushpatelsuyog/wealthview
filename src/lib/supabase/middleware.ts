@@ -29,17 +29,26 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Public routes that don't require auth
-  const publicRoutes = ['/login', '/signup'];
-  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
+  // Page routes that don't require auth (and redirect logged-in users away)
+  const authPageRoutes = ['/login', '/signup'];
+  // API routes that are accessible without auth (no redirect, no 401)
+  const publicApiRoutes = ['/api/stocks/search', '/api/mf/search', '/api/mf/nav'];
 
-  if (!user && !isPublicRoute) {
+  const isAuthPage   = authPageRoutes.some((route) => pathname.startsWith(route));
+  const isPublicApi  = publicApiRoutes.some((route) => pathname.startsWith(route));
+
+  if (!user && !isAuthPage && !isPublicApi) {
+    // API routes return 401 JSON — don't redirect them to the login page
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 
-  if (user && isPublicRoute) {
+  // Redirect authenticated users away from login/signup pages only
+  if (user && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);

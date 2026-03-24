@@ -1,257 +1,1064 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Input }  from '@/components/ui/input';
+import { Label }  from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TrendingUp, Upload, Link as LinkIcon, Check, ChevronDown } from 'lucide-react';
+import {
+  TrendingUp, TrendingDown, Upload, Link as LinkIcon, Check, ChevronDown, ChevronUp,
+  Loader2, AlertCircle, X, Plus, User, Building2, Search,
+} from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { formatLargeINR } from '@/lib/utils/formatters';
 import { BrokerSelector } from '@/components/forms/BrokerSelector';
 
-const STOCKS = [
-  { symbol: 'RELIANCE',  name: 'Reliance Industries Ltd',       exchange: 'NSE', price: 2847.55 },
-  { symbol: 'TCS',       name: 'Tata Consultancy Services',     exchange: 'NSE', price: 3912.40 },
-  { symbol: 'HDFCBANK',  name: 'HDFC Bank Ltd',                 exchange: 'NSE', price: 1654.20 },
-  { symbol: 'INFY',      name: 'Infosys Ltd',                   exchange: 'NSE', price: 1789.85 },
-  { symbol: 'WIPRO',     name: 'Wipro Ltd',                     exchange: 'NSE', price: 478.30  },
-  { symbol: 'SBIN',      name: 'State Bank of India',           exchange: 'NSE', price: 812.65  },
-  { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd',                exchange: 'NSE', price: 1243.50 },
-  { symbol: 'BAJFINANCE',name: 'Bajaj Finance Ltd',             exchange: 'NSE', price: 7245.00 },
-  { symbol: 'LT',        name: 'Larsen & Toubro Ltd',           exchange: 'NSE', price: 3542.80 },
-  { symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical Industries', exchange: 'NSE', price: 1678.45 },
-];
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface StockResult {
+  symbol: string;
+  companyName: string;
+  exchange: string;
+  sector: string;
+  industry: string;
+  isin: string;
+  bseCode: string;
+}
+
+interface StockPrice {
+  symbol: string;
+  price: number;
+  change: number;
+  changePct: number;
+  dayHigh: number;
+  dayLow: number;
+  lastUpdated: string;
+}
 
 interface FamilyMember { id: string; name: string }
+interface Portfolio    { id: string; name: string; type: string }
+interface Toast        { type: 'success' | 'error'; message: string }
 
-type Stock = typeof STOCKS[number];
+interface HolderFields {
+  firstHolder: string;
+  secondHolder: string;
+  nominee: string;
+  mobile: string;
+  email: string;
+  bankName: string;
+  bankLast4: string;
+}
 
-export default function IndianStocksPage() {
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const DEFAULT_PORTFOLIOS = ['Long-term Growth', 'Trading', 'Retirement', 'Tax Saving'];
+
+const TXN_TYPES = [
+  { key: 'buy',      label: 'Buy' },
+  { key: 'sell',     label: 'Sell' },
+  { key: 'bonus',    label: 'Bonus' },
+  { key: 'split',    label: 'Split' },
+  { key: 'rights',   label: 'Rights Issue' },
+  { key: 'dividend', label: 'Dividend' },
+];
+
+const SECTOR_COLORS: Record<string, string> = {
+  'IT':            '#3B82F6',
+  'Banking':       '#1B2A4A',
+  'Finance':       '#5C6BC0',
+  'FMCG':          '#059669',
+  'Auto':          '#EA580C',
+  'Pharma':        '#DB2777',
+  'Energy':        '#D97706',
+  'Metals':        '#6B7280',
+  'Infrastructure':'#8B5CF6',
+  'Chemicals':     '#14B8A6',
+  'Consumer':      '#F59E0B',
+  'Healthcare':    '#EC4899',
+  'Cement':        '#9CA3AF',
+  'Insurance':     '#2E8B8B',
+  'Telecom':       '#6366F1',
+  'Real Estate':   '#C9A84C',
+  'Technology':    '#3B82F6',
+  'Defense':       '#1F2937',
+  'Retail':        '#7C3AED',
+  'Logistics':     '#78716C',
+  'Media':         '#F97316',
+  'Capital Goods': '#10B981',
+};
+
+function sectorColor(sector: string): string {
+  return SECTOR_COLORS[sector] ?? '#6B7280';
+}
+
+const INDIAN_BANKS = [
+  'HDFC Bank','SBI','ICICI Bank','Kotak Mahindra','Axis Bank',
+  'Bank of Baroda','PNB','IndusInd','Yes Bank','IDFC First',
+  'Federal Bank','Canara Bank','Union Bank','Indian Bank','Bank of India',
+];
+
+const BLANK_HOLDER: HolderFields = {
+  firstHolder: '', secondHolder: '', nominee: '',
+  mobile: '', email: '', bankName: '', bankLast4: '',
+};
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function ToastBanner({ toast, onClose }: { toast: Toast; onClose: () => void }) {
+  const ok = toast.type === 'success';
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4 text-sm font-medium"
+      style={{ backgroundColor: ok ? 'rgba(5,150,105,0.08)' : 'rgba(220,38,38,0.08)',
+               border: `1px solid ${ok ? 'rgba(5,150,105,0.2)' : 'rgba(220,38,38,0.2)'}`,
+               color: ok ? '#059669' : '#DC2626' }}>
+      {ok ? <Check className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+      <span className="flex-1">{toast.message}</span>
+      <button onClick={onClose}><X className="w-3.5 h-3.5" /></button>
+    </div>
+  );
+}
+
+function FieldError({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return <p className="text-[10px] mt-0.5" style={{ color: '#DC2626' }}>{msg}</p>;
+}
+
+function AutoTag({ label }: { label: string }) {
+  return (
+    <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+      style={{ backgroundColor: 'rgba(5,150,105,0.1)', color: '#059669' }}>
+      {label}
+    </span>
+  );
+}
+
+function ChargeRow({ label, value, onChange, autoCalc, onAutoClick }: {
+  label: string; value: string; onChange: (v: string) => void;
+  autoCalc?: string; onAutoClick?: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Label className="text-xs w-36 flex-shrink-0" style={{ color: '#6B7280' }}>{label}</Label>
+      <div className="flex-1 relative">
+        <Input
+          type="number" step="0.01" min="0"
+          value={value} onChange={e => onChange(e.target.value)}
+          placeholder="0.00" className="h-8 text-xs pr-8"
+        />
+        {autoCalc !== undefined && (
+          <button onClick={onAutoClick}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-medium"
+            style={{ color: '#C9A84C' }}>
+            auto
+          </button>
+        )}
+      </div>
+      {autoCalc !== undefined && (
+        <span className="text-[10px] w-20 text-right flex-shrink-0" style={{ color: '#9CA3AF' }}>
+          calc: ₹{autoCalc}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Form Content ─────────────────────────────────────────────────────────
+
+function IndianStocksFormContent() {
+  const router   = useRouter();
   const supabase = createClient();
-  const [familyId, setFamilyId]   = useState<string | null>(null);
-  const [members,  setMembers]    = useState<FamilyMember[]>([]);
-  const [member, setMember]       = useState('');
-  const [broker, setBroker]       = useState('');
-  const [query, setQuery]         = useState('');
-  const [showDrop, setShowDrop]   = useState(false);
-  const [selected, setSelected]   = useState<Stock | null>(null);
-  const [exchange, setExchange]   = useState('NSE');
-  const [qty, setQty]             = useState('');
-  const [buyPrice, setBuyPrice]   = useState('');
-  const [buyDate, setBuyDate]     = useState('');
-  const [demat, setDemat]         = useState('');
-  const [brokerage, setBrokerage] = useState('');
-  const [saved, setSaved]         = useState(false);
+  const _searchParams = useSearchParams();
 
+  // Auth / family
+  const [familyId, setFamilyId] = useState<string | null>(null);
+  const [members,  setMembers]  = useState<FamilyMember[]>([]);
+  const [member,   setMember]   = useState('');
+
+  // Portfolio
+  const [portfolios,    setPortfolios]    = useState<Portfolio[]>([]);
+  const [portfolioName, setPortfolioName] = useState('Long-term Growth');
+  const [newPortName,   setNewPortName]   = useState('');
+  const [showNewPort,   setShowNewPort]   = useState(false);
+
+  // Broker
+  const [brokerId, setBrokerId] = useState<string | null>(null);
+
+  // Stock search
+  const [query,       setQuery]       = useState('');
+  const [searching,   setSearching]   = useState(false);
+  const [results,     setResults]     = useState<StockResult[]>([]);
+  const [showDrop,    setShowDrop]    = useState(false);
+  const [selectedStock, setSelectedStock] = useState<StockResult | null>(null);
+  const [stockPrice,  setStockPrice]  = useState<StockPrice | null>(null);
+  const [priceLoading,setPriceLoading]= useState(false);
+
+  // Transaction type
+  const [txnType, setTxnType] = useState<string>('buy');
+
+  // Buy / Sell fields
+  const [quantity,    setQuantity]    = useState('');
+  const [price,       setPrice]       = useState('');
+  const [date,        setDate]        = useState('');
+  const [priceLoaded, setPriceLoaded] = useState(false); // for auto-fill indicator
+
+  // Charges
+  const [brokerage,       setBrokerage]       = useState('0');
+  const [stt,             setStt]             = useState('');
+  const [gst,             setGst]             = useState('');
+  const [stampDuty,       setStampDuty]       = useState('');
+  const [exchangeCharges, setExchangeCharges] = useState('0');
+  const [dpCharges,       setDpCharges]       = useState('0');
+  const [demat,           setDemat]           = useState('');
+
+  // Bonus
+  const [bonusRatio,  setBonusRatio]  = useState('');
+  // Split
+  const [splitRatio,  setSplitRatio]  = useState('');
+  // Rights
+  const [rightsRatio, setRightsRatio] = useState('');
+  const [rightsPrice, setRightsPrice] = useState('');
+  // Dividend
+  const [divPerShare, setDivPerShare] = useState('');
+  const [divType,     setDivType]     = useState('Interim');
+  const [exDate,      setExDate]      = useState('');
+  const [payDate,     setPayDate]     = useState('');
+
+  // Holder details
+  const [showHolder, setShowHolder] = useState(false);
+  const [holder, setHolder] = useState<HolderFields>({ ...BLANK_HOLDER });
+
+  // UI state
+  const [saving,  setSaving]  = useState(false);
+  const [toast,   setToast]   = useState<Toast | null>(null);
+  const [errors,  setErrors]  = useState<Record<string, string>>({});
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Load user/family ────────────────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return;
+      if (!user) { router.push('/login'); return; }
       const { data: profile } = await supabase
-        .from('users')
-        .select('id, name, family_id')
-        .eq('id', user.id)
-        .single();
+        .from('users').select('id, name, family_id').eq('id', user.id).single();
       if (!profile) return;
       setMember(profile.id);
-      if (profile.family_id) {
-        setFamilyId(profile.family_id);
-        const { data: familyUsers } = await supabase
-          .from('users')
-          .select('id, name')
-          .eq('family_id', profile.family_id);
-        setMembers(familyUsers ?? [{ id: profile.id, name: profile.name }]);
+
+      const fid = profile.family_id;
+      if (fid) {
+        setFamilyId(fid);
+        const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', fid);
+        setMembers(fUsers ?? [{ id: profile.id, name: profile.name }]);
+        const { data: ports } = await supabase.from('portfolios').select('id, name, type').eq('family_id', fid).order('created_at');
+        setPortfolios(ports ?? []);
       } else {
         setMembers([{ id: profile.id, name: profile.name }]);
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filtered = query.length >= 2
-    ? STOCKS.filter((s) =>
-        s.symbol.toLowerCase().includes(query.toLowerCase()) ||
-        s.name.toLowerCase().includes(query.toLowerCase())
-      ).slice(0, 6)
-    : [];
+  // ── Auto-set today for date ─────────────────────────────────────────────────
+  useEffect(() => {
+    setDate(new Date().toISOString().split('T')[0]);
+  }, []);
 
-  const totalCost = qty && buyPrice ? (parseFloat(qty) * parseFloat(buyPrice)).toFixed(2) : '';
-  const currValue = selected && qty  ? (parseFloat(qty) * selected.price).toFixed(2) : '';
-  const gainLoss  = currValue && totalCost ? (parseFloat(currValue) - parseFloat(totalCost)).toFixed(2) : '';
-  const gainPct   = gainLoss && totalCost  ? ((parseFloat(gainLoss) / parseFloat(totalCost)) * 100).toFixed(2) : '';
-  const canCalc   = !!(qty && buyPrice && selected);
+  // ── Search with debounce ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (query.length < 2) { setResults([]); setShowDrop(false); return; }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(`/api/stocks/search?q=${encodeURIComponent(query)}`);
+        if (!res.ok) { console.error('[Stocks Search] HTTP', res.status, res.url); setSearching(false); return; }
+        const { results: r } = await res.json();
+        setResults(r ?? []);
+        setShowDrop(true);
+      } catch (err) { console.error('[Stocks Search] fetch error:', err); setResults([]); }
+      setSearching(false);
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [query]);
 
-  function handleSave() { setSaved(true); setTimeout(() => setSaved(false), 2500); }
+  // ── Auto-fetch price on date change ────────────────────────────────────────
+  useEffect(() => {
+    if (!selectedStock || !date) return;
+    setPriceLoaded(false);
+    fetch(`/api/stocks/price-history?symbol=${selectedStock.symbol}&date=${date}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.price) {
+          setPrice(d.price.toFixed(2));
+          setPriceLoaded(true);
+        }
+      })
+      .catch(() => {/* silent */});
+  }, [selectedStock, date]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Auto-calculate charges ──────────────────────────────────────────────────
+  const qty   = parseFloat(quantity) || 0;
+  const px    = parseFloat(price)    || 0;
+  const value = qty * px;
+
+  const autoSTT       = parseFloat((value * 0.001).toFixed(2));          // 0.1%
+  const autoGST       = parseFloat((parseFloat(brokerage || '0') * 0.18).toFixed(2)); // 18% of brokerage
+  const autoStamp     = parseFloat((value * 0.00015).toFixed(2));         // 0.015% for delivery
+
+  function applyAutoCharges() {
+    if (!stt)       setStt(autoSTT.toString());
+    if (!gst)       setGst(autoGST.toString());
+    if (!stampDuty) setStampDuty(autoStamp.toString());
+  }
+
+  const totalFees = (parseFloat(brokerage || '0') + parseFloat(stt || '0') +
+                     parseFloat(gst || '0') + parseFloat(stampDuty || '0') +
+                     parseFloat(exchangeCharges || '0') + parseFloat(dpCharges || '0'));
+
+  const totalCost = value + totalFees;
+
+  // For sell — P&L preview vs current price
+  const _currentPx = stockPrice?.price ?? 0;
+  const _sellPnl   = txnType === 'sell' && qty && px ? (px - (stockPrice ? parseFloat(price) : 0)) * qty : null;
+
+  // ── Select stock ────────────────────────────────────────────────────────────
+  async function selectStock(stock: StockResult) {
+    setSelectedStock(stock);
+    setQuery(`${stock.symbol} — ${stock.companyName}`);
+    setShowDrop(false);
+    setPriceLoading(true);
+    try {
+      const res = await fetch(`/api/stocks/price?symbol=${stock.symbol}`);
+      const data = await res.json();
+      setStockPrice(data);
+    } catch { setStockPrice(null); }
+    setPriceLoading(false);
+  }
+
+  // ── Validate ────────────────────────────────────────────────────────────────
+  function validate(): boolean {
+    const errs: Record<string, string> = {};
+    if (!selectedStock) errs.stock    = 'Select a stock';
+    if (!portfolioName && !newPortName) errs.portfolio = 'Select or create a portfolio';
+
+    if (txnType === 'buy' || txnType === 'sell' || txnType === 'rights') {
+      if (!quantity || qty <= 0)    errs.quantity = 'Enter a valid quantity';
+      if (!price    || px  <= 0)    errs.price    = 'Enter a valid price';
+    }
+    if (!date) errs.date = 'Enter a date';
+    if (txnType === 'bonus'    && !bonusRatio)  errs.bonusRatio  = 'Enter bonus ratio e.g. 1:2';
+    if (txnType === 'split'    && !splitRatio)  errs.splitRatio  = 'Enter split ratio e.g. 1:5';
+    if (txnType === 'dividend' && !divPerShare) errs.divPerShare = 'Enter dividend per share';
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
+  // ── Save ────────────────────────────────────────────────────────────────────
+  async function handleSave(andAnother = false) {
+    if (!validate()) return;
+    setSaving(true);
+
+    try {
+      const finalPortfolio = showNewPort && newPortName ? newPortName : portfolioName;
+
+      // For split: compute new total quantity
+      let splitFactor = 1;
+      if (txnType === 'split' && splitRatio) {
+        const [num, den] = splitRatio.split(':').map(Number);
+        if (den > 0) splitFactor = num / den;
+      }
+
+      // For bonus: compute bonus shares
+      let bonusQty = 0;
+      if (txnType === 'bonus' && bonusRatio && quantity) {
+        const [num, den] = bonusRatio.split(':').map(Number);
+        if (den > 0) bonusQty = Math.floor((qty / den) * num);
+      }
+
+      const body: Record<string, unknown> = {
+        symbol:          selectedStock!.symbol,
+        companyName:     selectedStock!.companyName,
+        exchange:        selectedStock!.exchange,
+        sector:          selectedStock!.sector,
+        industry:        selectedStock!.industry,
+        isin:            selectedStock!.isin,
+        bseCode:         selectedStock!.bseCode,
+        transactionType: txnType,
+        quantity:        txnType === 'bonus' ? bonusQty : qty,
+        price:           px,
+        date,
+        brokerage, stt, gst, stampDuty, exchangeCharges, dpCharges,
+        portfolioName:   finalPortfolio,
+        brokerId,
+        demat,
+        holderDetails:   {
+          first_holder:  holder.firstHolder,
+          second_holder: holder.secondHolder,
+          nominee:       holder.nominee,
+          mobile:        holder.mobile,
+          email:         holder.email,
+          bank_name:     holder.bankName,
+          bank_last4:    holder.bankLast4,
+        },
+        currentPrice: stockPrice?.price ?? null,
+        bonusRatio,  splitRatio,  splitFactor,
+        rightsRatio, rightsPrice,
+        dividendPerShare: divPerShare, dividendType: divType, exDate, paymentDate: payDate,
+      };
+
+      let endpoint = '/api/stocks/save';
+      if (txnType === 'sell') {
+        // For sell we need holdingId — use save route with transactionType='sell'
+        // The save route handles it through the existing holding
+        endpoint = '/api/stocks/save';
+      }
+
+      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Save failed');
+
+      setToast({ type: 'success', message: `${txnType === 'buy' ? 'Holding saved' : txnType.charAt(0).toUpperCase() + txnType.slice(1)} recorded successfully!${data.consolidated ? ' (Consolidated with existing holding)' : ''}` });
+
+      if (andAnother) {
+        resetForm();
+      } else {
+        setTimeout(() => router.push('/portfolio/indian-stocks'), 1200);
+      }
+    } catch (e) {
+      setToast({ type: 'error', message: (e as Error).message });
+    }
+    setSaving(false);
+  }
+
+  function resetForm() {
+    setSelectedStock(null); setQuery(''); setStockPrice(null);
+    setQuantity(''); setPrice(''); setPriceLoaded(false);
+    setBrokerage('0'); setStt(''); setGst(''); setStampDuty(''); setExchangeCharges('0'); setDpCharges('0');
+    setBonusRatio(''); setSplitRatio(''); setRightsRatio(''); setRightsPrice('');
+    setDivPerShare(''); setExDate(''); setPayDate('');
+    setErrors({});
+    setDate(new Date().toISOString().split('T')[0]);
+  }
+
+  // ── Portfolio pills ─────────────────────────────────────────────────────────
+  const allPortfolios = Array.from(new Set([
+    ...DEFAULT_PORTFOLIOS,
+    ...portfolios.map(p => p.name),
+  ]));
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
+
+      {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
           <TrendingUp className="w-5 h-5" style={{ color: '#1B2A4A' }} />
         </div>
         <div>
           <h1 className="font-display text-xl font-semibold" style={{ color: '#1A1A2E' }}>Indian Stocks</h1>
-          <p className="text-xs" style={{ color: '#9CA3AF' }}>Add NSE/BSE equity holdings</p>
+          <p className="text-xs" style={{ color: '#9CA3AF' }}>Track NSE/BSE equity holdings across all transaction types</p>
         </div>
       </div>
 
+      {toast && <ToastBanner toast={toast} onClose={() => setToast(null)} />}
+
       <Tabs defaultValue="manual">
         <TabsList className="mb-5 w-full" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
-          <TabsTrigger value="manual" className="flex-1 gap-1.5 text-xs data-[state=active]:bg-white"><TrendingUp className="w-3.5 h-3.5" />Manual Entry</TabsTrigger>
-          <TabsTrigger value="import" className="flex-1 gap-1.5 text-xs data-[state=active]:bg-white"><Upload    className="w-3.5 h-3.5" />Import Statement</TabsTrigger>
-          <TabsTrigger value="sync"   className="flex-1 gap-1.5 text-xs data-[state=active]:bg-white"><LinkIcon  className="w-3.5 h-3.5" />API Sync</TabsTrigger>
+          <TabsTrigger value="manual" className="flex-1 gap-1.5 text-xs data-[state=active]:bg-white">
+            <TrendingUp className="w-3.5 h-3.5" />Manual Entry
+          </TabsTrigger>
+          <TabsTrigger value="import" className="flex-1 gap-1.5 text-xs data-[state=active]:bg-white">
+            <Upload className="w-3.5 h-3.5" />Contract Note Import
+          </TabsTrigger>
+          <TabsTrigger value="sync" className="flex-1 gap-1.5 text-xs data-[state=active]:bg-white">
+            <LinkIcon className="w-3.5 h-3.5" />Broker Sync
+          </TabsTrigger>
         </TabsList>
 
+        {/* ── Tab 1: Manual Entry ──────────────────────────────────────────── */}
         <TabsContent value="manual" className="space-y-4">
+
+          {/* Step 1 — Portfolio & Broker */}
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Step 1 — Account & Broker</p>
-            <div className="space-y-4">
-              <div className="space-y-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+              Step 1 — Portfolio &amp; Distributor
+            </p>
+
+            {/* Family member */}
+            {members.length > 1 && (
+              <div className="space-y-1.5 mb-4">
                 <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
                 <Select value={member} onValueChange={setMember}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Loading…" /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {members.length > 0
-                      ? members.map((m) => <SelectItem key={m.id} value={m.id} className="text-xs">{m.name}</SelectItem>)
-                      : <SelectItem value="loading" disabled className="text-xs">Loading members…</SelectItem>
-                    }
+                    {members.map(m => <SelectItem key={m.id} value={m.id} className="text-xs">{m.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Broker</Label>
-                <BrokerSelector
-                  familyId={familyId}
-                  selectedBrokerId={broker}
-                  onChange={setBroker}
+            )}
+
+            {/* Portfolio pills */}
+            <div className="space-y-2 mb-4">
+              <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio</Label>
+              <div className="flex flex-wrap gap-2">
+                {allPortfolios.map(name => (
+                  <button key={name}
+                    onClick={() => { setPortfolioName(name); setShowNewPort(false); }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border"
+                    style={{
+                      backgroundColor: portfolioName === name && !showNewPort ? '#1B2A4A' : 'transparent',
+                      color:           portfolioName === name && !showNewPort ? 'white' : '#6B7280',
+                      borderColor:     portfolioName === name && !showNewPort ? '#1B2A4A' : '#E8E5DD',
+                    }}>
+                    {name}
+                  </button>
+                ))}
+                <button
+                  onClick={() => { setShowNewPort(!showNewPort); setPortfolioName(''); }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex items-center gap-1"
+                  style={{
+                    backgroundColor: showNewPort ? 'rgba(201,168,76,0.1)' : 'transparent',
+                    color:           showNewPort ? '#C9A84C' : '#6B7280',
+                    borderColor:     showNewPort ? '#C9A84C' : '#E8E5DD',
+                  }}>
+                  <Plus className="w-3 h-3" />New
+                </button>
+              </div>
+              {showNewPort && (
+                <Input
+                  value={newPortName} onChange={e => setNewPortName(e.target.value)}
+                  placeholder="Portfolio name e.g. Children's Education"
+                  className="h-9 text-xs mt-2"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Demat Account No.</Label>
-                <Input value={demat} onChange={(e) => setDemat(e.target.value)} placeholder="1234567890123456" className="h-9 text-xs" />
-              </div>
+              )}
+              <FieldError msg={errors.portfolio} />
+            </div>
+
+            {/* Broker */}
+            <div className="space-y-1.5">
+              <Label className="text-xs" style={{ color: '#6B7280' }}>Distributor / Demat Account</Label>
+              <BrokerSelector
+                familyId={familyId}
+                selectedBrokerId={brokerId}
+                onChange={setBrokerId}
+                error={errors.broker}
+              />
             </div>
           </div>
 
+          {/* Step 2 — Stock Search */}
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Step 2 — Stock Search</p>
-            <div className="flex gap-2 mb-3">
-              {['NSE','BSE'].map((ex) => (
-                <button key={ex} onClick={() => setExchange(ex)}
-                  className="px-4 py-1.5 rounded-lg text-xs font-semibold border transition-all"
-                  style={{ backgroundColor: exchange === ex ? '#1B2A4A' : 'transparent', color: exchange === ex ? 'white' : '#6B7280', borderColor: exchange === ex ? '#1B2A4A' : '#E8E5DD' }}>
-                  {ex}
-                </button>
-              ))}
-            </div>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+              Step 2 — Search Stock
+            </p>
+
             <div className="relative">
-              <Input value={query} onChange={(e) => { setQuery(e.target.value); setShowDrop(true); setSelected(null); }} onFocus={() => setShowDrop(true)} placeholder="Search symbol or company name..." className="h-9 text-xs pr-8" />
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#9CA3AF' }} />
-              {showDrop && filtered.length > 0 && (
-                <div className="absolute top-full mt-1 left-0 right-0 rounded-xl border bg-white" style={{ borderColor: '#E8E5DD', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
-                  {filtered.map((s) => (
-                    <button key={s.symbol} className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-bg text-left border-b last:border-0" style={{ borderColor: '#F0EDE6' }}
-                      onClick={() => { setSelected(s); setQuery(`${s.symbol} — ${s.name}`); setBuyPrice(s.price.toString()); setShowDrop(false); }}>
-                      <div>
-                        <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>{s.symbol}</p>
-                        <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{s.name} · {s.exchange}</p>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#9CA3AF' }} />
+                <Input
+                  value={query}
+                  onChange={e => { setQuery(e.target.value); setSelectedStock(null); setStockPrice(null); }}
+                  onFocus={() => { if (results.length > 0) setShowDrop(true); }}
+                  placeholder="Search by symbol or company name (min 2 chars)…"
+                  className="h-9 text-xs pl-9 pr-8"
+                />
+                {searching
+                  ? <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin" style={{ color: '#9CA3AF' }} />
+                  : <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#9CA3AF' }} />
+                }
+              </div>
+
+              {/* Dropdown */}
+              {showDrop && results.length > 0 && (
+                <>
+                  <div className="fixed inset-0" style={{ zIndex: 9990 }} onClick={() => setShowDrop(false)} />
+                  <div className="absolute top-full mt-1 left-0 right-0 rounded-xl border bg-white"
+                    style={{ borderColor: '#E8E5DD', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+                    {results.map((s) => (
+                      <button key={s.symbol}
+                        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[#F7F5F0] text-left border-b last:border-0 transition-colors"
+                        style={{ borderColor: '#F0EDE6' }}
+                        onClick={() => selectStock(s)}>
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
+                            style={{ backgroundColor: sectorColor(s.sector) }}>
+                            {s.symbol.slice(0, 2)}
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>{s.symbol}</p>
+                            <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{s.companyName}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-medium" style={{ color: '#6B7280' }}>{s.exchange}</p>
+                          <p className="text-[10px]" style={{ color: sectorColor(s.sector) }}>{s.sector}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <FieldError msg={errors.stock} />
+
+            {/* Selected stock info strip */}
+            {selectedStock && (
+              <div className="mt-3 p-3 rounded-xl flex items-center gap-3 relative"
+                style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.10)' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                  style={{ backgroundColor: sectorColor(selectedStock.sector) }}>
+                  {selectedStock.symbol.slice(0, 2)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-bold" style={{ color: '#1A1A2E' }}>{selectedStock.companyName}</p>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                      style={{ backgroundColor: sectorColor(selectedStock.sector) + '22', color: sectorColor(selectedStock.sector) }}>
+                      {selectedStock.sector}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                    <span className="text-[10px]" style={{ color: '#6B7280' }}>
+                      {selectedStock.symbol} · {selectedStock.exchange} · {selectedStock.industry}
+                    </span>
+                    {selectedStock.isin && (
+                      <span className="text-[10px]" style={{ color: '#9CA3AF' }}>ISIN: {selectedStock.isin}</span>
+                    )}
+                  </div>
+                  {priceLoading ? (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#C9A84C' }} />
+                      <span className="text-[10px]" style={{ color: '#9CA3AF' }}>Fetching price…</span>
+                    </div>
+                  ) : stockPrice ? (
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-sm font-bold" style={{ color: '#1A1A2E' }}>
+                        ₹{stockPrice.price.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                      </span>
+                      <span className={`text-xs font-medium flex items-center gap-0.5`}
+                        style={{ color: stockPrice.changePct >= 0 ? '#059669' : '#DC2626' }}>
+                        {stockPrice.changePct >= 0
+                          ? <TrendingUp className="w-3 h-3" />
+                          : <TrendingDown className="w-3 h-3" />}
+                        {stockPrice.changePct >= 0 ? '+' : ''}{stockPrice.changePct}%
+                      </span>
+                      <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                        H: ₹{stockPrice.dayHigh.toLocaleString('en-IN')} · L: ₹{stockPrice.dayLow.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+                <button className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-100"
+                  onClick={() => { setSelectedStock(null); setQuery(''); setStockPrice(null); }}>
+                  <X className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Step 3 — Transaction Details */}
+          {selectedStock && (
+            <div className="wv-card p-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+                Step 3 — Transaction Details
+              </p>
+
+              {/* Transaction type pills */}
+              <div className="flex flex-wrap gap-2 mb-5">
+                {TXN_TYPES.map(t => (
+                  <button key={t.key}
+                    onClick={() => { setTxnType(t.key); setErrors({}); }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border"
+                    style={{
+                      backgroundColor: txnType === t.key ? '#1B2A4A' : 'transparent',
+                      color:           txnType === t.key ? 'white'   : '#6B7280',
+                      borderColor:     txnType === t.key ? '#1B2A4A' : '#E8E5DD',
+                    }}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* ── Buy / Sell / Rights ─────────────────────────────────────── */}
+              {(txnType === 'buy' || txnType === 'sell' || txnType === 'rights') && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>
+                        Quantity (shares)
+                      </Label>
+                      <Input
+                        type="number" min="1" step="1"
+                        value={quantity} onChange={e => setQuantity(e.target.value)}
+                        placeholder="100" className="h-9 text-xs"
+                      />
+                      <FieldError msg={errors.quantity} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>
+                        {txnType === 'sell' ? 'Sell' : txnType === 'rights' ? 'Rights'  : 'Buy'} Price (₹)
+                        {priceLoaded && <AutoTag label="auto-filled" />}
+                        {stockPrice && (
+                          <span className="ml-1 text-[10px]" style={{ color: '#9CA3AF' }}>
+                            CMP ₹{stockPrice.price.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                          </span>
+                        )}
+                      </Label>
+                      <Input
+                        type="number" step="0.01" min="0.01"
+                        value={price} onChange={e => { setPrice(e.target.value); setPriceLoaded(false); }}
+                        placeholder="e.g. 2850.00" className="h-9 text-xs"
+                      />
+                      <FieldError msg={errors.price} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>Date</Label>
+                      <Input
+                        type="date" value={date} onChange={e => setDate(e.target.value)}
+                        className="h-9 text-xs"
+                      />
+                      <FieldError msg={errors.date} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>Demat Account / DP ID</Label>
+                      <Input
+                        value={demat} onChange={e => setDemat(e.target.value)}
+                        placeholder="IN301549…" className="h-9 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* ISIN auto-filled */}
+                  {selectedStock.isin && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>
+                        ISIN <AutoTag label="auto-filled" />
+                      </Label>
+                      <Input value={selectedStock.isin} readOnly className="h-8 text-xs font-mono bg-[#F7F5F0]" />
+                    </div>
+                  )}
+
+                  {/* Charges */}
+                  <div className="pt-3 border-t space-y-2.5" style={{ borderColor: '#F0EDE6' }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>Charges</p>
+                      {value > 0 && (
+                        <button onClick={applyAutoCharges}
+                          className="text-[10px] px-2 py-0.5 rounded font-medium"
+                          style={{ backgroundColor: 'rgba(201,168,76,0.1)', color: '#C9A84C' }}>
+                          Auto-fill all charges
+                        </button>
+                      )}
+                    </div>
+                    <ChargeRow label="Brokerage (₹)" value={brokerage} onChange={setBrokerage} />
+                    <ChargeRow label="STT (₹)" value={stt} onChange={setStt}
+                      autoCalc={autoSTT.toFixed(2)} onAutoClick={() => setStt(autoSTT.toString())} />
+                    <ChargeRow label="GST (₹)" value={gst} onChange={setGst}
+                      autoCalc={autoGST.toFixed(2)} onAutoClick={() => setGst(autoGST.toString())} />
+                    <ChargeRow label="Stamp Duty (₹)" value={stampDuty} onChange={setStampDuty}
+                      autoCalc={autoStamp.toFixed(2)} onAutoClick={() => setStampDuty(autoStamp.toString())} />
+                    <ChargeRow label="Exchange Charges (₹)" value={exchangeCharges} onChange={setExchangeCharges} />
+                    <ChargeRow label="DP Charges (₹)" value={dpCharges} onChange={setDpCharges} />
+                  </div>
+                </div>
+              )}
+
+              {/* ── Bonus ──────────────────────────────────────────────────── */}
+              {txnType === 'bonus' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>Bonus Ratio</Label>
+                      <Input value={bonusRatio} onChange={e => setBonusRatio(e.target.value)} placeholder="1:2 (1 bonus per 2 held)" className="h-9 text-xs" />
+                      <FieldError msg={errors.bonusRatio} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>Existing Quantity (your holdings)</Label>
+                      <Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="500" className="h-9 text-xs" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>Record Date</Label>
+                      <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-xs" />
+                      <FieldError msg={errors.date} />
+                    </div>
+                  </div>
+                  {bonusRatio && quantity && (() => {
+                    const [num, den] = bonusRatio.split(':').map(Number);
+                    const bonus = den > 0 ? Math.floor((parseFloat(quantity) / den) * num) : 0;
+                    return bonus > 0 ? (
+                      <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.15)' }}>
+                        <p className="text-xs" style={{ color: '#059669' }}>
+                          You will receive <strong>{bonus} bonus shares</strong> · Cost = ₹0 (lowers avg buy price)
+                        </p>
                       </div>
-                      <span className="text-xs font-bold" style={{ color: '#1A1A2E' }}>₹{s.price.toLocaleString('en-IN')}</span>
-                    </button>
-                  ))}
+                    ) : null;
+                  })()}
+                </div>
+              )}
+
+              {/* ── Split ──────────────────────────────────────────────────── */}
+              {txnType === 'split' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>Split Ratio (New : Old)</Label>
+                      <Input value={splitRatio} onChange={e => setSplitRatio(e.target.value)} placeholder="5:1 (1 share → 5 shares)" className="h-9 text-xs" />
+                      <FieldError msg={errors.splitRatio} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>Existing Quantity</Label>
+                      <Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="100" className="h-9 text-xs" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>Record Date</Label>
+                      <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-xs" />
+                      <FieldError msg={errors.date} />
+                    </div>
+                  </div>
+                  {splitRatio && quantity && (() => {
+                    const [num, den] = splitRatio.split(':').map(Number);
+                    const factor = den > 0 ? num / den : 1;
+                    const newQty = Math.round(parseFloat(quantity) * factor);
+                    return (
+                      <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.08)' }}>
+                        <p className="text-xs" style={{ color: '#1B2A4A' }}>
+                          {quantity} shares → <strong>{newQty} shares</strong> · Avg price adjusted by ÷{factor.toFixed(2)}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* ── Rights Issue ────────────────────────────────────────────── */}
+              {txnType === 'rights' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs" style={{ color: '#6B7280' }}>Rights Ratio</Label>
+                    <Input value={rightsRatio} onChange={e => setRightsRatio(e.target.value)} placeholder="1:5 (1 right per 5 held)" className="h-9 text-xs" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs" style={{ color: '#6B7280' }}>Rights Issue Price (₹)</Label>
+                    <Input type="number" step="0.01" value={rightsPrice} onChange={e => setRightsPrice(e.target.value)} placeholder="100.00" className="h-9 text-xs" />
+                  </div>
+                </div>
+              )}
+
+              {/* ── Dividend ────────────────────────────────────────────────── */}
+              {txnType === 'dividend' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>Dividend per Share (₹)</Label>
+                      <Input type="number" step="0.01" value={divPerShare} onChange={e => setDivPerShare(e.target.value)} placeholder="5.00" className="h-9 text-xs" />
+                      <FieldError msg={errors.divPerShare} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>Dividend Type</Label>
+                      <Select value={divType} onValueChange={setDivType}>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {['Interim','Final','Special'].map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>Ex-Dividend Date</Label>
+                      <Input type="date" value={exDate} onChange={e => setExDate(e.target.value)} className="h-9 text-xs" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>Payment Date</Label>
+                      <Input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="h-9 text-xs" />
+                    </div>
+                  </div>
+                  {divPerShare && (
+                    <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.15)' }}>
+                      <p className="text-xs" style={{ color: '#059669' }}>
+                        {divType} dividend of ₹{divPerShare}/share
+                        {stockPrice ? ` · Yield ≈ ${((parseFloat(divPerShare) / stockPrice.price) * 100).toFixed(2)}%` : ''}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Summary strip for Buy/Sell */}
+              {(txnType === 'buy' || txnType === 'sell') && qty > 0 && px > 0 && (
+                <div className="mt-4 p-3 rounded-xl grid grid-cols-4 gap-3"
+                  style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.08)' }}>
+                  <div>
+                    <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                      {txnType === 'buy' ? 'Invested' : 'Sale Value'}
+                    </p>
+                    <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>{formatLargeINR(value)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Total Charges</p>
+                    <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>₹{totalFees.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                      {txnType === 'buy' ? 'Total Cost' : 'Net Proceeds'}
+                    </p>
+                    <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>{formatLargeINR(txnType === 'buy' ? totalCost : value - totalFees)}</p>
+                  </div>
+                  {stockPrice && (
+                    <div>
+                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>vs CMP</p>
+                      {(() => {
+                        const diff = txnType === 'buy' ? stockPrice.price - px : px - (Number(price) || 0);
+                        const diffPct = px > 0 ? (diff / px) * 100 : 0;
+                        return (
+                          <p className="text-xs font-bold" style={{ color: diff >= 0 ? '#059669' : '#DC2626' }}>
+                            {diff >= 0 ? '+' : ''}{diffPct.toFixed(1)}%
+                          </p>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-            {selected && (
-              <div className="mt-3 p-3 rounded-xl flex items-center gap-3" style={{ backgroundColor: 'rgba(27,42,74,0.05)', border: '1px solid rgba(27,42,74,0.12)' }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ backgroundColor: '#1B2A4A' }}>{selected.symbol.slice(0,2)}</div>
-                <div>
-                  <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{selected.name}</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: '#6B7280' }}>CMP: <strong>₹{selected.price.toLocaleString('en-IN')}</strong> · {selected.exchange}</p>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
-          <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Step 3 — Transaction Details</p>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Quantity (shares)</Label>
-                <Input value={qty} onChange={(e) => setQty(e.target.value)} placeholder="100" className="h-9 text-xs" type="number" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Buy Price (₹) {selected && <span className="text-[10px] ml-1" style={{ color: '#C9A84C' }}>CMP: ₹{selected.price}</span>}</Label>
-                <Input value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} placeholder="2800.00" className="h-9 text-xs" type="number" step="0.01" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Buy Date</Label>
-                <Input value={buyDate} onChange={(e) => setBuyDate(e.target.value)} type="date" className="h-9 text-xs" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Brokerage (₹)</Label>
-                <Input value={brokerage} onChange={(e) => setBrokerage(e.target.value)} placeholder="20.00" className="h-9 text-xs" type="number" />
-              </div>
-              <div className="col-span-2 space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Total Investment (auto)</Label>
-                <Input value={totalCost ? `₹${parseFloat(totalCost).toLocaleString('en-IN',{maximumFractionDigits:2})}` : ''} readOnly placeholder="= Qty × Buy Price" className="h-9 text-xs font-semibold" style={{ backgroundColor: totalCost ? 'rgba(27,42,74,0.04)' : '#F7F5F0' }} />
-              </div>
+          {/* Holder Details (collapsible) */}
+          {selectedStock && (
+            <div className="wv-card">
+              <button
+                className="w-full flex items-center justify-between px-5 py-4"
+                onClick={() => setShowHolder(!showHolder)}>
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4" style={{ color: '#9CA3AF' }} />
+                  <span className="text-xs font-medium" style={{ color: '#6B7280' }}>Holder &amp; Contact Details</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+                    style={{ backgroundColor: '#F0EDE6', color: '#9CA3AF' }}>optional</span>
+                </div>
+                {showHolder
+                  ? <ChevronUp className="w-4 h-4" style={{ color: '#9CA3AF' }} />
+                  : <ChevronDown className="w-4 h-4" style={{ color: '#9CA3AF' }} />}
+              </button>
+
+              {showHolder && (
+                <div className="px-5 pb-5 space-y-4 border-t" style={{ borderColor: '#F0EDE6' }}>
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    {[
+                      { label: 'First Holder', key: 'firstHolder', ph: 'Full name' },
+                      { label: 'Second Holder', key: 'secondHolder', ph: 'Full name' },
+                      { label: 'Nominee', key: 'nominee', ph: 'Full name' },
+                      { label: 'Mobile', key: 'mobile', ph: '9XXXXXXXXX' },
+                      { label: 'Email', key: 'email', ph: 'email@example.com' },
+                      { label: 'Bank Last 4 Digits', key: 'bankLast4', ph: '1234' },
+                    ].map(f => (
+                      <div key={f.key} className="space-y-1.5">
+                        <Label className="text-xs" style={{ color: '#6B7280' }}>{f.label}</Label>
+                        <Input
+                          value={holder[f.key as keyof HolderFields]}
+                          onChange={e => setHolder(h => ({ ...h, [f.key]: e.target.value }))}
+                          placeholder={f.ph} className="h-9 text-xs"
+                        />
+                      </div>
+                    ))}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>Bank Name</Label>
+                      <Select value={holder.bankName} onValueChange={v => setHolder(h => ({ ...h, bankName: v }))}>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select bank" /></SelectTrigger>
+                        <SelectContent>
+                          {INDIAN_BANKS.map(b => <SelectItem key={b} value={b} className="text-xs">{b}</SelectItem>)}
+                          <SelectItem value="Other" className="text-xs">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-            {canCalc && (
-              <div className="mt-4 p-3 rounded-xl grid grid-cols-4 gap-3" style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.08)' }}>
-                <div><p className="text-[10px]" style={{ color: '#9CA3AF' }}>Invested</p><p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>₹{parseFloat(totalCost!).toLocaleString('en-IN',{maximumFractionDigits:0})}</p></div>
-                <div><p className="text-[10px]" style={{ color: '#9CA3AF' }}>Current</p><p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>₹{parseFloat(currValue!).toLocaleString('en-IN',{maximumFractionDigits:0})}</p></div>
-                <div><p className="text-[10px]" style={{ color: '#9CA3AF' }}>Gain/Loss</p><p className="text-xs font-bold" style={{ color: parseFloat(gainLoss!)>=0?'#059669':'#DC2626' }}>{parseFloat(gainLoss!)>=0?'+':'-'}₹{Math.abs(parseFloat(gainLoss!)).toLocaleString('en-IN',{maximumFractionDigits:0})}</p></div>
-                <div><p className="text-[10px]" style={{ color: '#9CA3AF' }}>Returns</p><p className="text-xs font-bold" style={{ color: parseFloat(gainPct!)>=0?'#059669':'#DC2626' }}>{parseFloat(gainPct!)>=0?'+':''}{gainPct}%</p></div>
-              </div>
-            )}
-            <div className="flex gap-3 mt-5">
-              <Button onClick={handleSave} className="flex-1 h-9 text-xs font-semibold" style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>
-                {saved ? <><Check className="w-3.5 h-3.5 mr-1" />Saved!</> : 'Save holding'}
+          )}
+
+          {/* Action buttons */}
+          {selectedStock && (
+            <div className="flex gap-3">
+              <Button onClick={() => handleSave(false)} disabled={saving} className="flex-1 h-10 text-xs font-semibold"
+                style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>
+                {saving ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Saving…</> : `Save ${txnType.charAt(0).toUpperCase() + txnType.slice(1)}`}
               </Button>
-              <Button className="flex-1 h-9 text-xs font-semibold text-white" style={{ backgroundColor: '#1B2A4A' }}>Save &amp; add another</Button>
-              <Button variant="outline" className="h-9 text-xs" style={{ borderColor: '#E8E5DD', color: '#6B7280' }}>Cancel</Button>
+              <Button onClick={() => handleSave(true)} disabled={saving} className="flex-1 h-10 text-xs font-semibold text-white"
+                style={{ backgroundColor: '#1B2A4A' }}>
+                Save &amp; Add Another
+              </Button>
+              <Button variant="outline" className="h-10 text-xs px-4" style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
+                onClick={() => router.back()}>
+                Cancel
+              </Button>
             </div>
-          </div>
+          )}
         </TabsContent>
 
+        {/* ── Tab 2: Import ─────────────────────────────────────────────────── */}
         <TabsContent value="import">
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Import Broker Statement</p>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              {['Zerodha P&L Report','Groww Statement','Angel One Report','ICICI Direct CAS'].map((fmt) => (
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+              Import Contract Note / Trade Statement
+            </p>
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              {['Zerodha Tradebook CSV','Groww Trade Report','Angel One Report','ICICI Direct CAS','HDFC Securities','Upstox Trade Report'].map(fmt => (
                 <div key={fmt} className="p-3 rounded-xl border flex items-center gap-2" style={{ borderColor: '#E8E5DD' }}>
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#C9A84C' }} />
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#C9A84C' }} />
                   <span className="text-xs" style={{ color: '#6B7280' }}>{fmt}</span>
                 </div>
               ))}
             </div>
-            <label className="flex flex-col items-center justify-center w-full h-36 rounded-xl border-2 border-dashed cursor-pointer hover:bg-bg transition-colors" style={{ borderColor: '#E8E5DD' }}>
+            <div className="p-4 rounded-xl border flex flex-col items-center gap-2 mb-4"
+              style={{ borderColor: 'rgba(201,168,76,0.3)', backgroundColor: 'rgba(201,168,76,0.04)' }}>
+              <Building2 className="w-8 h-8" style={{ color: '#C9A84C' }} />
+              <p className="text-sm font-semibold" style={{ color: '#C9A84C' }}>Coming Soon</p>
+              <p className="text-xs text-center" style={{ color: '#9CA3AF' }}>
+                Upload your broker tradebook CSV or contract note PDF.<br />
+                We&apos;ll parse and auto-map all your transactions.
+              </p>
+            </div>
+            <label className="flex flex-col items-center justify-center w-full h-32 rounded-xl border-2 border-dashed cursor-not-allowed opacity-50"
+              style={{ borderColor: '#E8E5DD' }}>
               <Upload className="w-7 h-7 mb-2" style={{ color: '#9CA3AF' }} />
               <p className="text-sm font-medium" style={{ color: '#6B7280' }}>Upload statement</p>
               <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>.xlsx, .csv, .pdf</p>
-              <input type="file" className="hidden" accept=".pdf,.csv,.xlsx" />
             </label>
           </div>
         </TabsContent>
 
+        {/* ── Tab 3: Broker Sync ─────────────────────────────────────────────── */}
         <TabsContent value="sync">
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Broker API Sync</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+              Broker API Sync
+            </p>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { name:'Zerodha Kite', color:'#2E8B8B', letter:'Z', status:'Ready',  statusBg:'rgba(5,150,105,0.1)', statusColor:'#059669' },
-                { name:'Angel One',    color:'#DC2626', letter:'A', status:'Ready',  statusBg:'rgba(5,150,105,0.1)', statusColor:'#059669' },
-                { name:'Groww',        color:'#00D09C', letter:'G', status:'Soon',   statusBg:'#F5EDD6',             statusColor:'#C9A84C' },
-                { name:'ICICI Direct', color:'#FF6600', letter:'I', status:'Soon',   statusBg:'#F5EDD6',             statusColor:'#C9A84C' },
-              ].map((api) => (
+                { name: 'Zerodha Kite',   color: '#387ED1', letter: 'Z', status: 'Soon' },
+                { name: 'Groww',          color: '#00D09C', letter: 'G', status: 'Soon' },
+                { name: 'Angel One',      color: '#DC2626', letter: 'A', status: 'Soon' },
+                { name: 'ICICI Direct',   color: '#FF6600', letter: 'I', status: 'Soon' },
+                { name: 'HDFC Securities',color: '#003087', letter: 'H', status: 'Soon' },
+                { name: 'Upstox',         color: '#5D47D4', letter: 'U', status: 'Soon' },
+              ].map(api => (
                 <div key={api.name} className="p-4 rounded-xl border" style={{ borderColor: '#E8E5DD' }}>
                   <div className="flex items-start justify-between mb-3">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: api.color }}>{api.letter}</div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: api.statusBg, color: api.statusColor }}>{api.status}</span>
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                      style={{ backgroundColor: api.color }}>
+                      {api.letter}
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: '#F5EDD6', color: '#C9A84C' }}>
+                      Coming Soon
+                    </span>
                   </div>
                   <p className="text-xs font-semibold mb-3" style={{ color: '#1A1A2E' }}>{api.name}</p>
-                  <Button disabled={api.status==='Soon'} className="w-full h-7 text-[11px]" style={{ backgroundColor: api.status==='Ready'?'#1B2A4A':'#F7F5F0', color: api.status==='Ready'?'white':'#9CA3AF' }}>
-                    {api.status==='Ready'?'Connect':'Coming Soon'}
+                  <Button disabled className="w-full h-7 text-[11px]"
+                    style={{ backgroundColor: '#F7F5F0', color: '#9CA3AF' }}>
+                    Connect
                   </Button>
                 </div>
               ))}
@@ -260,5 +1067,19 @@ export default function IndianStocksPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// ─── Page wrapper with Suspense ────────────────────────────────────────────────
+
+export default function IndianStocksPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#C9A84C' }} />
+      </div>
+    }>
+      <IndianStocksFormContent />
+    </Suspense>
   );
 }

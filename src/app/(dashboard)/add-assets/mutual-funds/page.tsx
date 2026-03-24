@@ -204,7 +204,7 @@ function AutoTag({ label }: { label: string }) {
 // ─── Holder Fields Collapsible ────────────────────────────────────────────────
 
 function HolderSection({
-  holder, onChange, memberName, familyId,
+  holder, onChange, memberName, familyId: _familyId,
 }: {
   holder: HolderFields;
   onChange: (h: HolderFields) => void;
@@ -242,7 +242,6 @@ function HolderSection({
     }
   }, [showCustomInput, open]);
 
-  const allStandardBanks = [...INDIAN_BANKS, ...customBanks];
   // "Other" is shown in dropdown if the bank doesn't match any known bank
   const selectBankValue = showCustomInput ? 'Other' : holder.bankName;
 
@@ -679,6 +678,7 @@ export default function MutualFundsPage() {
   const [amount,       setAmount]       = useState('');
   const [nav,          setNav]          = useState('');
   const [purchaseDate, setPurchaseDate] = useState('');
+  const [isNFO,        setIsNFO]        = useState(false);
   const [histNavHint,  setHistNavHint]  = useState<{ nav: number; date: string } | null>(null);
   const [isHistLoading, setIsHistLoading] = useState(false);
   const [folio,        setFolio]        = useState('');
@@ -726,7 +726,9 @@ export default function MutualFundsPage() {
       }
 
       const { data: portfolios } = await supabase
-        .from('portfolios').select('id, name, type').eq('user_id', user.id);
+        .from('portfolios').select('id, name, type')
+        .eq('family_id', profile.family_id ?? user.id)
+        .order('created_at');
       if (portfolios?.length) {
         setDbPortfolios(portfolios);
         setPortfolio(portfolios[0].name);
@@ -833,8 +835,11 @@ export default function MutualFundsPage() {
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/mf/search?q=${encodeURIComponent(val)}`);
+        if (!res.ok) { console.error('[MF Search] HTTP', res.status, res.url); setIsSearching(false); return; }
         const json = await res.json();
         setSearchResults(json.results ?? []);
+      } catch (err) {
+        console.error('[MF Search] fetch error:', err);
       } finally { setIsSearching(false); }
     }, 300);
   }
@@ -873,15 +878,17 @@ export default function MutualFundsPage() {
   }
 
   // ── Lump-sum calculations ──────────────────────────────────────────────────
-  // Stamp duty (0.005%) applied only for purchase dates on/after 2020-07-01
+  // Stamp duty (0.005%) applied only for purchase dates on/after 2020-07-01; NFO uses fixed NAV=10
   const STAMP_DUTY_CUTOFF = '2020-07-01';
-  const applyStampDuty = !!purchaseDate && purchaseDate >= STAMP_DUTY_CUTOFF;
+  const applyStampDuty = !isNFO && !!purchaseDate && purchaseDate >= STAMP_DUTY_CUTOFF;
   const stampDutyAmt   = amount ? parseFloat((parseFloat(amount) * 0.00005).toFixed(2)) : 0;
   const effectiveAmount = amount
     ? parseFloat(amount) - (applyStampDuty ? stampDutyAmt : 0)
     : 0;
-  const units   = amount && nav
-    ? (effectiveAmount / parseFloat(nav)).toFixed(4)
+  const nfoNav  = '10.0000';
+  const activeNav = isNFO ? nfoNav : nav;
+  const units   = amount && activeNav
+    ? (effectiveAmount / parseFloat(activeNav)).toFixed(4)
     : '';
   const currVal = navData && units
     ? (parseFloat(units) * navData.nav).toFixed(2)
@@ -889,7 +896,7 @@ export default function MutualFundsPage() {
   const returns = currVal && amount
     ? ((parseFloat(currVal) - parseFloat(amount)) / parseFloat(amount) * 100).toFixed(2)
     : '';
-  const canCalc = !!(amount && nav && selectedFund && navData);
+  const canCalc = !!(amount && activeNav && selectedFund && (isNFO || navData));
 
   // ── Combined SIP totals ────────────────────────────────────────────────────
   const sipTotals = sipBlocks.reduce(
@@ -1015,14 +1022,15 @@ export default function MutualFundsPage() {
         category:       selectedFund!.category,
         fundHouse:      navData?.fundHouse,
         purchaseDate,
-        purchaseNav:    parseFloat(nav),
+        purchaseNav:    isNFO ? 10 : parseFloat(nav),
         investedAmount: parseFloat(amount),
         units:          parseFloat(units || '0'),
         folio,
         isSIP:          false,
+        isNFO,
         portfolioName:  portfolio,
         brokerId:       broker || undefined,
-        currentNav:     navData?.nav,
+        currentNav:     navData?.nav ?? (isNFO ? 10 : undefined),
         holderDetails:  holderMeta,
       };
     }
@@ -1051,7 +1059,7 @@ export default function MutualFundsPage() {
         setSavedHolder({ ...holder });
         setShowReuseHolder(true);
         setQuery(''); setSelectedFund(null); setNavData(null);
-        setAmount(''); setNav(''); setPurchaseDate(''); setHistNavHint(null);
+        setAmount(''); setNav(''); setPurchaseDate(''); setHistNavHint(null); setIsNFO(false);
         setFolio(''); setSipBlocks([newSipBlock()]); setErrors({});
         setHolder({ ...BLANK_HOLDER });
       } else {
@@ -1308,7 +1316,7 @@ export default function MutualFundsPage() {
 
           {/* Step 1 — Portfolio & Broker */}
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Step 1 — Portfolio &amp; Broker</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Step 1 — Portfolio &amp; Distributor</p>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -1345,7 +1353,7 @@ export default function MutualFundsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Platform / Broker</Label>
+                <Label className="text-xs" style={{ color: '#6B7280' }}>Platform / Distributor</Label>
                 <BrokerSelector familyId={familyId} selectedBrokerId={broker}
                   onChange={(id) => { setBroker(id); setErrors((e) => ({ ...e, broker: '' })); }}
                   error={errors.broker} />
@@ -1519,10 +1527,21 @@ export default function MutualFundsPage() {
                   <FieldError msg={errors.amount} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>
-                    Purchase Date
-                    {isHistLoading && <Loader2 className="w-2.5 h-2.5 inline ml-1 animate-spin" style={{ color: '#9CA3AF' }} />}
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs" style={{ color: '#6B7280' }}>
+                      Purchase Date
+                      {isHistLoading && <Loader2 className="w-2.5 h-2.5 inline ml-1 animate-spin" style={{ color: '#9CA3AF' }} />}
+                    </Label>
+                    <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                      <input type="checkbox" checked={isNFO} onChange={(e) => {
+                        setIsNFO(e.target.checked);
+                        if (e.target.checked) setNav('');
+                      }} className="w-3 h-3 accent-blue-600" />
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                        style={{ backgroundColor: isNFO ? 'rgba(37,99,235,0.12)' : 'rgba(156,163,175,0.12)',
+                                 color: isNFO ? '#2563EB' : '#9CA3AF' }}>NFO</span>
+                    </label>
+                  </div>
                   <Input type="date" value={purchaseDate}
                     onChange={(e) => { handleDateChange(e.target.value); setErrors((er) => ({ ...er, purchaseDate: '' })); }}
                     className="h-9 text-xs" max={new Date().toISOString().split('T')[0]}
@@ -1532,16 +1551,19 @@ export default function MutualFundsPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs" style={{ color: '#6B7280' }}>
                     NAV at Purchase
-                    {navData && <span className="text-[10px] ml-1" style={{ color: '#C9A84C' }}>Today: ₹{navData.nav.toFixed(4)}</span>}
+                    {!isNFO && navData && <span className="text-[10px] ml-1" style={{ color: '#C9A84C' }}>Today: ₹{navData.nav.toFixed(4)}</span>}
+                    {isNFO && <span className="text-[10px] ml-1" style={{ color: '#2563EB' }}>NFO — fixed at ₹10</span>}
                   </Label>
-                  {histNavHint && (
+                  {!isNFO && histNavHint && (
                     <p className="text-[10px]" style={{ color: '#059669' }}>
                       NAV on {fmtNavDate(histNavHint.date)}: ₹{histNavHint.nav.toFixed(4)} (auto-filled)
                     </p>
                   )}
-                  <Input value={nav} onChange={(e) => { setNav(e.target.value); setErrors((er) => ({ ...er, nav: '' })); }}
+                  <Input value={isNFO ? nfoNav : nav}
+                    onChange={(e) => { if (!isNFO) { setNav(e.target.value); setErrors((er) => ({ ...er, nav: '' })); } }}
+                    readOnly={isNFO}
                     placeholder="54.1200" className="h-9 text-xs" type="number" step="0.0001"
-                    style={errors.nav ? { borderColor: '#DC2626' } : {}} />
+                    style={{ ...(errors.nav ? { borderColor: '#DC2626' } : {}), ...(isNFO ? { backgroundColor: 'rgba(37,99,235,0.04)', color: '#2563EB' } : {}) }} />
                   <FieldError msg={errors.nav} />
                 </div>
                 <div className="space-y-1.5">

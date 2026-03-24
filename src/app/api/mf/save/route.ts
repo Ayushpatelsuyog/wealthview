@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   const {
     schemeCode, schemeName, category, fundHouse,
     purchaseDate, purchaseNav, investedAmount, units,
-    folio, planType, fees, isSIP, sipAmount,
+    folio, planType, fees, isSIP, sipAmount, isNFO,
     portfolioName = 'My Portfolio',
     brokerId: passedBrokerId,
     brokerName = 'Other',
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
   const { data: existingPortfolio } = await supabase
     .from('portfolios')
     .select('id')
-    .eq('user_id', user.id)
+    .eq('family_id', familyId)
     .eq('name', portfolioName)
     .maybeSingle();
 
@@ -175,6 +175,7 @@ export async function POST(req: NextRequest) {
           plan_type:   planType  ?? null,
           folio:       folio     ?? null,
           is_sip:      isSIP     ?? false,
+          is_nfo:      isNFO     ?? false,
           sip_amount:  sipAmount ?? null,
           current_nav: currentNav ?? null,
           amfi_code:   schemeCode,

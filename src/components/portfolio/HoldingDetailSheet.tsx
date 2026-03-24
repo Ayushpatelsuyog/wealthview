@@ -82,7 +82,7 @@ const CAT_COLORS: Record<string, { bg: string; text: string }> = {
   'Sectoral/Thematic':  { bg: 'rgba(234,88,12,0.12)',   text: '#C2410C' },
   Arbitrage:            { bg: 'rgba(46,139,139,0.10)',  text: '#2E8B8B' },
 };
-function catStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: '#F3F4F6', text: '#6B7280' }; }
+function _catStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: '#F3F4F6', text: '#6B7280' }; }
 
 const ALL_CATEGORIES = [
   'Equity', 'Debt', 'Hybrid', 'ELSS', 'Index/ETF', 'Liquid', 'Gilt',
@@ -914,7 +914,7 @@ export function HoldingDetailSheet({
     { label: 'XIRR',
       value: h.xirr != null ? `${(h.xirr * 100) >= 0 ? '+' : ''}${(h.xirr * 100).toFixed(2)}%` : '—',
       color: h.xirr != null ? (h.xirr >= 0 ? '#059669' : '#DC2626') : undefined },
-    { label: 'Broker',    value: h.brokers?.name ?? '—',             color: undefined },
+    { label: 'Distributor', value: h.brokers?.name ?? '—',           color: undefined },
     { label: 'Folio',     value: meta.folio ? String(meta.folio) : '—', color: undefined },
     { label: 'Portfolio', value: h.portfolios?.name ?? '—',          color: undefined },
   ];
@@ -977,6 +977,10 @@ export function HoldingDetailSheet({
                 {isSIP && (
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                     style={{ backgroundColor: 'rgba(201,168,76,0.25)', color: '#C9A84C' }}>SIP</span>
+                )}
+                {!!meta.is_nfo && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: 'rgba(37,99,235,0.25)', color: '#93C5FD' }}>NFO</span>
                 )}
                 <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>AMFI {h.symbol}</span>
               </div>

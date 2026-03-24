@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     const { data: existing } = await supabase
       .from('portfolios')
       .select('id')
-      .eq('user_id', userId)
+      .eq('family_id', familyId)
       .eq('name', portfolioName)
       .maybeSingle();
 

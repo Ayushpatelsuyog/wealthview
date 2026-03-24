@@ -209,7 +209,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
       const data = await res.json();
       setFundSearches(prev => {
         const next = new Map(prev);
-        next.set(fi, { query, results: data ?? [], searching: false });
+        next.set(fi, { query, results: data.results ?? [], searching: false });
         return next;
       });
     } catch {
@@ -226,7 +226,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
   const toggleFund = (fi: number) => {
     setSelectedFunds(prev => {
       const next = new Set(prev);
-      next.has(fi) ? next.delete(fi) : next.add(fi);
+      if (next.has(fi)) next.delete(fi); else next.add(fi);
       return next;
     });
   };
@@ -235,7 +235,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
     setSelectedTxns(prev => {
       const next = new Map(prev);
       const set = new Set(next.get(fi) ?? []);
-      set.has(ti) ? set.delete(ti) : set.add(ti);
+      if (set.has(ti)) set.delete(ti); else set.add(ti);
       next.set(fi, set);
       return next;
     });
@@ -252,7 +252,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
   const toggleExpand = (fi: number) => {
     setExpandedFunds(prev => {
       const next = new Set(prev);
-      next.has(fi) ? next.delete(fi) : next.add(fi);
+      if (next.has(fi)) next.delete(fi); else next.add(fi);
       return next;
     });
   };
@@ -715,7 +715,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
       <div className="space-y-4">
         {/* Broker */}
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium" style={{ color: '#374151' }}>Broker / Platform</Label>
+          <Label className="text-xs font-medium" style={{ color: '#374151' }}>Distributor / Platform</Label>
           <select
             className="w-full rounded-md border px-3 py-2 text-sm"
             style={{ borderColor: '#E5E7EB', color: '#1A1A2E', backgroundColor: 'white' }}

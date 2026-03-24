@@ -90,7 +90,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
 
   // ── Add broker ─────────────────────────────────────────────────────────────
   async function handleAdd() {
-    if (!addName.trim()) { setAddError('Broker name is required'); return; }
+    if (!addName.trim()) { setAddError('Distributor name is required'); return; }
     if (!familyId) { setAddError('Set up your family first'); return; }
     setAddSaving(true);
     setAddError(null);
@@ -108,7 +108,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
 
     setAddSaving(false);
     if (err || !data) {
-      setAddError(err?.message ?? 'Failed to save broker');
+      setAddError(err?.message ?? 'Failed to save distributor');
       return;
     }
     setBrokers(prev => [...prev, data]);
@@ -132,7 +132,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
       .eq('broker_id', deleteTarget.id);
 
     if (count && count > 0) {
-      setDeleteError(`This broker has ${count} active holding${count > 1 ? 's' : ''}. Remove or reassign holdings first.`);
+      setDeleteError(`This distributor has ${count} active holding${count > 1 ? 's' : ''}. Remove or reassign holdings first.`);
       setDeleting(false);
       return;
     }
@@ -158,7 +158,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
       {loading ? (
         <div className="flex items-center gap-2 py-3">
           <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#9CA3AF' }} />
-          <span className="text-xs" style={{ color: '#9CA3AF' }}>Loading brokers…</span>
+          <span className="text-xs" style={{ color: '#9CA3AF' }}>Loading distributors…</span>
         </div>
       ) : (
         <div className="grid grid-cols-4 gap-2">
@@ -227,7 +227,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
               <Plus className="w-4 h-4" style={{ color: '#C9A84C' }} />
             </div>
             <span className="text-[10px] font-medium text-center leading-tight" style={{ color: '#C9A84C' }}>
-              Add Broker
+              Add Distributor
             </span>
           </button>
         </div>
@@ -245,11 +245,11 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
             style={{ backgroundColor: 'white' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-sm font-semibold mb-4" style={{ color: '#1A1A2E' }}>Add Broker / Platform</h3>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: '#1A1A2E' }}>Add Distributor / Platform</h3>
 
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Broker Name *</Label>
+                <Label className="text-xs" style={{ color: '#6B7280' }}>Distributor Name *</Label>
                 <Input
                   value={addName}
                   onChange={e => setAddName(e.target.value)}
@@ -304,7 +304,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
                   {brokerLetter(addName || 'B')}
                 </div>
                 <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
-                  {addName || 'Broker Name'}
+                  {addName || 'Distributor Name'}
                 </span>
               </div>
 
@@ -325,7 +325,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
                 onClick={handleAdd}
                 disabled={addSaving}
               >
-                {addSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save Broker'}
+                {addSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save Distributor'}
               </Button>
             </div>
           </div>
@@ -354,7 +354,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
               Remove {deleteTarget.name}?
             </h3>
             <p className="text-xs mb-4" style={{ color: '#6B7280' }}>
-              This cannot be undone. The broker will be removed from your list.
+              This cannot be undone. The distributor will be removed from your list.
             </p>
 
             {deleteError && (
