@@ -11,6 +11,7 @@ import { StockDetailSheet, type StockHoldingDetail } from '@/components/portfoli
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR, formatPercentage } from '@/lib/utils/formatters';
 import { calculateXIRR } from '@/lib/utils/calculations';
+import { holdingsCacheGet, holdingsCacheSet, holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -259,19 +260,29 @@ export default function IndianStocksPortfolioPage() {
     (usersData ?? []).forEach(u => { names[u.id] = u.name; });
     setMemberNames(names);
 
-    const { data, error: dbErr } = await supabase
-      .from('holdings')
-      .select(`
-        id, symbol, name, quantity, avg_buy_price, metadata,
-        portfolios(id, name, type, user_id),
-        brokers(id, name, platform_type),
-        transactions(id, date, price, quantity, type, fees, notes, metadata)
-      `)
-      .eq('asset_type', 'indian_stock')
-      .gt('quantity', 0)  // only active holdings
-      .order('created_at', { ascending: false });
+    // Check holdings cache first
+    const cachedHoldings = holdingsCacheGet<RawHolding[]>('stock_holdings');
+    let data: unknown[] | null = cachedHoldings;
 
-    if (dbErr) { setError(dbErr.message); setLoading(false); return; }
+    if (!data) {
+      const { data: freshData, error: dbErr } = await supabase
+        .from('holdings')
+        .select(`
+          id, symbol, name, quantity, avg_buy_price, metadata,
+          portfolios(id, name, type, user_id),
+          brokers(id, name, platform_type),
+          transactions(id, date, price, quantity, type, fees, notes, metadata)
+        `)
+        .eq('asset_type', 'indian_stock')
+        .gt('quantity', 0)  // only active holdings
+        .order('created_at', { ascending: false });
+
+      if (dbErr) { setError(dbErr.message); setLoading(false); return; }
+      data = freshData;
+      if (data) holdingsCacheSet('stock_holdings', data as unknown as RawHolding[]);
+    }
+
+    if (!data) { setError('Failed to load holdings'); setLoading(false); return; }
 
     const rows: HoldingRow[] = (data as unknown as RawHolding[]).map(h => {
       const invested = Number(h.quantity) * Number(h.avg_buy_price);
@@ -317,9 +328,12 @@ export default function IndianStocksPortfolioPage() {
   }
 
   async function fetchPriceBatch(symbols: string[], baseRows?: HoldingRow[], nocache = false): Promise<number> {
-    const suffix = nocache ? '&nocache=1' : '';
     try {
-      const res  = await fetch(`/api/stocks/price/batch?symbols=${symbols.join(',')}${suffix}`);
+      const res  = await fetch('/api/stocks/price/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbols, nocache }),
+      });
       const json = await res.json();
       const batchResults: Record<string, { price: number } | null> = json.results ?? {};
       let succeeded = 0;
@@ -372,6 +386,7 @@ export default function IndianStocksPortfolioPage() {
 
   async function refreshAllPrices() {
     setPriceRefreshing(true);
+    holdingsCacheClearAll();
     const unique = Array.from(new Set(holdings.map(h => h.symbol)));
     const succeeded = await fetchPriceBatch(unique, undefined, true);
     const total = unique.length;
@@ -703,8 +718,9 @@ export default function IndianStocksPortfolioPage() {
           <div className="wv-card overflow-hidden">
             {/* Table header */}
             <div className="grid text-[10px] font-semibold uppercase tracking-wide px-4 py-2 border-b"
-              style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr 1fr 40px', borderColor: '#F0EDE6', color: '#9CA3AF', backgroundColor: '#F7F5F0' }}>
+              style={{ gridTemplateColumns: '2fr 0.8fr 0.8fr 1fr 1fr 1fr 1fr 1fr 40px', borderColor: '#F0EDE6', color: '#9CA3AF', backgroundColor: '#F7F5F0' }}>
               <span>Stock</span>
+              <span>Distributor</span>
               <span>Sector</span>
               <span className="text-right">Qty · Avg</span>
               <span className="text-right">Invested</span>
@@ -725,7 +741,7 @@ export default function IndianStocksPortfolioPage() {
                   <div key={h.id}
                     className="grid items-center px-4 py-3 border-b hover:bg-[#FAFAF8] transition-colors cursor-pointer"
                     style={{
-                      gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr 1fr 40px',
+                      gridTemplateColumns: '2fr 0.8fr 0.8fr 1fr 1fr 1fr 1fr 1fr 40px',
                       borderColor: '#F0EDE6',
                       backgroundColor: h.gainLoss != null ? (isGain ? 'rgba(5,150,105,0.01)' : 'rgba(220,38,38,0.01)') : 'transparent',
                     }}
@@ -742,9 +758,16 @@ export default function IndianStocksPortfolioPage() {
                           {h.name}
                         </p>
                         <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                          {h.symbol} · {h.brokers?.name ?? '—'}
+                          {h.symbol}
                         </p>
                       </div>
+                    </div>
+
+                    {/* Distributor */}
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-medium truncate" style={{ color: '#4B5563' }}>
+                        {h.brokers?.name ?? '—'}
+                      </p>
                     </div>
 
                     {/* Sector */}

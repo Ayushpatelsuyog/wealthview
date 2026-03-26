@@ -10,6 +10,10 @@ function isMarketOpen(): boolean {
   return istMinutes >= 9 * 60 + 15 && istMinutes < 15 * 60 + 30;
 }
 
+function cacheTTL(): number {
+  return isMarketOpen() ? 15 * 60 * 1000 : 6 * 60 * 60 * 1000; // 15 min market hours, 6h after
+}
+
 async function fetchYahooPrice(symbol: string): Promise<StockPriceData | null> {
   const headers: Record<string, string> = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -44,15 +48,8 @@ async function fetchYahooPrice(symbol: string): Promise<StockPriceData | null> {
   return null;
 }
 
-export async function GET(req: NextRequest) {
-  const raw = (req.nextUrl.searchParams.get('symbols') ?? '').trim();
-  if (!raw) return NextResponse.json({ error: 'symbols required' }, { status: 400 });
-
-  const symbols = raw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean).slice(0, 30);
-  if (symbols.length === 0) return NextResponse.json({ results: {} });
-
-  const nocache = req.nextUrl.searchParams.get('nocache') === '1';
-  const ttl = isMarketOpen() ? 5 * 60 * 1000 : 6 * 60 * 60 * 1000;
+async function fetchBatchPrices(symbols: string[], nocache: boolean): Promise<Record<string, StockPriceData | null>> {
+  const ttl = cacheTTL();
   const results: Record<string, StockPriceData | null> = {};
   const uncached: string[] = [];
 
@@ -72,5 +69,36 @@ export async function GET(req: NextRequest) {
     }));
   }
 
+  return results;
+}
+
+export async function GET(req: NextRequest) {
+  const raw = (req.nextUrl.searchParams.get('symbols') ?? '').trim();
+  if (!raw) return NextResponse.json({ error: 'symbols required' }, { status: 400 });
+
+  const symbols = raw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean).slice(0, 30);
+  if (symbols.length === 0) return NextResponse.json({ results: {} });
+
+  const nocache = req.nextUrl.searchParams.get('nocache') === '1';
+  const results = await fetchBatchPrices(symbols, nocache);
   return NextResponse.json({ results });
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const rawSymbols: string[] = body?.symbols ?? [];
+    if (!Array.isArray(rawSymbols) || rawSymbols.length === 0) {
+      return NextResponse.json({ error: 'symbols array required' }, { status: 400 });
+    }
+
+    const symbols = rawSymbols.map(s => String(s).trim().toUpperCase()).filter(Boolean).slice(0, 30);
+    if (symbols.length === 0) return NextResponse.json({ results: {} });
+
+    const nocache = body?.nocache === true;
+    const results = await fetchBatchPrices(symbols, nocache);
+    return NextResponse.json({ results });
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
 }

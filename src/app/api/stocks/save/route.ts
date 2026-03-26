@@ -114,13 +114,15 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 5. Find or create holding ───────────────────────────────────────────────
-  const { data: existingHolding } = await supabase
+  // Consolidate only when: same symbol + same broker + same portfolio
+  let holdingQuery = supabase
     .from('holdings')
     .select('id, quantity, avg_buy_price, metadata')
     .eq('portfolio_id', portfolioId)
     .eq('symbol', symbol.toUpperCase())
-    .eq('asset_type', 'indian_stock')
-    .maybeSingle();
+    .eq('asset_type', 'indian_stock');
+  if (brokerId) holdingQuery = holdingQuery.eq('broker_id', brokerId);
+  const { data: existingHolding } = await holdingQuery.maybeSingle();
 
   let holdingId: string;
   let consolidated = false;

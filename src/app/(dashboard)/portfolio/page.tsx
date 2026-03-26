@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Plus, TrendingUp, TrendingDown } from 'lucide-react';
+import { Loader2, Plus, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
-import { navCacheGet, navCacheSet } from '@/lib/utils/nav-cache';
-import { cacheGet, cacheSet, TTL } from '@/lib/utils/price-cache';
+import { navCacheGet, navCacheSet, navCacheClearAll } from '@/lib/utils/nav-cache';
+import { stockPriceCacheGet, stockPriceCacheSet, stockPriceCacheClearAll } from '@/lib/utils/stock-price-cache';
+import { holdingsCacheGet, holdingsCacheSet, holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -135,41 +136,45 @@ export default function PortfolioPage() {
   const [stockPriceMap, setStockPriceMap] = useState<Map<string, number>>(new Map());
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setError(null);
+  const loadData = useCallback(async (forceRefresh = false) => {
+    setError(null);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
 
-      // Get current user's family_id
-      let familyId: string | null = null;
+    // Get current user's family_id
+    let familyId: string | null = null;
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('family_id')
+        .eq('id', user.id)
+        .single();
+      familyId = (userData as { family_id: string | null } | null)?.family_id ?? null;
+    } catch { familyId = null; }
+
+    // Load family members
+    if (familyId) {
       try {
-        const { data: userData } = await supabase
+        const { data: membersData } = await supabase
           .from('users')
-          .select('family_id')
-          .eq('id', user.id)
-          .single();
-        familyId = (userData as { family_id: string | null } | null)?.family_id ?? null;
-      } catch { familyId = null; }
+          .select('id, name, email')
+          .eq('family_id', familyId);
+        if (membersData) {
+          setMembers(membersData as MemberRow[]);
+          if (membersData.length > 0) setSelectedMemberId((membersData as MemberRow[])[0].id);
+        }
+      } catch { /* ignore */ }
+    }
 
-      // Load family members
-      if (familyId) {
-        try {
-          const { data: membersData } = await supabase
-            .from('users')
-            .select('id, name, email')
-            .eq('family_id', familyId);
-          if (membersData) {
-            setMembers(membersData as MemberRow[]);
-            if (membersData.length > 0) setSelectedMemberId((membersData as MemberRow[])[0].id);
-          }
-        } catch { /* ignore */ }
-      }
+    // Load holdings — check client cache first
+    let loadedHoldings: RawHolding[] = [];
+    if (!forceRefresh) {
+      const cached = holdingsCacheGet<RawHolding[]>('portfolio_holdings');
+      if (cached) { loadedHoldings = cached; }
+    }
 
-      // Load holdings with portfolio info
-      let loadedHoldings: RawHolding[] = [];
+    if (loadedHoldings.length === 0) {
       try {
         const { data: holdingsData, error: hErr } = await supabase
           .from('holdings')
@@ -178,64 +183,121 @@ export default function PortfolioPage() {
           setError('Failed to load portfolio data');
         } else if (holdingsData) {
           loadedHoldings = holdingsData as unknown as RawHolding[];
-          setHoldings(loadedHoldings);
+          holdingsCacheSet('portfolio_holdings', loadedHoldings);
         }
       } catch {
         setError('Failed to load portfolio data');
       }
-
-      setLoading(false);
-
-      // Auto-fetch live NAVs for MF holdings
-      const mfSymbols = Array.from(new Set(
-        loadedHoldings.filter(h => h.asset_type === 'mutual_fund' && h.symbol).map(h => h.symbol)
-      ));
-      if (mfSymbols.length > 0) {
-        setNavLoading(true);
-        const results = await Promise.allSettled(mfSymbols.map(async sym => {
-          const cached = navCacheGet(sym);
-          if (cached) return { sym, nav: cached.nav };
-          const res = await fetch(`/api/mf/nav?scheme_code=${sym}`);
-          if (!res.ok) return { sym, nav: null };
-          const { nav, navDate } = await res.json();
-          navCacheSet(sym, nav, navDate ?? '');
-          return { sym, nav: nav as number };
-        }));
-        const map = new Map<string, number>();
-        results.forEach(r => {
-          if (r.status === 'fulfilled' && r.value.nav != null) map.set(r.value.sym, r.value.nav);
-        });
-        setNavMap(map);
-        setNavLoading(false);
-      }
-
-      // Auto-fetch live prices for Indian Stock holdings
-      const stockSymbols = Array.from(new Set(
-        loadedHoldings.filter(h => h.asset_type === 'indian_stock' && h.symbol).map(h => h.symbol)
-      ));
-      if (stockSymbols.length > 0) {
-        setStockPriceLoading(true);
-        const results = await Promise.allSettled(stockSymbols.map(async sym => {
-          const cacheKey = `stock_price_${sym}`;
-          const cached = cacheGet<number>(cacheKey);
-          if (cached != null) return { sym, price: cached };
-          const res = await fetch(`/api/stocks/price?symbol=${sym}`);
-          if (!res.ok) return { sym, price: null };
-          const { price } = await res.json();
-          cacheSet(cacheKey, price as number, TTL.STOCKS);
-          return { sym, price: price as number };
-        }));
-        const map = new Map<string, number>();
-        results.forEach(r => {
-          if (r.status === 'fulfilled' && r.value.price != null) map.set(r.value.sym, r.value.price);
-        });
-        setStockPriceMap(map);
-        setStockPriceLoading(false);
-      }
     }
-    load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    setHoldings(loadedHoldings);
+    setLoading(false); // Show table immediately with invested values
+
+    // Collect unique symbols for batch calls
+    const mfSymbols = Array.from(new Set(
+      loadedHoldings.filter(h => h.asset_type === 'mutual_fund' && h.symbol).map(h => h.symbol)
+    ));
+    const stockSymbols = Array.from(new Set(
+      loadedHoldings.filter(h => h.asset_type === 'indian_stock' && h.symbol).map(h => h.symbol)
+    ));
+
+    // Check client-side caches first (skip if force refresh)
+    const navMapFromCache = new Map<string, number>();
+    const stockMapFromCache = new Map<string, number>();
+    const mfToFetch: string[] = [];
+    const stocksToFetch: string[] = [];
+
+    if (!forceRefresh) {
+      for (const sym of mfSymbols) {
+        const cached = navCacheGet(sym);
+        if (cached) navMapFromCache.set(sym, cached.nav);
+        else mfToFetch.push(sym);
+      }
+      for (const sym of stockSymbols) {
+        const cached = stockPriceCacheGet(sym);
+        if (cached != null) stockMapFromCache.set(sym, cached);
+        else stocksToFetch.push(sym);
+      }
+    } else {
+      mfToFetch.push(...mfSymbols);
+      stocksToFetch.push(...stockSymbols);
+    }
+
+    // Apply cached values immediately
+    if (navMapFromCache.size > 0) setNavMap(new Map(navMapFromCache));
+    if (stockMapFromCache.size > 0) setStockPriceMap(new Map(stockMapFromCache));
+
+    // Fetch uncached NAVs and stock prices in PARALLEL using batch POST endpoints
+    const promises: Promise<void>[] = [];
+
+    if (mfToFetch.length > 0) {
+      setNavLoading(true);
+      promises.push((async () => {
+        try {
+          const res = await fetch('/api/mf/nav/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scheme_codes: mfToFetch, nocache: forceRefresh }),
+          });
+          if (res.ok) {
+            const { results } = await res.json();
+            const map = new Map(navMapFromCache);
+            for (const [sym, data] of Object.entries(results)) {
+              if (data && (data as { nav: number }).nav) {
+                const d = data as { nav: number; navDate: string };
+                map.set(sym, d.nav);
+                navCacheSet(sym, d.nav, d.navDate);
+              }
+            }
+            setNavMap(map);
+          }
+        } catch { /* batch failed */ }
+        setNavLoading(false);
+      })());
+    }
+
+    if (stocksToFetch.length > 0) {
+      setStockPriceLoading(true);
+      promises.push((async () => {
+        try {
+          const res = await fetch('/api/stocks/price/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symbols: stocksToFetch, nocache: forceRefresh }),
+          });
+          if (res.ok) {
+            const { results } = await res.json();
+            const map = new Map(stockMapFromCache);
+            for (const [sym, data] of Object.entries(results)) {
+              if (data && (data as { price: number }).price) {
+                const d = data as { price: number };
+                map.set(sym, d.price);
+                stockPriceCacheSet(sym, d.price);
+              }
+            }
+            setStockPriceMap(map);
+          }
+        } catch { /* batch failed */ }
+        setStockPriceLoading(false);
+      })());
+    }
+
+    await Promise.all(promises);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleRefresh = useCallback(async () => {
+    // Clear all client caches and force re-fetch
+    navCacheClearAll();
+    stockPriceCacheClearAll();
+    holdingsCacheClearAll();
+    setNavLoading(true);
+    setStockPriceLoading(true);
+    await loadData(true);
+  }, [loadData]);
 
   const filterUserId = viewMode === 'individual' ? (selectedMemberId || null) : null;
   const rows = buildRows(holdings, filterUserId, navMap, stockPriceMap);
@@ -266,6 +328,18 @@ export default function PortfolioPage() {
           <p className="text-sm text-gray-500">Overview of all asset classes</p>
         </div>
 
+        <div className="flex items-center gap-3">
+        {/* Refresh button */}
+        <button
+          onClick={handleRefresh}
+          disabled={navLoading || stockPriceLoading}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+          style={{ backgroundColor: '#F7F5F0', color: '#6B7280', border: '1px solid #E8E5DD' }}
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${navLoading || stockPriceLoading ? 'animate-spin' : ''}`} />
+          {navLoading || stockPriceLoading ? 'Refreshing…' : 'Refresh'}
+        </button>
+
         {/* View Toggle */}
         <div className="flex items-center gap-1 p-1 rounded-full border border-gray-200 bg-white">
           <button
@@ -286,6 +360,7 @@ export default function PortfolioPage() {
           >
             Individual
           </button>
+        </div>
         </div>
       </div>
 

@@ -24,7 +24,7 @@ function isMarketOpen(): boolean {
 }
 
 function cacheTTL(): number {
-  return isMarketOpen() ? 5 * 60 * 1000 : 6 * 60 * 60 * 1000;
+  return isMarketOpen() ? 15 * 60 * 1000 : 6 * 60 * 60 * 1000; // 15 min market hours, 6h after
 }
 
 async function fetchFromYahoo(symbol: string): Promise<StockPriceData | null> {

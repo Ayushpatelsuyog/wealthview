@@ -34,6 +34,8 @@ interface SipBlock {
   sipAmount: string;
   sipDate: string;   // "1st","5th", etc.
   sipStart: string;  // YYYY-MM-DD
+  sipStatus: 'active' | 'inactive';  // Active = to today, Stopped = to stop date
+  sipStop: string;   // YYYY-MM-DD (only used when status = 'inactive')
   // auto-calculated
   isCalculating: boolean;
   installments: number | null;
@@ -151,6 +153,7 @@ function newSipBlock(): SipBlock {
   return {
     id: crypto.randomUUID(),
     sipAmount: '', sipDate: '1st', sipStart: '',
+    sipStatus: 'active', sipStop: '',
     isCalculating: false,
     installments: null, totalUnits: null, avgNav: null,
     totalInvested: null, currentValue: null, pnl: null, xirr: null,
@@ -362,6 +365,7 @@ function SipBlockCard({
     const merged = { ...block, ...patch };
     onChange(merged);
     if (!schemeCode || !merged.sipAmount || !merged.sipDate || !merged.sipStart) return;
+    if (merged.sipStatus === 'inactive' && !merged.sipStop) return;
     if (merged.manualOverride) return;
     clearTimeout(calcTimeoutRef.current);
     calcTimeoutRef.current = setTimeout(() => autoCalc(merged, schemeCode), 600);
@@ -370,11 +374,15 @@ function SipBlockCard({
   async function autoCalc(b: SipBlock, code: number) {
     onChange({ ...b, isCalculating: true });
     try {
+      const endDate = b.sipStatus === 'inactive' && b.sipStop
+        ? b.sipStop
+        : new Date().toISOString().split('T')[0];
       const params = new URLSearchParams({
         scheme_code: code.toString(),
         sip_amount:  b.sipAmount,
         sip_date:    b.sipDate,
         start_date:  b.sipStart,
+        end_date:    endDate,
       });
       const res = await fetch(`/api/mf/sip-calculate?${params}`);
       if (!res.ok) throw new Error('Calc failed');
@@ -460,10 +468,86 @@ function SipBlockCard({
         </div>
       </div>
 
+      {/* SIP Status — Active / Stopped */}
+      <div className="space-y-2">
+        <Label className="text-xs" style={{ color: '#6B7280' }}>SIP Status</Label>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => triggerCalc({ sipStatus: 'active', sipStop: '' })}
+            className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+            style={block.sipStatus === 'active'
+              ? { backgroundColor: 'rgba(5,150,105,0.12)', color: '#059669', border: '1px solid rgba(5,150,105,0.3)' }
+              : { backgroundColor: '#F7F5F0', color: '#9CA3AF', border: '1px solid #E8E5DD' }}
+          >
+            Active
+          </button>
+          <button
+            type="button"
+            onClick={() => update({ sipStatus: 'inactive' })}
+            className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+            style={block.sipStatus === 'inactive'
+              ? { backgroundColor: 'rgba(107,114,128,0.12)', color: '#6B7280', border: '1px solid rgba(107,114,128,0.3)' }
+              : { backgroundColor: '#F7F5F0', color: '#9CA3AF', border: '1px solid #E8E5DD' }}
+          >
+            Stopped
+          </button>
+        </div>
+        {block.sipStatus === 'active' && block.sipStart && (
+          <p className="text-[10px]" style={{ color: '#059669' }}>
+            Installments calculated from {block.sipStart} to today
+          </p>
+        )}
+      </div>
+
+      {/* Stop Date — only when Stopped */}
+      {block.sipStatus === 'inactive' && (
+        <div className="space-y-1">
+          <Label className="text-xs" style={{ color: '#6B7280' }}>Stop Date</Label>
+          <Input type="date" value={block.sipStop}
+            onChange={(e) => triggerCalc({ sipStop: e.target.value })}
+            className="h-9 text-xs"
+            min={block.sipStart || undefined}
+            max={new Date().toISOString().split('T')[0]}
+            style={block.errors.sipStop ? { borderColor: '#DC2626' } : {}}
+          />
+          <FieldError msg={block.errors.sipStop} />
+          {block.sipStop && block.sipStart && (
+            <p className="text-[10px]" style={{ color: '#6B7280' }}>
+              Installments calculated from {block.sipStart} to {block.sipStop}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Auto-calc status */}
       {block.isCalculating && (
         <div className="flex items-center gap-2 text-xs" style={{ color: '#9CA3AF' }}>
           <Loader2 className="w-3 h-3 animate-spin" />Calculating from NAV history…
+        </div>
+      )}
+
+      {/* Installment summary line */}
+      {!block.isCalculating && block.installments !== null && block.installments > 0 && (
+        <div className="px-3 py-2 rounded-lg text-xs font-medium"
+          style={{ backgroundColor: 'rgba(27,42,74,0.04)', color: '#1B2A4A' }}>
+          {block.installments} installments
+          {block.sipStart && (
+            <> from <strong>{block.sipStart}</strong></>
+          )}
+          {block.sipStatus === 'inactive' && block.sipStop
+            ? <> to <strong>{block.sipStop}</strong></>
+            : <> to <strong>today</strong></>
+          }
+          {block.totalInvested !== null && (
+            <> · Total Invested: <strong>{formatLargeINR(block.totalInvested)}</strong></>
+          )}
+          {block.totalUnits !== null && (
+            <> · Units: <strong>{block.totalUnits.toFixed(4)}</strong></>
+          )}
+          {block.avgNav !== null && (
+            <> · Avg NAV: <strong>₹{block.avgNav.toFixed(4)}</strong></>
+          )}
         </div>
       )}
 
@@ -767,6 +851,8 @@ export default function MutualFundsPage() {
         ? prefill.sipGroups.map((g) => ({
             ...newSipBlock(),
             sipAmount: g.sipAmount, sipDate: g.sipDate, sipStart: g.sipStart,
+            sipStatus: (g as Record<string, unknown>).sipStatus === 'inactive' ? 'inactive' as const : 'active' as const,
+            sipStop: ((g as Record<string, unknown>).sipStop as string) ?? '',
             manualOverride: true,
             manualInstallments: g.manualInstallments,
             manualTotalUnits:   g.manualTotalUnits,
@@ -948,6 +1034,7 @@ export default function MutualFundsPage() {
         const be: Record<string, string> = {};
         if (!b.sipAmount || parseFloat(b.sipAmount) <= 0) { be.sipAmount = 'Enter SIP amount'; sipOk = false; }
         if (!b.sipStart) { be.sipStart = 'Enter start date'; sipOk = false; }
+        if (b.sipStatus === 'inactive' && !b.sipStop) { be.sipStop = 'Enter stop date'; sipOk = false; }
         if (!b.installments && !b.manualInstallments) { be.installments = 'Calc or enter instalments'; sipOk = false; }
         return { ...b, errors: be };
       });
@@ -1003,7 +1090,15 @@ export default function MutualFundsPage() {
           sips: sipBlocks.map((b) => {
             const inst = b.manualOverride ? parseInt(b.manualInstallments) : (b.installments ?? 0);
             const u    = b.manualOverride ? parseFloat(b.manualTotalUnits)  : (b.totalUnits ?? 0);
-            return { amount: parseFloat(b.sipAmount), date: b.sipDate, start_date: b.sipStart, installments: inst, units: u };
+            return {
+              amount: parseFloat(b.sipAmount),
+              date: b.sipDate,
+              start_date: b.sipStart,
+              status: b.sipStatus,
+              stop_date: b.sipStatus === 'inactive' ? b.sipStop || null : null,
+              installments: inst,
+              units: u,
+            };
           }),
         },
         holderDetails: holderMeta,

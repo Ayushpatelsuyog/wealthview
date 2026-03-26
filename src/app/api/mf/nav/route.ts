@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cacheGet, cacheSet, cacheClear, TTL } from '@/lib/utils/price-cache';
+import { cacheGet, cacheSet, cacheClear } from '@/lib/utils/price-cache';
 
 export interface MFNavData {
   schemeCode: number;
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       navDate: json.data[0].date,
     };
 
-    cacheSet(cacheKey, result, TTL.MF);
+    cacheSet(cacheKey, result, 15 * 60 * 1000); // 15 minutes
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 502 });

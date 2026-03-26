@@ -58,6 +58,7 @@ async function fetchAmfiWithRetry(): Promise<void> {
         amfiList = data as MFScheme[];
         fetchState = 'done';
         lastFetchedAt = Date.now();
+        console.log(`AMFI cache: ${amfiList.length} schemes loaded`);
         console.log(`[MF Search] ✓ Cached ${amfiList.length} AMFI schemes (attempt ${attempt})`);
         return;
       }

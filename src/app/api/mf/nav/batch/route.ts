@@ -1,24 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cacheGet, cacheSet, TTL } from '@/lib/utils/price-cache';
+import { cacheGet, cacheSet } from '@/lib/utils/price-cache';
 import type { MFNavData } from '@/app/api/mf/nav/route';
 
-export async function GET(req: NextRequest) {
-  const raw = (req.nextUrl.searchParams.get('scheme_codes') ?? '').trim();
-  if (!raw) return NextResponse.json({ error: 'scheme_codes required' }, { status: 400 });
+const NAV_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
-  const codes = raw.split(',').map(s => s.trim()).filter(Boolean).slice(0, 50);
-  if (codes.length === 0) return NextResponse.json({ results: {} });
-
-  // Split into cached vs uncached
+async function fetchBatchNavs(codes: string[], nocache: boolean): Promise<Record<string, MFNavData | null>> {
   const results: Record<string, MFNavData | null> = {};
   const uncached: string[] = [];
 
   for (const code of codes) {
-    const cached = cacheGet<MFNavData>(`mf_nav_${code}`);
-    if (cached) { results[code] = cached; } else { uncached.push(code); }
+    if (!nocache) {
+      const cached = cacheGet<MFNavData>(`mf_nav_${code}`);
+      if (cached) { results[code] = cached; continue; }
+    }
+    uncached.push(code);
   }
 
-  // Fetch uncached in parallel
   if (uncached.length > 0) {
     await Promise.allSettled(uncached.map(async (code) => {
       try {
@@ -36,7 +33,7 @@ export async function GET(req: NextRequest) {
           nav:        parseFloat(json.data[0].nav),
           navDate:    json.data[0].date,
         };
-        cacheSet(`mf_nav_${code}`, data, TTL.MF);
+        cacheSet(`mf_nav_${code}`, data, NAV_CACHE_TTL);
         results[code] = data;
       } catch {
         results[code] = null;
@@ -44,5 +41,36 @@ export async function GET(req: NextRequest) {
     }));
   }
 
+  return results;
+}
+
+export async function GET(req: NextRequest) {
+  const raw = (req.nextUrl.searchParams.get('scheme_codes') ?? '').trim();
+  if (!raw) return NextResponse.json({ error: 'scheme_codes required' }, { status: 400 });
+
+  const codes = raw.split(',').map(s => s.trim()).filter(Boolean).slice(0, 50);
+  if (codes.length === 0) return NextResponse.json({ results: {} });
+
+  const nocache = req.nextUrl.searchParams.get('nocache') === '1';
+  const results = await fetchBatchNavs(codes, nocache);
   return NextResponse.json({ results });
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const schemeCodes: string[] = body?.scheme_codes ?? [];
+    if (!Array.isArray(schemeCodes) || schemeCodes.length === 0) {
+      return NextResponse.json({ error: 'scheme_codes array required' }, { status: 400 });
+    }
+
+    const codes = schemeCodes.map(s => String(s).trim()).filter(Boolean).slice(0, 50);
+    if (codes.length === 0) return NextResponse.json({ results: {} });
+
+    const nocache = body?.nocache === true;
+    const results = await fetchBatchNavs(codes, nocache);
+    return NextResponse.json({ results });
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
 }

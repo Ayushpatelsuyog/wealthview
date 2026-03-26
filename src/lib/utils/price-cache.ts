@@ -3,9 +3,9 @@ type CacheEntry<T> = { data: T; fetchedAt: number; ttlMs: number };
 const store = new Map<string, CacheEntry<unknown>>();
 
 export const TTL = {
-  STOCKS:  5  * 60 * 1000,   // 5 min
+  STOCKS:  15 * 60 * 1000,   // 15 min
   CRYPTO:  60      * 1000,   // 60 s
-  MF:      24 * 60 * 60 * 1000, // 24 hr
+  MF:      15 * 60 * 1000,   // 15 min
   FOREX:   30 * 60 * 1000,   // 30 min
 };
 

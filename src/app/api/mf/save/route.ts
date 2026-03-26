@@ -114,14 +114,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── 6. Find or create holding (deduplication by portfolio + symbol) ────────
-  const { data: existingHolding } = await supabase
+  // ── 6. Find or create holding (dedup by portfolio + symbol + broker) ───────
+  // Same fund + same distributor + same portfolio = consolidate
+  // Same fund + different distributor = separate holdings
+  let holdingQuery = supabase
     .from('holdings')
     .select('id, quantity, avg_buy_price, metadata')
     .eq('portfolio_id', portfolioId)
     .eq('symbol', schemeCode.toString())
-    .eq('asset_type', 'mutual_fund')
-    .maybeSingle();
+    .eq('asset_type', 'mutual_fund');
+  if (brokerId) holdingQuery = holdingQuery.eq('broker_id', brokerId);
+  const { data: existingHolding } = await holdingQuery.maybeSingle();
 
   let holdingId: string;
   let consolidated = false;

@@ -24,6 +24,8 @@ export interface HoldingPrefill {
     sipAmount:          string;
     sipDate:            string;
     sipStart:           string;
+    sipStatus:          string;
+    sipStop:            string;
     manualInstallments: string;
     manualTotalUnits:   string;
     manualAvgNav:       string;
@@ -54,6 +56,8 @@ interface SipMeta {
   amount:       number;
   date:         string;
   start_date:   string;
+  status?:      string;
+  stop_date?:   string | null;
   installments: number;
   units:        number;
 }
@@ -112,6 +116,8 @@ export function useHoldingPrefill(holdingId: string | null): {
         sipAmount:          s.amount.toString(),
         sipDate:            s.date,
         sipStart:           s.start_date,
+        sipStatus:          s.status ?? 'active',
+        sipStop:            s.stop_date ?? '',
         manualInstallments: s.installments.toString(),
         manualTotalUnits:   s.units.toFixed(4),
         manualAvgNav:       avgNav.toFixed(4),
@@ -125,6 +131,8 @@ export function useHoldingPrefill(holdingId: string | null): {
           sipAmount:          String(Math.round((qty * avgNav) / buyTxns.length)),
           sipDate:            '1st',
           sipStart:           firstTxn.date,
+          sipStatus:          'active',
+          sipStop:            '',
           manualInstallments: buyTxns.length.toString(),
           manualTotalUnits:   totalUnits.toFixed(4),
           manualAvgNav:       avgNav.toFixed(4),

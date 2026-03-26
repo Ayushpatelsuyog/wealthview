@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR, formatPercentage } from '@/lib/utils/formatters';
 import { calculateXIRR } from '@/lib/utils/calculations';
 import { navCacheGet, navCacheSet, navCacheClearAll } from '@/lib/utils/nav-cache';
+import { holdingsCacheGet, holdingsCacheSet, holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -403,18 +404,28 @@ export default function MutualFundsPortfolioPage() {
     (usersData ?? []).forEach(u => { names[u.id] = u.name; });
     setMemberNames(names);
 
-    const { data, error: dbErr } = await supabase
-      .from('holdings')
-      .select(`
-        id, symbol, name, quantity, avg_buy_price, metadata,
-        portfolios(id, name, type, user_id),
-        brokers(id, name, platform_type),
-        transactions(id, date, price, quantity, type, fees, notes, metadata)
-      `)
-      .eq('asset_type', 'mutual_fund')
-      .order('created_at', { ascending: false });
+    // Check holdings cache first
+    const cachedHoldings = holdingsCacheGet<RawHolding[]>('mf_holdings');
+    let data: unknown[] | null = cachedHoldings;
 
-    if (dbErr) { setError(dbErr.message); setLoading(false); return; }
+    if (!data) {
+      const { data: freshData, error: dbErr } = await supabase
+        .from('holdings')
+        .select(`
+          id, symbol, name, quantity, avg_buy_price, metadata,
+          portfolios(id, name, type, user_id),
+          brokers(id, name, platform_type),
+          transactions(id, date, price, quantity, type, fees, notes, metadata)
+        `)
+        .eq('asset_type', 'mutual_fund')
+        .order('created_at', { ascending: false });
+
+      if (dbErr) { setError(dbErr.message); setLoading(false); return; }
+      data = freshData;
+      if (data) holdingsCacheSet('mf_holdings', data as unknown as RawHolding[]);
+    }
+
+    if (!data) { setError('Failed to load holdings'); setLoading(false); return; }
 
     const rows: HoldingRow[] = (data as unknown as RawHolding[]).map((h) => {
       const invested = Number(h.quantity) * Number(h.avg_buy_price);
@@ -483,9 +494,12 @@ export default function MutualFundsPortfolioPage() {
     }
 
     if (toFetch.length > 0) {
-      const suffix = nocache ? '&nocache=1' : '';
       try {
-        const res = await fetch(`/api/mf/nav/batch?scheme_codes=${toFetch.join(',')}${suffix}`);
+        const res = await fetch('/api/mf/nav/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scheme_codes: toFetch, nocache }),
+        });
         if (res.ok) {
           const json = await res.json();
           const batchResults: Record<string, { nav: number; navDate: string; fundName: string; fundHouse: string } | null> = json.results ?? {};
@@ -510,6 +524,7 @@ export default function MutualFundsPortfolioPage() {
   async function refreshAllNavs() {
     setNavRefreshing(true);
     navCacheClearAll();
+    holdingsCacheClearAll();
     setHoldings(prev => prev.map(h => ({ ...h, navLoading: true })));
     const unique = Array.from(new Set(holdings.map(h => h.symbol)));
     const succeeded = await fetchNavBatch(unique, undefined, true);
