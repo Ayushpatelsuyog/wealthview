@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   BarChart3, Upload, Link as LinkIcon, Check, ChevronDown, ChevronUp,
   Loader2, AlertCircle, X, TrendingUp, TrendingDown, Plus, Trash2,
-  User, ChevronRight, History,
+  User, ChevronRight, History, Pencil, RotateCcw,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
@@ -47,11 +47,14 @@ interface SipBlock {
   xirr: number | null;
   breakdown: { date: string; nav: number; units_purchased: number; amount: number; stamp_duty: number; effective_amount: number }[];
   showBreakdown: boolean;
-  manualOverride: boolean;
-  // manual overrides
+  manualOverride: boolean;           // legacy — kept for backward compat
+  // per-field manual overrides
   manualInstallments: string;
   manualTotalUnits: string;
   manualAvgNav: string;
+  overrideInstallments: boolean;
+  overrideUnits: boolean;
+  overrideAvgNav: boolean;
   errors: Record<string, string>;
 }
 
@@ -159,6 +162,7 @@ function newSipBlock(): SipBlock {
     totalInvested: null, currentValue: null, pnl: null, xirr: null,
     breakdown: [], showBreakdown: false, manualOverride: false,
     manualInstallments: '', manualTotalUnits: '', manualAvgNav: '',
+    overrideInstallments: false, overrideUnits: false, overrideAvgNav: false,
     errors: {},
   };
 }
@@ -407,16 +411,17 @@ function SipBlockCard({
     }
   }
 
-  const effectiveInstallments = block.manualOverride
+  const effectiveInstallments = (block.overrideInstallments || block.manualOverride)
     ? (parseInt(block.manualInstallments) || 0)
     : (block.installments ?? 0);
-  const effectiveUnits = block.manualOverride
+  const effectiveUnits = (block.overrideUnits || block.manualOverride)
     ? (parseFloat(block.manualTotalUnits) || 0)
     : (block.totalUnits ?? 0);
-  const _effectiveAvgNav = block.manualOverride
+  const _effectiveAvgNav = (block.overrideAvgNav || block.manualOverride)
     ? (parseFloat(block.manualAvgNav) || 0)
     : (block.avgNav ?? 0);
-  const effectiveInvested = block.manualOverride
+  const anyOverride = block.overrideInstallments || block.overrideUnits || block.overrideAvgNav || block.manualOverride;
+  const effectiveInvested = anyOverride
     ? (parseFloat(block.sipAmount) || 0) * effectiveInstallments
     : (block.totalInvested ?? 0);
 
@@ -551,64 +556,108 @@ function SipBlockCard({
         </div>
       )}
 
-      {/* Calculated fields */}
+      {/* Calculated fields — per-field manual override */}
       {!block.isCalculating && (
         <div className="grid grid-cols-3 gap-3">
+          {/* Installments */}
           <div className="space-y-1">
             <Label className="text-xs flex items-center gap-1" style={{ color: '#6B7280' }}>
               Instalments
-              {!block.manualOverride && block.installments !== null && <AutoTag label="auto" />}
+              {!block.overrideInstallments && block.installments !== null && <AutoTag label="auto" />}
+              {!block.overrideInstallments && block.installments !== null && (
+                <button type="button" onClick={() => update({ overrideInstallments: true, manualInstallments: block.installments?.toString() ?? '' })}
+                  className="ml-auto p-0.5 rounded hover:bg-gray-100 transition-colors" title="Edit manually">
+                  <Pencil className="w-2.5 h-2.5" style={{ color: '#9CA3AF' }} />
+                </button>
+              )}
             </Label>
             <Input
-              value={block.manualOverride ? block.manualInstallments : (block.installments?.toString() ?? '')}
+              value={block.overrideInstallments ? block.manualInstallments : (block.installments?.toString() ?? '')}
               onChange={(e) => update({ manualInstallments: e.target.value })}
-              readOnly={!block.manualOverride}
-              placeholder="—"
+              readOnly={!block.overrideInstallments}
+              placeholder={block.installments != null ? `Auto: ${block.installments}` : '—'}
               className="h-9 text-xs"
-              style={!block.manualOverride ? { backgroundColor: block.installments !== null ? 'rgba(5,150,105,0.04)' : '#F7F5F0' } : {}}
+              style={!block.overrideInstallments
+                ? { backgroundColor: block.installments !== null ? 'rgba(5,150,105,0.04)' : '#F7F5F0' }
+                : {}}
             />
+            {block.overrideInstallments && block.installments !== null && (
+              <div className="flex items-center justify-between">
+                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Auto was: {block.installments}</p>
+                <button type="button" onClick={() => update({ overrideInstallments: false, manualInstallments: '' })}
+                  className="text-[9px] flex items-center gap-0.5" style={{ color: '#C9A84C' }}>
+                  <RotateCcw className="w-2 h-2" />Reset
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Total Units */}
           <div className="space-y-1">
             <Label className="text-xs flex items-center gap-1" style={{ color: '#6B7280' }}>
               Total Units
-              {!block.manualOverride && block.totalUnits !== null && <AutoTag label="auto" />}
+              {!block.overrideUnits && block.totalUnits !== null && <AutoTag label="auto" />}
+              {!block.overrideUnits && block.totalUnits !== null && (
+                <button type="button" onClick={() => update({ overrideUnits: true, manualTotalUnits: block.totalUnits?.toFixed(4) ?? '' })}
+                  className="ml-auto p-0.5 rounded hover:bg-gray-100 transition-colors" title="Edit manually">
+                  <Pencil className="w-2.5 h-2.5" style={{ color: '#9CA3AF' }} />
+                </button>
+              )}
             </Label>
             <Input
-              value={block.manualOverride ? block.manualTotalUnits : (block.totalUnits?.toFixed(3) ?? '')}
+              value={block.overrideUnits ? block.manualTotalUnits : (block.totalUnits?.toFixed(4) ?? '')}
               onChange={(e) => update({ manualTotalUnits: e.target.value })}
-              readOnly={!block.manualOverride}
-              placeholder="—"
+              readOnly={!block.overrideUnits}
+              placeholder={block.totalUnits != null ? `Auto: ${block.totalUnits.toFixed(4)}` : '—'}
               className="h-9 text-xs"
-              style={!block.manualOverride ? { backgroundColor: block.totalUnits !== null ? 'rgba(5,150,105,0.04)' : '#F7F5F0' } : {}}
+              style={!block.overrideUnits
+                ? { backgroundColor: block.totalUnits !== null ? 'rgba(5,150,105,0.04)' : '#F7F5F0' }
+                : {}}
             />
+            {block.overrideUnits && block.totalUnits !== null && (
+              <div className="flex items-center justify-between">
+                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Auto was: {block.totalUnits.toFixed(4)}</p>
+                <button type="button" onClick={() => update({ overrideUnits: false, manualTotalUnits: '' })}
+                  className="text-[9px] flex items-center gap-0.5" style={{ color: '#C9A84C' }}>
+                  <RotateCcw className="w-2 h-2" />Reset
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Avg NAV */}
           <div className="space-y-1">
             <Label className="text-xs flex items-center gap-1" style={{ color: '#6B7280' }}>
               Avg NAV
-              {!block.manualOverride && block.avgNav !== null && <AutoTag label="auto" />}
+              {!block.overrideAvgNav && block.avgNav !== null && <AutoTag label="auto" />}
+              {!block.overrideAvgNav && block.avgNav !== null && (
+                <button type="button" onClick={() => update({ overrideAvgNav: true, manualAvgNav: block.avgNav?.toFixed(4) ?? '' })}
+                  className="ml-auto p-0.5 rounded hover:bg-gray-100 transition-colors" title="Edit manually">
+                  <Pencil className="w-2.5 h-2.5" style={{ color: '#9CA3AF' }} />
+                </button>
+              )}
             </Label>
             <Input
-              value={block.manualOverride ? block.manualAvgNav : (block.avgNav?.toFixed(4) ?? '')}
+              value={block.overrideAvgNav ? block.manualAvgNav : (block.avgNav?.toFixed(4) ?? '')}
               onChange={(e) => update({ manualAvgNav: e.target.value })}
-              readOnly={!block.manualOverride}
-              placeholder="—"
+              readOnly={!block.overrideAvgNav}
+              placeholder={block.avgNav != null ? `Auto: ₹${block.avgNav.toFixed(4)}` : '—'}
               className="h-9 text-xs"
-              style={!block.manualOverride ? { backgroundColor: block.avgNav !== null ? 'rgba(5,150,105,0.04)' : '#F7F5F0' } : {}}
+              style={!block.overrideAvgNav
+                ? { backgroundColor: block.avgNav !== null ? 'rgba(5,150,105,0.04)' : '#F7F5F0' }
+                : {}}
             />
+            {block.overrideAvgNav && block.avgNav !== null && (
+              <div className="flex items-center justify-between">
+                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Auto was: ₹{block.avgNav.toFixed(4)}</p>
+                <button type="button" onClick={() => update({ overrideAvgNav: false, manualAvgNav: '' })}
+                  className="text-[9px] flex items-center gap-0.5" style={{ color: '#C9A84C' }}>
+                  <RotateCcw className="w-2 h-2" />Reset
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      )}
-
-      {/* Manual override toggle */}
-      {!block.isCalculating && (
-        <button
-          type="button"
-          onClick={() => update({ manualOverride: !block.manualOverride })}
-          className="text-[11px] underline"
-          style={{ color: '#C9A84C' }}
-        >
-          {block.manualOverride ? 'Use auto-calculated values' : 'Edit manually'}
-        </button>
       )}
 
       {/* Mini summary */}
@@ -618,7 +667,7 @@ function SipBlockCard({
             <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Invested</p>
             <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(effectiveInvested)}</p>
           </div>
-          {block.currentValue !== null && !block.manualOverride && (
+          {block.currentValue !== null && !anyOverride && (
             <>
               <div>
                 <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Current</p>
@@ -853,7 +902,10 @@ export default function MutualFundsPage() {
             sipAmount: g.sipAmount, sipDate: g.sipDate, sipStart: g.sipStart,
             sipStatus: (g as Record<string, unknown>).sipStatus === 'inactive' ? 'inactive' as const : 'active' as const,
             sipStop: ((g as Record<string, unknown>).sipStop as string) ?? '',
-            manualOverride: true,
+            // Per-field overrides for prefilled values
+            overrideInstallments: true,
+            overrideUnits: true,
+            overrideAvgNav: true,
             manualInstallments: g.manualInstallments,
             manualTotalUnits:   g.manualTotalUnits,
             manualAvgNav:       g.manualAvgNav,
@@ -987,12 +1039,13 @@ export default function MutualFundsPage() {
   // ── Combined SIP totals ────────────────────────────────────────────────────
   const sipTotals = sipBlocks.reduce(
     (acc, b) => {
-      const inst = b.manualOverride ? (parseInt(b.manualInstallments) || 0) : (b.installments ?? 0);
-      const u    = b.manualOverride ? (parseFloat(b.manualTotalUnits) || 0) : (b.totalUnits ?? 0);
-      const inv  = b.manualOverride
+      const hasAnyOverride = b.overrideInstallments || b.overrideUnits || b.overrideAvgNav || b.manualOverride;
+      const inst = (b.overrideInstallments || b.manualOverride) ? (parseInt(b.manualInstallments) || 0) : (b.installments ?? 0);
+      const u    = (b.overrideUnits || b.manualOverride) ? (parseFloat(b.manualTotalUnits) || 0) : (b.totalUnits ?? 0);
+      const inv  = hasAnyOverride
         ? (parseFloat(b.sipAmount) || 0) * inst
         : (b.totalInvested ?? 0);
-      const cv   = b.manualOverride && navData ? u * navData.nav : (b.currentValue ?? 0);
+      const cv   = hasAnyOverride && navData ? u * navData.nav : (b.currentValue ?? 0);
       return { units: acc.units + u, invested: acc.invested + inv, currentValue: acc.currentValue + cv };
     },
     { units: 0, invested: 0, currentValue: 0 },
@@ -1088,8 +1141,8 @@ export default function MutualFundsPage() {
         sipMetadata: {
           is_sip: true,
           sips: sipBlocks.map((b) => {
-            const inst = b.manualOverride ? parseInt(b.manualInstallments) : (b.installments ?? 0);
-            const u    = b.manualOverride ? parseFloat(b.manualTotalUnits)  : (b.totalUnits ?? 0);
+            const inst = (b.overrideInstallments || b.manualOverride) ? parseInt(b.manualInstallments) : (b.installments ?? 0);
+            const u    = (b.overrideUnits || b.manualOverride) ? parseFloat(b.manualTotalUnits)  : (b.totalUnits ?? 0);
             return {
               amount: parseFloat(b.sipAmount),
               date: b.sipDate,

@@ -11,7 +11,7 @@ import { StockDetailSheet, type StockHoldingDetail } from '@/components/portfoli
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR, formatPercentage } from '@/lib/utils/formatters';
 import { calculateXIRR } from '@/lib/utils/calculations';
-import { holdingsCacheGet, holdingsCacheSet, holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
+import { holdingsCacheGet, holdingsCacheSet, holdingsCacheClear, holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -868,6 +868,7 @@ export default function IndianStocksPortfolioPage() {
         onClose={() => setDetailId(null)}
         onDelete={deleteHolding}
         onRefreshPrice={sym => fetchPrice(sym)}
+        onHoldingChanged={() => { holdingsCacheClear('stock_holdings'); loadHoldings(); }}
       />
     </div>
   );

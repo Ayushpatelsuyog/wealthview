@@ -122,10 +122,11 @@ interface StockDetailSheetProps {
   onClose: () => void;
   onDelete: (id: string) => void;
   onRefreshPrice?: (symbol: string) => void;
+  onHoldingChanged?: () => void;
 }
 
 export function StockDetailSheet({
-  holding, open, onClose, onDelete, onRefreshPrice,
+  holding, open, onClose, onDelete, onRefreshPrice, onHoldingChanged,
 }: StockDetailSheetProps) {
   const router   = useRouter();
   const _supabase = createClient();
@@ -157,8 +158,8 @@ export function StockDetailSheet({
         onClose();
         onDelete(holding.id);
       } else {
-        // Remove from local transactions
-        holding.transactions = holding.transactions.filter(t => t.id !== txn.id);
+        // Notify parent to refresh holdings from DB
+        onHoldingChanged?.();
       }
     } catch (e) {
       alert((e as Error).message);
