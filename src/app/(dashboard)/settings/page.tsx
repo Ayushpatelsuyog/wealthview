@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, User, Bell, Shield, Users, Eye, EyeOff, Loader2, Building2, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
+import { Settings, User, Bell, Shield, Users, Eye, EyeOff, Loader2, Building2, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -30,13 +30,7 @@ interface FamilyRow {
   currency_default: string;
 }
 
-interface FamilyMemberRow {
-  id: string;
-  family_id: string;
-  name: string;
-  email: string | null;
-  role: string;
-}
+
 
 interface BrokerRow {
   id: string;
@@ -209,7 +203,7 @@ export default function SettingsPage() {
   const [familyCurrency, setFamilyCurrency] = useState('INR');
   const [familySaving, setFamilySaving] = useState(false);
   const [members, setMembers] = useState<UserRow[]>([]);
-  const [extraMembers, setExtraMembers] = useState<FamilyMemberRow[]>([]);
+  // extraMembers removed — all members are in the users table
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
@@ -288,14 +282,8 @@ export default function SettingsPage() {
             if (membersData) setMembers(membersData as UserRow[]);
           } catch { /* ignore */ }
 
-          try {
-            const { data: extraData } = await supabase
-              .from('family_members')
-              .select('id, family_id, name, email, role')
-              .eq('family_id', userData.family_id)
-              .order('created_at');
-            if (extraData) setExtraMembers(extraData as FamilyMemberRow[]);
-          } catch { /* ignore — table may not exist yet */ }
+          // Extra members are now also in the users table — no separate fetch needed
+          // The members query above already loads all family users
 
           // Load brokers
           try {
@@ -394,21 +382,24 @@ export default function SettingsPage() {
   async function addFamilyMember() {
     if (!familyId || !newMemberName.trim()) return;
     setAddingMember(true);
+    const email = newMemberEmail.trim() || `${newMemberName.trim().toLowerCase().replace(/\s+/g, '.')}@family.local`;
     const { data, error } = await supabase
-      .from('family_members')
+      .from('users')
       .insert({
-        family_id: familyId,
+        id: crypto.randomUUID(),
+        email,
         name: newMemberName.trim(),
-        email: newMemberEmail.trim() || null,
+        family_id: familyId,
+        primary_email: email,
         role: newMemberRole,
       })
-      .select('id, family_id, name, email, role')
+      .select('*')
       .single();
     setAddingMember(false);
     if (error) {
       showToast('error', error.message);
     } else if (data) {
-      setExtraMembers(prev => [...prev, data as FamilyMemberRow]);
+      setMembers(prev => [...prev, data as UserRow]);
       setNewMemberName('');
       setNewMemberEmail('');
       setNewMemberRole('member');
@@ -417,14 +408,14 @@ export default function SettingsPage() {
     }
   }
 
-  async function deleteFamilyMember(id: string) {
+  async function _deleteFamilyMember(id: string) {
     const { error } = await supabase
-      .from('family_members')
+      .from('users')
       .delete()
       .eq('id', id);
     if (error) showToast('error', error.message);
     else {
-      setExtraMembers(prev => prev.filter(m => m.id !== id));
+      setMembers(prev => prev.filter(m => m.id !== id));
       showToast('success', 'Family member removed');
     }
   }
@@ -595,7 +586,7 @@ export default function SettingsPage() {
                 <div>
                   <h2 className="font-semibold text-gray-900">Family Members</h2>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {members.length + extraMembers.length} member{members.length + extraMembers.length !== 1 ? 's' : ''} in this family
+                    {members.length} member{members.length !== 1 ? 's' : ''} in this family
                   </p>
                 </div>
                 <Button
@@ -676,34 +667,7 @@ export default function SettingsPage() {
                   <MemberCard key={m.id} member={m} onSave={saveMember} />
                 ))}
 
-                {/* Extra family members (from family_members table) */}
-                {extraMembers.map(m => (
-                  <div key={m.id} className="border border-gray-100 rounded-lg p-4 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold text-white"
-                          style={{ backgroundColor: '#C9A84C' }}>
-                          {m.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{m.name}</p>
-                          <p className="text-xs text-gray-400">
-                            {m.email ?? 'No email'} &middot; <span className="capitalize">{m.role}</span>
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => deleteFamilyMember(m.id)}
-                        className="text-gray-300 hover:text-red-500 transition-colors"
-                        title="Remove member"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {members.length === 0 && extraMembers.length === 0 && (
+                {members.length === 0 && (
                   <p className="text-sm text-gray-400 text-center py-4">No family members yet. Click &ldquo;Add Member&rdquo; to get started.</p>
                 )}
               </div>

@@ -231,8 +231,7 @@ function IndianStocksFormContent() {
       if (fid) {
         setFamilyId(fid);
         const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', fid);
-        const { data: extraMembers } = await supabase.from('family_members').select('id, name').eq('family_id', fid);
-        setMembers([...(fUsers ?? [{ id: profile.id, name: profile.name }]), ...(extraMembers ?? [])]);
+        setMembers(fUsers ?? [{ id: profile.id, name: profile.name }]);
         const { data: ports } = await supabase.from('portfolios').select('id, name, type').eq('family_id', fid).order('created_at');
         setPortfolios(ports ?? []);
       } else {

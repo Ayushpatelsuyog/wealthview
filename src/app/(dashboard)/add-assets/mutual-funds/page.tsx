@@ -854,9 +854,7 @@ export default function MutualFundsPage() {
       if (profile.family_id) {
         const { data: familyUsers } = await supabase
           .from('users').select('id, name').eq('family_id', profile.family_id);
-        const { data: extraMembers } = await supabase
-          .from('family_members').select('id, name').eq('family_id', profile.family_id);
-        setMembers([...(familyUsers ?? [{ id: profile.id, name: profile.name }]), ...(extraMembers ?? [])]);
+        setMembers(familyUsers ?? [{ id: profile.id, name: profile.name }]);
       } else {
         setMembers([{ id: profile.id, name: profile.name }]);
       }
