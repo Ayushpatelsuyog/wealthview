@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   RefreshCw, PlusCircle, Loader2, AlertCircle, TrendingUp, TrendingDown,
-  MoreHorizontal, Search, Download,
+  MoreHorizontal, Search, Download, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { HoldingDetailSheet } from '@/components/portfolio/HoldingDetailSheet';
 import { createClient } from '@/lib/supabase/client';
@@ -366,6 +366,7 @@ export default function MutualFundsPortfolioPage() {
   const [_memberNames, setMemberNames] = useState<Record<string, string>>({});
   const [detailId, setDetailId]     = useState<string | null>(null);
   const [openAsRedeem, setOpenAsRedeem] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // Filter + sort state — multi-select sets
   const [filterBrokers,    setFilterBrokers]    = useState<Set<string>>(new Set());
@@ -571,6 +572,50 @@ export default function MutualFundsPortfolioPage() {
     });
   }, [holdings, filterBrokers, filterPortfolios, filterCategories, filterMembers, searchQuery, sortKey]);
 
+  // ── Grouped holdings (multi-distributor consolidation) ────────────────────
+
+  interface FundGroup {
+    symbol: string; name: string; category: string;
+    holdings: HoldingRow[]; isMultiDistributor: boolean;
+    totalUnits: number; totalInvested: number;
+    totalCurrentValue: number | null;
+    currentNav: number | null; navLoading: boolean;
+  }
+
+  const groupedFiltered: FundGroup[] = useMemo(() => {
+    const map = new Map<string, HoldingRow[]>();
+    for (const h of filtered) {
+      const key = h.symbol;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(h);
+    }
+    return Array.from(map.entries()).map(([symbol, rows]) => ({
+      symbol,
+      name: rows[0].name,
+      category: String(rows[0].metadata?.category ?? ''),
+      holdings: rows,
+      isMultiDistributor: rows.length > 1,
+      totalUnits: rows.reduce((s, r) => s + Number(r.quantity), 0),
+      totalInvested: rows.reduce((s, r) => s + r.investedValue, 0),
+      totalCurrentValue: rows.every(r => r.currentValue != null)
+        ? rows.reduce((s, r) => s + (r.currentValue ?? 0), 0) : null,
+      currentNav: rows[0].currentNav,
+      navLoading: rows.some(r => r.navLoading),
+    }));
+  }, [filtered]);
+
+  useEffect(() => {
+    const multiSymbols = groupedFiltered.filter(g => g.isMultiDistributor).map(g => g.symbol);
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      multiSymbols.forEach(s => { if (!next.has(s)) next.add(s); });
+      return next.size !== prev.size ? next : prev;
+    });
+  }, [groupedFiltered]);
+
+  const uniqueFundCount = groupedFiltered.length;
+  const totalUniqueFundCount = useMemo(() => new Set(holdings.map(h => h.symbol)).size, [holdings]);
+
   // ── Summary totals ────────────────────────────────────────────────────────
 
   const totalInvested     = filtered.reduce((s, h) => s + h.investedValue, 0);
@@ -708,8 +753,8 @@ export default function MutualFundsPortfolioPage() {
     );
   }
 
-  const filteredCount = filtered.length;
-  const totalCount    = holdings.length;
+  const filteredCount = uniqueFundCount;
+  const totalCount    = totalUniqueFundCount;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -747,7 +792,7 @@ export default function MutualFundsPortfolioPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-semibold" style={{ color: '#1B2A4A' }}>Mutual Funds</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#9CA3AF' }}>Live NAVs from mfapi.in · {holdings.length} fund{holdings.length === 1 ? '' : 's'} tracked</p>
+          <p className="text-sm mt-0.5" style={{ color: '#9CA3AF' }}>Live NAVs from mfapi.in · {totalUniqueFundCount} fund{totalUniqueFundCount === 1 ? '' : 's'} tracked</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={exportCsv} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-colors" style={{ borderColor: '#E8E5DD', color: '#6B7280', backgroundColor: 'white' }}>
@@ -935,94 +980,102 @@ export default function MutualFundsPortfolioPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.length === 0 ? (
+                  {groupedFiltered.length === 0 ? (
                     <tr><td colSpan={12} className="px-4 py-8 text-center text-xs" style={{ color: '#9CA3AF' }}>No funds match the current filters</td></tr>
-                  ) : filtered.map((h) => {
-                    const rowBg = h.gainLoss != null
-                      ? h.gainLoss > 0 ? 'rgba(5,150,105,0.02)' : h.gainLoss < 0 ? 'rgba(220,38,38,0.02)' : 'transparent'
-                      : 'transparent';
-                    const cat = String(h.metadata?.category ?? '');
-
-                    return (
-                      <>
-                        <tr
-                          key={h.id}
-                          style={{ borderBottom: '1px solid #F7F5F0', backgroundColor: rowBg, cursor: 'pointer' }}
+                  ) : groupedFiltered.map((group) => {
+                    const renderFundRow = (h: HoldingRow, extraStyle?: React.CSSProperties) => {
+                      const rowBg = h.gainLoss != null
+                        ? h.gainLoss > 0 ? 'rgba(5,150,105,0.02)' : h.gainLoss < 0 ? 'rgba(220,38,38,0.02)' : 'transparent'
+                        : 'transparent';
+                      const cat = String(h.metadata?.category ?? '');
+                      return (
+                        <tr key={h.id}
+                          style={{ borderBottom: '1px solid #F7F5F0', backgroundColor: rowBg, cursor: 'pointer', ...extraStyle }}
                           className="hover:bg-[#FAFAF8] transition-colors"
-                          onClick={() => setDetailId(h.id)}
-                        >
-                          {/* Fund name — wraps freely, no truncation */}
+                          onClick={() => setDetailId(h.id)}>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12 }}>
                             <p className="leading-snug" style={{ color: '#1A1A2E', fontWeight: 500, whiteSpace: 'normal', wordBreak: 'break-word' }}>{h.name}</p>
                             {h.metadata?.fund_house != null && (
                               <p className="text-[10px] mt-0.5 leading-tight" style={{ color: '#9CA3AF' }}>{String(h.metadata.fund_house)}</p>
                             )}
                             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                              {cat && (
-                                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: catStyle(cat).bg, color: catStyle(cat).text }}>{cat}</span>
-                              )}
+                              {cat && <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: catStyle(cat).bg, color: catStyle(cat).text }}>{cat}</span>}
                               <SipBadge metadata={h.metadata} />
-                              {h.metadata?.folio != null && (
-                                <span className="text-[10px]" style={{ color: '#D1D5DB' }}>Folio: {String(h.metadata.folio)}</span>
-                              )}
+                              {h.metadata?.folio != null && <span className="text-[10px]" style={{ color: '#D1D5DB' }}>Folio: {String(h.metadata.folio)}</span>}
                             </div>
                           </td>
-                          {/* Broker */}
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'normal', wordBreak: 'break-word' }} title="Distributor">{h.brokers?.name ?? '—'}</td>
-                          {/* Units */}
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'normal', wordBreak: 'break-word' }}>{h.brokers?.name ?? '—'}</td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'nowrap', textAlign: 'right' }}>{Number(h.quantity).toFixed(4)}</td>
-                          {/* Avg NAV */}
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'nowrap', textAlign: 'right' }}>₹{Number(h.avg_buy_price).toFixed(4)}</td>
-                          {/* Invested */}
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#1A1A2E', fontWeight: 500, whiteSpace: 'nowrap', textAlign: 'right' }}>{formatLargeINR(h.investedValue)}</td>
-                          {/* Current NAV */}
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
-                            {h.navLoading
-                              ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#9CA3AF' }} />
-                              : h.currentNav ? <span style={{ color: '#1A1A2E' }}>₹{h.currentNav.toFixed(4)}</span> : <span style={{ color: '#9CA3AF' }}>—</span>
-                            }
+                            {h.navLoading ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#9CA3AF' }} /> : h.currentNav ? <span style={{ color: '#1A1A2E' }}>₹{h.currentNav.toFixed(4)}</span> : <span style={{ color: '#9CA3AF' }}>—</span>}
                           </td>
-                          {/* Current value */}
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#1A1A2E', fontWeight: 500, whiteSpace: 'nowrap', textAlign: 'right' }}>
-                            {h.currentValue ? formatLargeINR(h.currentValue) : '—'}
-                          </td>
-                          {/* P&L */}
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#1A1A2E', fontWeight: 500, whiteSpace: 'nowrap', textAlign: 'right' }}>{h.currentValue ? formatLargeINR(h.currentValue) : '—'}</td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
-                            {h.gainLoss != null ? (
-                              <span className="font-semibold" style={{ color: h.gainLoss >= 0 ? '#059669' : '#DC2626' }}>
-                                {h.gainLoss >= 0 ? '+' : ''}{formatLargeINR(h.gainLoss)}
-                              </span>
-                            ) : '—'}
+                            {h.gainLoss != null ? <span className="font-semibold" style={{ color: h.gainLoss >= 0 ? '#059669' : '#DC2626' }}>{h.gainLoss >= 0 ? '+' : ''}{formatLargeINR(h.gainLoss)}</span> : '—'}
                           </td>
-                          {/* P&L % */}
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
-                            {h.gainLossPct != null ? (
-                              <span className="font-semibold" style={{ color: h.gainLossPct >= 0 ? '#059669' : '#DC2626' }}>
-                                {h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}%
-                              </span>
-                            ) : '—'}
+                            {h.gainLossPct != null ? <span className="font-semibold" style={{ color: h.gainLossPct >= 0 ? '#059669' : '#DC2626' }}>{h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}%</span> : '—'}
                           </td>
-                          {/* XIRR */}
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
-                            {h.xirr != null ? (
-                              <span style={{ color: h.xirr >= 0 ? '#059669' : '#DC2626' }}>{formatPercentage(h.xirr * 100)}</span>
-                            ) : <span style={{ color: '#9CA3AF' }}>—</span>}
+                            {h.xirr != null ? <span style={{ color: h.xirr >= 0 ? '#059669' : '#DC2626' }}>{formatPercentage(h.xirr * 100)}</span> : <span style={{ color: '#9CA3AF' }}>—</span>}
                           </td>
-                          {/* Portfolio */}
                           <td className="text-[11px]" style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#9CA3AF', whiteSpace: 'nowrap' }}>{h.portfolios?.name ?? '—'}</td>
-                          {/* Actions */}
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12 }} onClick={e => e.stopPropagation()}>
-                            <ActionMenu
-                              holdingId={h.id}
-                              onDelete={deleteHolding}
+                            <ActionMenu holdingId={h.id} onDelete={deleteHolding}
                               onViewDetails={(id) => { setOpenAsRedeem(false); setDetailId(id); }}
                               onAddMore={(id) => router.push(`/add-assets/mutual-funds?add_to=${id}`)}
-                              onSellRedeem={(id) => { setOpenAsRedeem(true); setDetailId(id); }}
-                            />
+                              onSellRedeem={(id) => { setOpenAsRedeem(true); setDetailId(id); }} />
                           </td>
                         </tr>
+                      );
+                    };
 
-                      </>
+                    if (!group.isMultiDistributor) return renderFundRow(group.holdings[0]);
+
+                    const isExpanded = expandedGroups.has(group.symbol);
+                    const tGain = group.totalCurrentValue != null ? group.totalCurrentValue - group.totalInvested : null;
+                    const tGainPct = tGain != null && group.totalInvested > 0 ? (tGain / group.totalInvested) * 100 : null;
+                    const wtdAvg = group.totalUnits > 0 ? group.totalInvested / group.totalUnits : 0;
+                    const cat = group.category;
+
+                    return (
+                      <React.Fragment key={group.symbol}>
+                        {isExpanded && group.holdings.map(h => renderFundRow(h, { borderLeft: '3px solid #C9A84C' }))}
+                        {/* Consolidated summary row */}
+                        <tr
+                          style={{ borderBottom: '1px solid #F7F5F0', backgroundColor: 'rgba(201,168,76,0.08)', borderLeft: '3px solid #C9A84C', cursor: 'pointer' }}
+                          onClick={() => setExpandedGroups(prev => { const next = new Set(prev); if (next.has(group.symbol)) next.delete(group.symbol); else next.add(group.symbol); return next; })}>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12 }}>
+                            <div className="flex items-center gap-2">
+                              {isExpanded ? <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} /> : <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} />}
+                              <div>
+                                <p className="leading-snug font-semibold" style={{ color: '#1A1A2E', whiteSpace: 'normal', wordBreak: 'break-word' }}>{group.name} — Total</p>
+                                <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>{group.holdings.length} distributors</p>
+                                {cat && <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full mt-1 inline-block" style={{ backgroundColor: catStyle(cat).bg, color: catStyle(cat).text }}>{cat}</span>}
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12 }}><span className="font-semibold" style={{ color: '#C9A84C' }}>Consolidated</span></td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'right', color: '#1A1A2E' }}>{group.totalUnits.toFixed(4)}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'nowrap', textAlign: 'right' }}>₹{wtdAvg.toFixed(4)}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'right', color: '#1A1A2E' }}>{formatLargeINR(group.totalInvested)}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
+                            {group.navLoading ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#9CA3AF' }} /> : group.currentNav ? <span style={{ color: '#1A1A2E' }}>₹{group.currentNav.toFixed(4)}</span> : <span style={{ color: '#9CA3AF' }}>—</span>}
+                          </td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'right', color: '#1A1A2E' }}>{group.totalCurrentValue != null ? formatLargeINR(group.totalCurrentValue) : '—'}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
+                            {tGain != null ? <span className="font-semibold" style={{ color: tGain >= 0 ? '#059669' : '#DC2626' }}>{tGain >= 0 ? '+' : ''}{formatLargeINR(tGain)}</span> : '—'}
+                          </td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
+                            {tGainPct != null ? <span className="font-semibold" style={{ color: tGainPct >= 0 ? '#059669' : '#DC2626' }}>{tGainPct >= 0 ? '+' : ''}{tGainPct.toFixed(2)}%</span> : '—'}
+                          </td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#9CA3AF' }}>—</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#9CA3AF' }}>—</td>
+                          <td />
+                        </tr>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -1033,7 +1086,7 @@ export default function MutualFundsPortfolioPage() {
             {filtered.length > 0 && (
               <div className="px-5 py-3 flex items-center justify-between" style={{ borderTop: '2px solid #E8E5DD', backgroundColor: '#F7F5F0' }}>
                 <span className="text-xs font-semibold" style={{ color: '#1B2A4A' }}>
-                  {filtered.length} fund{filtered.length === 1 ? '' : 's'} · Total
+                  {uniqueFundCount} fund{uniqueFundCount === 1 ? '' : 's'} · Total
                 </span>
                 <div className="flex items-center gap-6 text-xs">
                   <span style={{ color: '#6B7280' }}>Invested: <strong style={{ color: '#1B2A4A' }}>{formatLargeINR(totalInvested)}</strong></span>

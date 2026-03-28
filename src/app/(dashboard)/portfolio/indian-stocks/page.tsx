@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   RefreshCw, PlusCircle, Loader2, AlertCircle, TrendingUp, TrendingDown,
-  MoreHorizontal, Search, Download, X,
+  MoreHorizontal, Search, Download, X, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { StockDetailSheet, type StockHoldingDetail } from '@/components/portfolio/StockDetailSheet';
 import { createClient } from '@/lib/supabase/client';
@@ -227,6 +227,7 @@ export default function IndianStocksPortfolioPage() {
   const [detailId,       setDetailId]       = useState<string | null>(null);
   const [_memberNames,   setMemberNames]    = useState<Record<string, string>>({});
   const [manualPriceInput, setManualPriceInput] = useState<Record<string, string>>({}); // symbol → input string
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set()); // default expanded — populated on first group render
 
   // Filters
   const [filterBrokers,    setFilterBrokers]    = useState<Set<string>>(new Set());
@@ -431,6 +432,52 @@ export default function IndianStocksPortfolioPage() {
     });
   }, [holdings, filterBrokers, filterPortfolios, filterSectors, searchQuery, sortKey]);
 
+  // ── Grouped holdings (multi-broker consolidation) ─────────────────────────
+
+  interface StockGroup {
+    symbol: string; name: string; sector: string;
+    holdings: HoldingRow[]; isMultiBroker: boolean;
+    totalQty: number; totalInvested: number;
+    totalCurrentValue: number | null;
+    currentPrice: number | null; priceLoading: boolean; priceUnavailable: boolean;
+  }
+
+  const groupedFiltered: StockGroup[] = useMemo(() => {
+    const map = new Map<string, HoldingRow[]>();
+    for (const h of filtered) {
+      const key = h.symbol;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(h);
+    }
+    return Array.from(map.entries()).map(([symbol, rows]) => ({
+      symbol,
+      name: rows[0].name,
+      sector: rows[0].sector,
+      holdings: rows,
+      isMultiBroker: rows.length > 1,
+      totalQty: rows.reduce((s, r) => s + Number(r.quantity), 0),
+      totalInvested: rows.reduce((s, r) => s + r.investedValue, 0),
+      totalCurrentValue: rows.every(r => r.currentValue != null)
+        ? rows.reduce((s, r) => s + (r.currentValue ?? 0), 0) : null,
+      currentPrice: rows[0].currentPrice,
+      priceLoading: rows.some(r => r.priceLoading),
+      priceUnavailable: rows.every(r => r.priceUnavailable),
+    }));
+  }, [filtered]);
+
+  // Auto-expand new multi-broker groups
+  useEffect(() => {
+    const multiBrokerSymbols = groupedFiltered.filter(g => g.isMultiBroker).map(g => g.symbol);
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      multiBrokerSymbols.forEach(s => { if (!next.has(s)) next.add(s); });
+      return next.size !== prev.size ? next : prev;
+    });
+  }, [groupedFiltered]);
+
+  const uniqueStockCount = groupedFiltered.length;
+  const totalUniqueStockCount = useMemo(() => new Set(holdings.map(h => h.symbol)).size, [holdings]);
+
   // ── Summary totals ─────────────────────────────────────────────────────────
 
   const totalInvested     = filtered.reduce((s, h) => s + h.investedValue, 0);
@@ -514,6 +561,87 @@ export default function IndianStocksPortfolioPage() {
     };
   }, [detailId, holdings]);
 
+  // ── Row renderer ──────────────────────────────────────────────────────────
+
+  function renderStockRow(h: HoldingRow, extraStyle?: React.CSSProperties) {
+    const isGain = (h.gainLoss ?? 0) >= 0;
+    return (
+      <div key={h.id}
+        className="grid items-center px-4 py-3 border-b hover:bg-[#FAFAF8] transition-colors cursor-pointer"
+        style={{
+          gridTemplateColumns: '2fr 0.8fr 0.8fr 1fr 1fr 1fr 1fr 1fr 40px',
+          borderColor: '#F0EDE6',
+          backgroundColor: h.gainLoss != null ? (isGain ? 'rgba(5,150,105,0.01)' : 'rgba(220,38,38,0.01)') : 'transparent',
+          ...extraStyle,
+        }}
+        onClick={() => setDetailId(h.id)}>
+        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
+            style={{ backgroundColor: sectorColor(h.sector) }}>
+            {h.symbol.slice(0, 2)}
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold leading-tight" style={{ color: '#1A1A2E', wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: 1.3 }}>
+              {h.name}
+            </p>
+            <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>{h.symbol}</p>
+          </div>
+        </div>
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium truncate" style={{ color: '#4B5563' }}>{h.brokers?.name ?? '—'}</p>
+        </div>
+        <div>
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+            style={{ backgroundColor: sectorColor(h.sector) + '15', color: sectorColor(h.sector) }}>{h.sector}</span>
+        </div>
+        <div className="text-right">
+          <p className="text-xs" style={{ color: '#1A1A2E' }}>{Number(h.quantity).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+          <p className="text-[10px]" style={{ color: '#9CA3AF' }}>₹{Number(h.avg_buy_price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs" style={{ color: '#1A1A2E' }}>{formatLargeINR(h.investedValue)}</p>
+        </div>
+        <div className="text-right" onClick={e => e.stopPropagation()}>
+          {h.priceLoading ? (
+            <Loader2 className="w-3 h-3 animate-spin ml-auto" style={{ color: '#C9A84C' }} />
+          ) : h.currentPrice !== null ? (
+            <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>₹{h.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+          ) : h.priceUnavailable ? (
+            <div className="flex flex-col items-end gap-1">
+              <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Unavailable</p>
+              <div className="flex items-center gap-1">
+                <input type="number" placeholder="Enter"
+                  value={manualPriceInput[h.symbol] ?? ''}
+                  onChange={e => setManualPriceInput(prev => ({ ...prev, [h.symbol]: e.target.value }))}
+                  onKeyDown={e => { if (e.key === 'Enter') submitManualPrice(h.symbol); }}
+                  className="w-16 h-6 text-[10px] text-right border rounded px-1 outline-none"
+                  style={{ borderColor: '#E8E5DD', color: '#1A1A2E' }} />
+                <button onClick={() => submitManualPrice(h.symbol)}
+                  className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+                  style={{ backgroundColor: '#1B2A4A', color: 'white' }}>✓</button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-[10px]" style={{ color: '#DC2626' }}>Error</p>
+          )}
+        </div>
+        <div className="text-right">
+          {h.currentValue != null ? (
+            <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{formatLargeINR(h.currentValue)}</p>
+          ) : (
+            <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>
+          )}
+        </div>
+        <div className="text-right">
+          {h.gainLoss != null && <_PnlBadge value={h.gainLoss} pct={h.gainLossPct ?? 0} />}
+        </div>
+        <div onClick={e => e.stopPropagation()}>
+          <ActionMenu holdingId={h.id} onDelete={deleteHolding} onViewDetails={id => setDetailId(id)} />
+        </div>
+      </div>
+    );
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -559,7 +687,7 @@ export default function IndianStocksPortfolioPage() {
           </div>
           <div>
             <h1 className="font-display text-lg font-semibold" style={{ color: '#1A1A2E' }}>Indian Stocks</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>{holdings.length} holding{holdings.length !== 1 ? 's' : ''}</p>
+            <p className="text-xs" style={{ color: '#9CA3AF' }}>{totalUniqueStockCount} stock{totalUniqueStockCount !== 1 ? 's' : ''}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -606,7 +734,7 @@ export default function IndianStocksPortfolioPage() {
                                           sub: null, color: totalGainLossPct >= 0 ? '#059669' : '#DC2626' },
               { label: 'XIRR',            value: overallXirr != null ? `${overallXirr.toFixed(2)}%` : '—',
                                           sub: null, color: overallXirr != null && overallXirr >= 0 ? '#059669' : '#DC2626' },
-              { label: 'Stocks',          value: holdings.length.toString(), sub: `${filtered.length} shown` },
+              { label: 'Stocks',          value: totalUniqueStockCount.toString(), sub: `${uniqueStockCount} shown` },
             ].map(({ label, value, sub, color }) => (
               <div key={label} className="wv-card p-3">
                 <p className="text-[10px] font-medium" style={{ color: '#9CA3AF' }}>{label}</p>
@@ -701,7 +829,7 @@ export default function IndianStocksPortfolioPage() {
               </div>
               <div className="flex items-center gap-2">
                 <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
-                  Showing {filtered.length} of {holdings.length}
+                  Showing {uniqueStockCount} of {totalUniqueStockCount} stocks
                 </p>
                 {isFiltered && (
                   <button onClick={clearFilters}
@@ -730,126 +858,57 @@ export default function IndianStocksPortfolioPage() {
               <span />
             </div>
 
-            {filtered.length === 0 ? (
+            {groupedFiltered.length === 0 ? (
               <div className="px-4 py-12 text-center">
                 <p className="text-sm" style={{ color: '#9CA3AF' }}>No holdings match your filters</p>
               </div>
             ) : (
-              filtered.map(h => {
-                const isGain = (h.gainLoss ?? 0) >= 0;
+              groupedFiltered.map(group => {
+                if (!group.isMultiBroker) return renderStockRow(group.holdings[0]);
+                const isExpanded = expandedGroups.has(group.symbol);
+                const tGain = group.totalCurrentValue != null ? group.totalCurrentValue - group.totalInvested : null;
+                const tGainPct = tGain != null && group.totalInvested > 0 ? (tGain / group.totalInvested) * 100 : null;
+                const wtdAvg = group.totalQty > 0 ? group.totalInvested / group.totalQty : 0;
                 return (
-                  <div key={h.id}
-                    className="grid items-center px-4 py-3 border-b hover:bg-[#FAFAF8] transition-colors cursor-pointer"
-                    style={{
-                      gridTemplateColumns: '2fr 0.8fr 0.8fr 1fr 1fr 1fr 1fr 1fr 40px',
-                      borderColor: '#F0EDE6',
-                      backgroundColor: h.gainLoss != null ? (isGain ? 'rgba(5,150,105,0.01)' : 'rgba(220,38,38,0.01)') : 'transparent',
-                    }}
-                    onClick={() => setDetailId(h.id)}>
-
-                    {/* Stock name */}
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
-                        style={{ backgroundColor: sectorColor(h.sector) }}>
-                        {h.symbol.slice(0, 2)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold leading-tight" style={{ color: '#1A1A2E', wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: 1.3 }}>
-                          {h.name}
-                        </p>
-                        <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                          {h.symbol}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Distributor */}
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-medium truncate" style={{ color: '#4B5563' }}>
-                        {h.brokers?.name ?? '—'}
-                      </p>
-                    </div>
-
-                    {/* Sector */}
-                    <div>
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded"
-                        style={{ backgroundColor: sectorColor(h.sector) + '15', color: sectorColor(h.sector) }}>
-                        {h.sector}
-                      </span>
-                    </div>
-
-                    {/* Qty · Avg */}
-                    <div className="text-right">
-                      <p className="text-xs" style={{ color: '#1A1A2E' }}>
-                        {Number(h.quantity).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                      </p>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
-                        ₹{Number(h.avg_buy_price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                      </p>
-                    </div>
-
-                    {/* Invested */}
-                    <div className="text-right">
-                      <p className="text-xs" style={{ color: '#1A1A2E' }}>{formatLargeINR(h.investedValue)}</p>
-                    </div>
-
-                    {/* CMP */}
-                    <div className="text-right" onClick={e => e.stopPropagation()}>
-                      {h.priceLoading ? (
-                        <Loader2 className="w-3 h-3 animate-spin ml-auto" style={{ color: '#C9A84C' }} />
-                      ) : h.currentPrice !== null ? (
-                        <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
-                          ₹{h.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                        </p>
-                      ) : h.priceUnavailable ? (
-                        <div className="flex flex-col items-end gap-1">
-                          <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Unavailable</p>
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              placeholder="Enter"
-                              value={manualPriceInput[h.symbol] ?? ''}
-                              onChange={e => setManualPriceInput(prev => ({ ...prev, [h.symbol]: e.target.value }))}
-                              onKeyDown={e => { if (e.key === 'Enter') submitManualPrice(h.symbol); }}
-                              className="w-16 h-6 text-[10px] text-right border rounded px-1 outline-none"
-                              style={{ borderColor: '#E8E5DD', color: '#1A1A2E' }}
-                            />
-                            <button
-                              onClick={() => submitManualPrice(h.symbol)}
-                              className="text-[9px] px-1.5 py-0.5 rounded font-medium"
-                              style={{ backgroundColor: '#1B2A4A', color: 'white' }}>
-                              ✓
-                            </button>
-                          </div>
+                  <div key={group.symbol}>
+                    {isExpanded && group.holdings.map(h => renderStockRow(h, { borderLeft: '3px solid #C9A84C' }))}
+                    {/* Consolidated summary row */}
+                    <div
+                      className="grid items-center px-4 py-3 border-b cursor-pointer"
+                      style={{
+                        gridTemplateColumns: '2fr 0.8fr 0.8fr 1fr 1fr 1fr 1fr 1fr 40px',
+                        borderColor: '#F0EDE6',
+                        backgroundColor: 'rgba(201,168,76,0.08)',
+                        borderLeft: '3px solid #C9A84C',
+                      }}
+                      onClick={() => setExpandedGroups(prev => { const next = new Set(prev); if (next.has(group.symbol)) next.delete(group.symbol); else next.add(group.symbol); return next; })}>
+                      <div className="flex items-center gap-2 min-w-0 pr-2">
+                        {isExpanded ? <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} /> : <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} />}
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
+                          style={{ backgroundColor: sectorColor(group.sector) }}>
+                          {group.symbol.slice(0, 2)}
                         </div>
-                      ) : (
-                        <p className="text-[10px]" style={{ color: '#DC2626' }}>Error</p>
-                      )}
-                    </div>
-
-                    {/* Current Value */}
-                    <div className="text-right">
-                      {h.currentValue != null ? (
-                        <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
-                          {formatLargeINR(h.currentValue)}
-                        </p>
-                      ) : (
-                        <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>
-                      )}
-                    </div>
-
-                    {/* P&L */}
-                    <div className="text-right">
-                      {h.gainLoss != null && <_PnlBadge value={h.gainLoss} pct={h.gainLossPct ?? 0} />}
-                    </div>
-
-                    {/* Actions */}
-                    <div onClick={e => e.stopPropagation()}>
-                      <ActionMenu
-                        holdingId={h.id}
-                        onDelete={deleteHolding}
-                        onViewDetails={id => setDetailId(id)}
-                      />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold leading-tight" style={{ color: '#1A1A2E' }}>{group.name} — Total</p>
+                          <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>{group.holdings.length} brokers</p>
+                        </div>
+                      </div>
+                      <div><p className="text-[11px] font-semibold" style={{ color: '#C9A84C' }}>Consolidated</p></div>
+                      <div><span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ backgroundColor: sectorColor(group.sector) + '15', color: sectorColor(group.sector) }}>{group.sector}</span></div>
+                      <div className="text-right">
+                        <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{group.totalQty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                        <p className="text-[10px]" style={{ color: '#9CA3AF' }}>₹{wtdAvg.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+                      </div>
+                      <div className="text-right"><p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(group.totalInvested)}</p></div>
+                      <div className="text-right">
+                        {group.currentPrice != null ? <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>₹{group.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+                          : group.priceLoading ? <Loader2 className="w-3 h-3 animate-spin ml-auto" style={{ color: '#C9A84C' }} /> : <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>}
+                      </div>
+                      <div className="text-right">
+                        {group.totalCurrentValue != null ? <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(group.totalCurrentValue)}</p> : <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>}
+                      </div>
+                      <div className="text-right">{tGain != null && tGainPct != null && <_PnlBadge value={tGain} pct={tGainPct} />}</div>
+                      <div />
                     </div>
                   </div>
                 );
