@@ -8,6 +8,7 @@ import { formatLargeINR } from '@/lib/utils/formatters';
 import { navCacheGet, navCacheSet, navCacheClearAll } from '@/lib/utils/nav-cache';
 import { stockPriceCacheGet, stockPriceCacheSet, stockPriceCacheClearAll } from '@/lib/utils/stock-price-cache';
 import { holdingsCacheGet, holdingsCacheSet, holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
+import { FamilyMemberSelector } from '@/components/shared/FamilyMemberSelector';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -155,6 +156,10 @@ export default function PortfolioPage() {
   const [globalStockLoading, setGlobalStockLoading] = useState(false);
   const [globalStockINRMap, setGlobalStockINRMap] = useState<Map<string, number>>(new Map());
   const [error, setError] = useState<string | null>(null);
+  const [activeMemberIds, setActiveMemberIds] = useState<string[]>([]);
+  const handleSelectionChange = useCallback((memberIds: string[]) => {
+    setActiveMemberIds(memberIds);
+  }, []);
 
   const loadData = useCallback(async (forceRefresh = false) => {
     setError(null);
@@ -370,7 +375,11 @@ export default function PortfolioPage() {
   }, [loadData]);
 
   const filterUserId = viewMode === 'individual' ? (selectedMemberId || null) : null;
-  const rows = buildRows(holdings, filterUserId, navMap, stockPriceMap, globalStockINRMap);
+  // Also apply family member selector filter
+  const memberFilteredHoldings = activeMemberIds.length > 0
+    ? holdings.filter(h => activeMemberIds.includes(h.portfolios?.user_id ?? ''))
+    : holdings;
+  const rows = buildRows(memberFilteredHoldings, filterUserId, navMap, stockPriceMap, globalStockINRMap);
   const stats = computeStats(rows);
 
   const totalHoldings = rows.reduce((s, r) => s + r.holdings, 0);
@@ -433,6 +442,8 @@ export default function PortfolioPage() {
         </div>
         </div>
       </div>
+
+      <FamilyMemberSelector onSelectionChange={handleSelectionChange} />
 
       {/* Member selector (Individual mode) */}
       {viewMode === 'individual' && members.length > 0 && (

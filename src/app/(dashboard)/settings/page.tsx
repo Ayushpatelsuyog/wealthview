@@ -457,7 +457,8 @@ export default function SettingsPage() {
   }
 
   async function addFamilyMember() {
-    if (!familyId || !newMemberName.trim()) return;
+    const targetFamily = selectedFamilyTab || familyId;
+    if (!targetFamily || !newMemberName.trim()) return;
     if (addingMember) return; // prevent double-click
     setAddingMember(true);
     const email = newMemberEmail.trim() || `${newMemberName.trim().toLowerCase().replace(/\s+/g, '.')}@family.local`;
@@ -471,6 +472,7 @@ export default function SettingsPage() {
     }
 
     const { data: newId, error } = await supabase.rpc('add_family_member', {
+      target_family_id: targetFamily,
       member_name: newMemberName.trim(),
       member_email: email,
       member_role: newMemberRole,
@@ -483,7 +485,7 @@ export default function SettingsPage() {
         : error.message;
       showToast('error', msg);
     } else if (newId) {
-      const { data: refreshed } = await supabase.from('users').select('*').eq('family_id', familyId);
+      const { data: refreshed } = await supabase.from('users').select('*').eq('family_id', targetFamily);
       if (refreshed) setMembers(refreshed as UserRow[]);
       setNewMemberName('');
       setNewMemberEmail('');

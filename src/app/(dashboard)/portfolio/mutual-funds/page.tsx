@@ -13,6 +13,7 @@ import { formatLargeINR, formatPercentage } from '@/lib/utils/formatters';
 import { calculateXIRR } from '@/lib/utils/calculations';
 import { navCacheGet, navCacheSet, navCacheClearAll } from '@/lib/utils/nav-cache';
 import { holdingsCacheGet, holdingsCacheSet, holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
+import { FamilyMemberSelector } from '@/components/shared/FamilyMemberSelector';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -376,7 +377,7 @@ export default function MutualFundsPortfolioPage() {
   const [filterCategories, setFilterCategories] = useState<Set<string>>(new Set());
   const [sortKey,          setSortKey]          = useState<SortKey>('value');
   const [searchQuery,      setSearchQuery]      = useState('');
-  const [filterMemberId,   setFilterMemberId]   = useState<string | ''>(''); // '' = all family
+  const [activeMemberIds,  setActiveMemberIds]  = useState<string[]>([]);
 
   function toggleSet(set: Set<string>, setFn: (s: Set<string>) => void, val: string) {
     const next = new Set(set);
@@ -444,8 +445,6 @@ export default function MutualFundsPortfolioPage() {
     });
 
     setHoldings(rows);
-    // Default to logged-in user if not already set
-    if (!filterMemberId) setFilterMemberId(user.id);
     setLoading(false);
 
     // Batch-fetch NAVs for all unique symbols in a single request
@@ -557,21 +556,11 @@ export default function MutualFundsPortfolioPage() {
   const portfolios = useMemo(() => Array.from(new Set(holdings.map(h => h.portfolios?.name ?? 'My Portfolio').filter(Boolean))), [holdings]);
   const categories = useMemo(() => Array.from(new Set(holdings.map(h => String(h.metadata?.category ?? '')).filter(Boolean))), [holdings]);
 
-  const membersList = useMemo(() => {
-    const map = new Map<string, string>();
-    holdings.forEach(h => {
-      const uid = h.portfolios?.user_id ?? '';
-      const name = h.memberName || uid;
-      if (uid && name) map.set(uid, name);
-    });
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [holdings]);
-
   // ── Filtered + sorted holdings ────────────────────────────────────────────
 
   const filtered = useMemo(() => {
-    let rows = filterMemberId
-      ? holdings.filter(h => h.portfolios?.user_id === filterMemberId)
+    let rows = activeMemberIds.length > 0
+      ? holdings.filter(h => activeMemberIds.includes(h.portfolios?.user_id ?? ''))
       : holdings;
     if (filterBrokers.size > 0)    rows = rows.filter(h => filterBrokers.has(h.brokers?.name ?? '—'));
     if (filterPortfolios.size > 0) rows = rows.filter(h => filterPortfolios.has(h.portfolios?.name ?? 'My Portfolio'));
@@ -588,7 +577,7 @@ export default function MutualFundsPortfolioPage() {
         default:        return 0;
       }
     });
-  }, [holdings, filterMemberId, filterBrokers, filterPortfolios, filterCategories, searchQuery, sortKey]);
+  }, [holdings, activeMemberIds, filterBrokers, filterPortfolios, filterCategories, searchQuery, sortKey]);
 
   // ── Grouped holdings (multi-distributor consolidation) ────────────────────
 
@@ -868,34 +857,10 @@ export default function MutualFundsPortfolioPage() {
 
           {/* ── Filter bar ─────────────────────────────────────────────────────────── */}
           <div className="wv-card p-4 space-y-3">
-            {/* Member filter */}
-            {membersList.length > 1 && (
-              <div className="flex items-center gap-2 flex-wrap pb-2 border-b" style={{ borderColor: '#F0EDE6' }}>
-                <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: '#9CA3AF' }}>Member:</span>
-                <button
-                  onClick={() => setFilterMemberId('')}
-                  className="px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors"
-                  style={{
-                    backgroundColor: !filterMemberId ? '#1B2A4A' : '#F7F5F0',
-                    color: !filterMemberId ? 'white' : '#6B7280',
-                    border: `1px solid ${!filterMemberId ? '#1B2A4A' : '#E8E5DD'}`,
-                  }}>
-                  All Family
-                </button>
-                {membersList.map(m => (
-                  <button key={m.id}
-                    onClick={() => setFilterMemberId(m.id)}
-                    className="px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors"
-                    style={{
-                      backgroundColor: filterMemberId === m.id ? '#C9A84C' : '#F7F5F0',
-                      color: filterMemberId === m.id ? 'white' : '#6B7280',
-                      border: `1px solid ${filterMemberId === m.id ? '#C9A84C' : '#E8E5DD'}`,
-                    }}>
-                    {m.name}
-                  </button>
-                ))}
-              </div>
-            )}
+            <FamilyMemberSelector
+              onSelectionChange={(ids) => setActiveMemberIds(ids)}
+              compact
+            />
 
             <div className="flex items-center gap-3 flex-wrap">
               {/* Search */}

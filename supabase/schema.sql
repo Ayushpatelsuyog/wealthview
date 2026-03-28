@@ -268,13 +268,20 @@ CREATE POLICY "users_select" ON users
   FOR SELECT USING (
     id = auth.uid()
     OR family_id = get_my_family_id()
+    OR family_id IN (SELECT fm.family_id FROM family_memberships fm WHERE fm.auth_user_id = auth.uid())
+    OR family_id IN (SELECT f.id FROM families f WHERE f.created_by = auth.uid())
   );
 
 CREATE POLICY "users_insert" ON users
   FOR INSERT WITH CHECK (id = auth.uid());
 
 CREATE POLICY "users_update" ON users
-  FOR UPDATE USING (id = auth.uid());
+  FOR UPDATE USING (
+    id = auth.uid()
+    OR family_id = get_my_family_id()
+    OR family_id IN (SELECT fm.family_id FROM family_memberships fm WHERE fm.auth_user_id = auth.uid())
+    OR family_id IN (SELECT f.id FROM families f WHERE f.created_by = auth.uid())
+  );
 
 -- import_batches
 CREATE POLICY "import_batches_family_access" ON import_batches
@@ -408,7 +415,11 @@ CREATE TRIGGER advisory_logs_updated_at BEFORE UPDATE ON advisory_logs FOR EACH 
 -- ============================================================
 -- RPC: Add family member (bypasses RLS on users table)
 -- ============================================================
+-- Drop old single-family version
+-- DROP FUNCTION IF EXISTS add_family_member(TEXT, TEXT, TEXT, TEXT, TEXT);
+
 CREATE OR REPLACE FUNCTION add_family_member(
+  target_family_id UUID,
   member_name TEXT,
   member_email TEXT,
   member_role TEXT DEFAULT 'member',
@@ -417,28 +428,30 @@ CREATE OR REPLACE FUNCTION add_family_member(
 ) RETURNS uuid AS $$
 DECLARE
   new_id uuid;
-  caller_family_id uuid;
   existing_id uuid;
 BEGIN
-  -- Get the caller's family_id
-  SELECT family_id INTO caller_family_id FROM users WHERE id = auth.uid();
-
-  IF caller_family_id IS NULL THEN
-    RAISE EXCEPTION 'You must belong to a family first';
+  -- Verify the caller has access to this family (via family_memberships or is the creator)
+  IF NOT EXISTS (
+    SELECT 1 FROM family_memberships WHERE auth_user_id = auth.uid() AND family_id = target_family_id
+  ) AND NOT EXISTS (
+    SELECT 1 FROM families WHERE id = target_family_id AND created_by = auth.uid()
+  ) AND NOT EXISTS (
+    SELECT 1 FROM users WHERE id = auth.uid() AND family_id = target_family_id
+  ) THEN
+    RAISE EXCEPTION 'You do not have access to this family';
   END IF;
 
   -- Check if email already exists
   SELECT id INTO existing_id FROM users WHERE email = member_email;
   IF existing_id IS NOT NULL THEN
-    -- If they exist but have no family, link them to this family
-    UPDATE users SET family_id = caller_family_id WHERE id = existing_id AND family_id IS NULL;
+    UPDATE users SET family_id = target_family_id WHERE id = existing_id AND family_id IS NULL;
     RETURN existing_id;
   END IF;
 
   new_id := gen_random_uuid();
 
   INSERT INTO users (id, email, name, family_id, role, pan, primary_mobile, primary_email)
-  VALUES (new_id, member_email, member_name, caller_family_id, member_role, member_pan, member_mobile, member_email);
+  VALUES (new_id, member_email, member_name, target_family_id, member_role, member_pan, member_mobile, member_email);
 
   RETURN new_id;
 END;
