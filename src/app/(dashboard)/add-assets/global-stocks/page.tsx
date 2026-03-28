@@ -456,6 +456,7 @@ function GlobalStocksFormContent() {
         notes,
         portfolioName:   finalPortfolio,
         brokerId,
+        memberId:        member,
         currentPrice:    stockPrice?.price ?? null,
         currentFxRate:   fxRate?.rate ?? null,
       };

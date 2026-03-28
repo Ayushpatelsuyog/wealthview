@@ -73,7 +73,10 @@ export function DashboardClient() {
 
     try {
       const url = force ? '/api/dashboard?force=1' : '/api/dashboard';
-      const res = await fetch(url);
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 10_000); // 10s timeout
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(tid);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: DashboardSnapshot = await res.json();
       setSnapshot(data);

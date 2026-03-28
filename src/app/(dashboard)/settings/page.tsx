@@ -381,25 +381,33 @@ export default function SettingsPage() {
 
   async function addFamilyMember() {
     if (!familyId || !newMemberName.trim()) return;
+    if (addingMember) return; // prevent double-click
     setAddingMember(true);
     const email = newMemberEmail.trim() || `${newMemberName.trim().toLowerCase().replace(/\s+/g, '.')}@family.local`;
-    const { data, error } = await supabase
-      .from('users')
-      .insert({
-        id: crypto.randomUUID(),
-        email,
-        name: newMemberName.trim(),
-        family_id: familyId,
-        primary_email: email,
-        role: newMemberRole,
-      })
-      .select('*')
-      .single();
+
+    // Check if email already exists in this family
+    const existing = members.find(m => m.email === email || m.primary_email === email);
+    if (existing) {
+      showToast('error', `A member with email "${email}" already exists in this family.`);
+      setAddingMember(false);
+      return;
+    }
+
+    const { data: newId, error } = await supabase.rpc('add_family_member', {
+      member_name: newMemberName.trim(),
+      member_email: email,
+      member_role: newMemberRole,
+    });
     setAddingMember(false);
     if (error) {
-      showToast('error', error.message);
-    } else if (data) {
-      setMembers(prev => [...prev, data as UserRow]);
+      // Friendly message for duplicate key
+      const msg = error.message.includes('duplicate key') || error.message.includes('unique constraint')
+        ? 'A member with this email already exists.'
+        : error.message;
+      showToast('error', msg);
+    } else if (newId) {
+      const { data: refreshed } = await supabase.from('users').select('*').eq('family_id', familyId);
+      if (refreshed) setMembers(refreshed as UserRow[]);
       setNewMemberName('');
       setNewMemberEmail('');
       setNewMemberRole('member');

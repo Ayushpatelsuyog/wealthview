@@ -490,6 +490,7 @@ function IndianStocksFormContent() {
         brokerage, stt, gst, stampDuty, exchangeCharges, dpCharges,
         portfolioName:   finalPortfolio,
         brokerId,
+        memberId:        member,
         currentPrice: stockPrice?.price ?? null,
         bonusRatio,  splitRatio,  splitFactor,
         rightsRatio, rightsPrice,

@@ -208,7 +208,6 @@ CREATE TABLE audit_log (
 -- ============================================================
 ALTER TABLE families ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE family_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE portfolios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE brokers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE import_batches ENABLE ROW LEVEL SECURITY;
@@ -276,19 +275,6 @@ CREATE POLICY "users_insert" ON users
 
 CREATE POLICY "users_update" ON users
   FOR UPDATE USING (id = auth.uid());
-
--- family_members
-CREATE POLICY "family_members_select" ON family_members
-  FOR SELECT USING (family_id = get_my_family_id());
-
-CREATE POLICY "family_members_insert" ON family_members
-  FOR INSERT WITH CHECK (family_id = get_my_family_id());
-
-CREATE POLICY "family_members_update" ON family_members
-  FOR UPDATE USING (family_id = get_my_family_id());
-
-CREATE POLICY "family_members_delete" ON family_members
-  FOR DELETE USING (family_id = get_my_family_id());
 
 -- import_batches
 CREATE POLICY "import_batches_family_access" ON import_batches
@@ -387,7 +373,7 @@ CREATE POLICY "audit_log_insert" ON audit_log
 -- ============================================================
 -- INDEXES
 -- ============================================================
-CREATE INDEX idx_family_members_family_id ON family_members(family_id);
+-- (family_members table removed — members stored in users table)
 CREATE INDEX idx_import_batches_family_id ON import_batches(family_id);
 CREATE INDEX idx_holdings_import_batch_id ON holdings(import_batch_id) WHERE import_batch_id IS NOT NULL;
 CREATE INDEX idx_portfolios_family_id ON portfolios(family_id);
@@ -412,13 +398,51 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER families_updated_at BEFORE UPDATE ON families FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER family_members_updated_at BEFORE UPDATE ON family_members FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER portfolios_updated_at BEFORE UPDATE ON portfolios FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER holdings_updated_at BEFORE UPDATE ON holdings FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER manual_assets_updated_at BEFORE UPDATE ON manual_assets FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER insurance_policies_updated_at BEFORE UPDATE ON insurance_policies FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER advisory_logs_updated_at BEFORE UPDATE ON advisory_logs FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ============================================================
+-- RPC: Add family member (bypasses RLS on users table)
+-- ============================================================
+CREATE OR REPLACE FUNCTION add_family_member(
+  member_name TEXT,
+  member_email TEXT,
+  member_role TEXT DEFAULT 'member',
+  member_pan TEXT DEFAULT NULL,
+  member_mobile TEXT DEFAULT NULL
+) RETURNS uuid AS $$
+DECLARE
+  new_id uuid;
+  caller_family_id uuid;
+  existing_id uuid;
+BEGIN
+  -- Get the caller's family_id
+  SELECT family_id INTO caller_family_id FROM users WHERE id = auth.uid();
+
+  IF caller_family_id IS NULL THEN
+    RAISE EXCEPTION 'You must belong to a family first';
+  END IF;
+
+  -- Check if email already exists
+  SELECT id INTO existing_id FROM users WHERE email = member_email;
+  IF existing_id IS NOT NULL THEN
+    -- If they exist but have no family, link them to this family
+    UPDATE users SET family_id = caller_family_id WHERE id = existing_id AND family_id IS NULL;
+    RETURN existing_id;
+  END IF;
+
+  new_id := gen_random_uuid();
+
+  INSERT INTO users (id, email, name, family_id, role, pan, primary_mobile, primary_email)
+  VALUES (new_id, member_email, member_name, caller_family_id, member_role, member_pan, member_mobile, member_email);
+
+  RETURN new_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
 -- SEED DATA

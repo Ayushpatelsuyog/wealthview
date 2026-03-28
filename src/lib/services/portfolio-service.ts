@@ -8,28 +8,6 @@ function getInitials(name: string): string {
   return name.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase();
 }
 
-async function fetchMfNavs(schemeCodes: string[]): Promise<Map<string, number>> {
-  const navMap = new Map<string, number>();
-  const unique = Array.from(new Set(schemeCodes.filter(Boolean)));
-  if (unique.length === 0) return navMap;
-
-  await Promise.allSettled(
-    unique.map(async (code) => {
-      try {
-        const res = await fetch(`https://api.mfapi.in/mf/${code}/latest`, {
-          next: { revalidate: 86400 },
-          signal: AbortSignal.timeout(4000),
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        const nav = parseFloat(data.data?.[0]?.nav ?? '0');
-        if (nav > 0) navMap.set(code, nav);
-      } catch { /* ignore individual failures */ }
-    })
-  );
-  return navMap;
-}
-
 function calcFdCurrentValue(meta: Record<string, unknown>): number {
   const principal = Number(meta.principal ?? meta.amount ?? meta.invested_amount ?? 0);
   const rate = Number(meta.interest_rate ?? meta.rate ?? 0);
@@ -88,6 +66,11 @@ function emptySnapshot(): DashboardSnapshot {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 
+/**
+ * Dashboard snapshot — DATABASE ONLY, no external API calls.
+ * Uses invested values (qty * avg_buy_price) for current value.
+ * Live prices are fetched lazily on the client side.
+ */
 export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   try {
     const supabase = await createClient();
@@ -106,6 +89,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     const familyId = userProfile.family_id;
 
     // Fetch all data in parallel — RLS scopes everything to the family
+    // NO external API calls — database only for speed
     const [holdingsRes, manualRes, insuranceRes, membersRes] = await Promise.all([
       supabase
         .from('holdings')
@@ -141,11 +125,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       return { ...emptySnapshot(), members, hasRealData: false };
     }
 
-    // ── Batch fetch live MF NAVs ──
-    const mfCodes = holdings.filter(h => h.asset_type === 'mutual_fund' && h.symbol).map(h => h.symbol);
-    const navMap = await fetchMfNavs(mfCodes);
-
-    // ── Process Holdings ──
+    // ── Process Holdings (using invested value as current — no live prices) ──
     const now = new Date();
     const oneYearAgo = new Date(now.getTime() - 365.25 * 24 * 3600 * 1000);
 
@@ -164,36 +144,36 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     for (const h of holdings) {
       const qty = Number(h.quantity);
       const avgBuy = Number(h.avg_buy_price);
-      const invested = qty * avgBuy;
+      let invested = qty * avgBuy;
 
-      let currentValue = invested;
-      if (h.asset_type === 'mutual_fund') {
-        const liveNav = navMap.get(h.symbol) ?? Number((h.metadata as Row)?.current_nav ?? avgBuy);
-        currentValue = qty * liveNav;
+      // For global stocks: avg_buy_price is in local currency — multiply by FX rate for INR
+      if (h.asset_type === 'global_stock') {
+        const meta = (h.metadata ?? {}) as Row;
+        const fxRate = Number(meta.fx_rate ?? 0);
+        if (fxRate > 0) invested = invested * fxRate;
       }
-      // For stocks/crypto/etc — use avg_buy_price (no intraday stock API in this service)
+
+      // Use invested as current value — live prices will update this on client
+      const currentValue = invested;
 
       totalHoldingsInvested += invested;
       totalHoldingsCurrentValue += currentValue;
 
-      const pnl = currentValue - invested;
       const txns: Row[] = h.transactions ?? [];
-      const buyTxns = txns.filter(t => t.type === 'buy' || t.type === 'sip');
+      const buyTxns = txns.filter((t: Row) => t.type === 'buy' || t.type === 'sip');
 
-      // Collect XIRR cash flows
       for (const t of buyTxns) {
         allCashFlows.push({ amount: -(Number(t.quantity) * Number(t.price) + Number(t.fees ?? 0)), date: new Date(t.date) });
       }
 
-      // STCG / LTCG classification
+      const pnl = currentValue - invested;
       if (pnl > 0 && buyTxns.length > 0) {
-        const earliest = buyTxns.reduce((a, b) => new Date(a.date) < new Date(b.date) ? a : b);
+        const earliest = buyTxns.reduce((a: Row, b: Row) => new Date(a.date) < new Date(b.date) ? a : b);
         const purchaseDate = new Date(earliest.date);
         if (purchaseDate >= oneYearAgo) stcgGains += pnl;
         else ltcgGains += pnl;
       }
 
-      // SIP detection — sum only active SIPs from the sips array (or fall back to sip_amount)
       const meta = h.metadata as Row ?? {};
       if (meta.is_sip) {
         if (Array.isArray(meta.sips)) {
@@ -209,19 +189,16 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
         }
       }
 
-      // Dividends in last 12 months
-      const divTxns = txns.filter(t => t.type === 'dividend');
+      const divTxns = txns.filter((t: Row) => t.type === 'dividend');
       for (const d of divTxns) {
         if (new Date(d.date) >= oneYearAgo) annualDividends += Number(d.quantity) * Number(d.price);
       }
 
-      // Allocation bucketing
       const bucket = h.asset_type as string;
       if (!holdingBuckets[bucket]) holdingBuckets[bucket] = { invested: 0, current: 0 };
       holdingBuckets[bucket].invested += invested;
       holdingBuckets[bucket].current += currentValue;
 
-      // Per-member attribution
       const ownerUserId = (h.portfolio as Row)?.user_id;
       if (ownerUserId) userHoldingsValue[ownerUserId] = (userHoldingsValue[ownerUserId] ?? 0) + currentValue;
     }
@@ -243,10 +220,8 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       if (a.asset_type === 'fd') {
         const calculated = calcFdCurrentValue(meta);
         if (calculated > 0) currentValue = calculated;
-
         const rate = Number(meta.interest_rate ?? meta.rate ?? 0);
         if (rate > 0) fdRates.push(rate);
-
         const maturityStr = String(meta.maturity_date ?? '');
         if (maturityStr) {
           const maturityDate = new Date(maturityStr);
@@ -279,7 +254,6 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     for (const p of insurance) {
       insuranceCoverage += Number(p.sum_assured);
       annualPremiumOutflow += Number(p.premium) * (freqMultiplier[p.premium_frequency] ?? 1);
-
       const nextDue = getNextPremiumDate(p.start_date, p.premium_frequency, now);
       if (nextDue) {
         const daysUntil = (nextDue.getTime() - now.getTime()) / (24 * 3600 * 1000);
@@ -294,12 +268,10 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       }
     }
 
-    // SIP cash flow — next month
     if (sipMonthly > 0) {
       const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
       cashFlows.push({ description: 'SIP Auto-debit', amount: -sipMonthly, date: nextMonth.toISOString().slice(0, 10), type: 'sip' });
     }
-
     cashFlows.sort((a, b) => a.date.localeCompare(b.date));
 
     // ── Overall XIRR ──
@@ -338,21 +310,17 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       others:        { value: othersValue,     pct: (othersValue     / totalForPct) * 100 },
     };
 
-    // ── Equity:Debt ratio ──
     const equityTotal = equitiesValue + mfValue + cryptoValue;
     const debtTotal   = fdValue + (manualBuckets['ppf'] ?? 0) + (manualBuckets['epf'] ?? 0) + (manualBuckets['nps'] ?? 0) + (holdingBuckets['bond']?.current ?? 0);
     const edSum       = equityTotal + debtTotal || 1;
     const equityDebtRatio = { equity: Math.round((equityTotal / edSum) * 100), debt: Math.round((debtTotal / edSum) * 100) };
 
-    // ── Emergency Fund ──
     const estMonthlyExpenses = (sipMonthly > 0 ? sipMonthly : 10000) + (annualPremiumOutflow > 0 ? annualPremiumOutflow / 12 : 5000);
     const emergencyFundMonths = savingsBalance > 0 ? savingsBalance / estMonthlyExpenses : 0;
 
-    // ── Misc stats ──
     const avgFdYield      = fdRates.length > 0 ? fdRates.reduce((s, r) => s + r, 0) / fdRates.length : 0;
-    const rebalancingDrift = Math.abs(equityDebtRatio.equity - 60); // vs 60:40 target
+    const rebalancingDrift = Math.abs(equityDebtRatio.equity - 60);
 
-    // ── Members ──
     const members: DashboardMember[] = familyMembers.map((m, i) => ({
       id: m.id, name: m.name, role: m.role,
       netWorth: (userHoldingsValue[m.id] ?? 0) + (userManualValue[m.id] ?? 0),

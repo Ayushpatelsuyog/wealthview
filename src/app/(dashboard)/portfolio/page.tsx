@@ -36,22 +36,28 @@ interface AssetClassConfig {
 // ─── Asset Class Config ───────────────────────────────────────────────────────
 
 const ASSET_CLASSES: AssetClassConfig[] = [
-  { key: 'mutual_fund',    label: 'Mutual Funds',      detailPath: '/portfolio/mutual-funds',    addPath: '/add-assets/mutual-funds' },
-  { key: 'sif',            label: 'SIF',               detailPath: '/portfolio/sif',             addPath: '/add-assets/sif' },
+  // EQUITY & FUNDS
   { key: 'indian_stock',   label: 'Indian Stocks',     detailPath: '/portfolio/indian-stocks',   addPath: '/add-assets/indian-stocks' },
   { key: 'global_stock',   label: 'Global Stocks',     detailPath: '/portfolio/global-stocks',   addPath: '/add-assets/global-stocks' },
+  { key: 'mutual_fund',    label: 'Mutual Funds',      detailPath: '/portfolio/mutual-funds',    addPath: '/add-assets/mutual-funds' },
+  { key: 'sif',            label: 'SIF',               detailPath: '/portfolio/sif',             addPath: '/add-assets/sif' },
   { key: 'pms',            label: 'PMS',               detailPath: '/portfolio/pms',             addPath: '/add-assets/pms' },
   { key: 'aif',            label: 'AIF',               detailPath: '/portfolio/aif',             addPath: '/add-assets/aif' },
+  // CRYPTO & FOREX
   { key: 'crypto',         label: 'Crypto',            detailPath: '/portfolio/crypto',          addPath: '/add-assets/crypto' },
   { key: 'forex',          label: 'Forex',             detailPath: '/portfolio/forex',           addPath: '/add-assets/forex' },
+  // FIXED INCOME
   { key: 'bond',           label: 'Bonds',             detailPath: '/portfolio/bonds',           addPath: '/add-assets/bonds' },
   { key: 'fd',             label: 'Fixed Deposits',    detailPath: '/portfolio/fixed-deposits',  addPath: '/add-assets/fixed-deposits' },
   { key: 'ppf',            label: 'PPF',               detailPath: '/portfolio/ppf',             addPath: '/add-assets/ppf' },
   { key: 'epf',            label: 'EPF / VPF',         detailPath: '/portfolio/epf-vpf',         addPath: '/add-assets/epf-vpf' },
   { key: 'gratuity',       label: 'Gratuity',          detailPath: '/portfolio/gratuity',        addPath: '/add-assets/gratuity' },
   { key: 'nps',            label: 'NPS',               detailPath: '/portfolio/nps',             addPath: '/add-assets/nps' },
-  { key: 'insurance',      label: 'Insurance',         detailPath: '/portfolio/insurance',       addPath: '/add-assets/insurance' },
+  // INSURANCE
+  { key: 'insurance',      label: 'Life & Health',     detailPath: '/portfolio/insurance',       addPath: '/add-assets/insurance' },
+  // CASH & SAVINGS
   { key: 'savings_account',label: 'Savings Accounts',  detailPath: '/portfolio/savings-accounts',addPath: '/add-assets/savings-accounts' },
+  // PHYSICAL ASSETS
   { key: 'gold',           label: 'Gold & Jewelry',    detailPath: '/portfolio/gold',            addPath: '/add-assets/gold' },
   { key: 'real_estate',    label: 'Real Estate',       detailPath: '/portfolio/real-estate',     addPath: '/add-assets/real-estate' },
 ];
@@ -78,7 +84,16 @@ function buildRows(holdings: RawHolding[], filterUserId: string | null, navMap: 
   for (const h of filtered) {
     const existing = byType.get(h.asset_type) ?? { count: 0, invested: 0, currentValue: 0 };
     const qty = h.quantity ?? 0;
-    const invested = qty * (h.avg_buy_price ?? 0);
+    let invested = qty * (h.avg_buy_price ?? 0);
+
+    // For global stocks: avg_buy_price is in LOCAL currency — multiply by FX rate for INR
+    if (h.asset_type === 'global_stock') {
+      const fxRate = Number((h.metadata as Record<string, unknown>)?.fx_rate ?? 0);
+      if (fxRate > 0) {
+        invested = invested * fxRate;
+      }
+    }
+
     // For MF: use live NAV; for Indian Stocks: use live price; otherwise fall back to invested
     let currentValue = invested;
     if (h.asset_type === 'mutual_fund' && navMap.has(h.symbol)) {

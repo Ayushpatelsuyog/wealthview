@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
     brokerId: passedBrokerId,
     brokerName = 'Zerodha',
     brokerPlatformId = 'zerodha',
+    // Member override
+    memberId,
     // Optional extras
     demat,
     holderDetails,
@@ -79,8 +81,9 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 3. Ensure portfolio ─────────────────────────────────────────────────────
+  const targetUserId = memberId || user.id;
   const { data: existingPortfolio } = await supabase
-    .from('portfolios').select('id').eq('family_id', familyId).eq('name', portfolioName).maybeSingle();
+    .from('portfolios').select('id').eq('family_id', familyId).eq('name', portfolioName).eq('user_id', targetUserId).maybeSingle();
 
   let portfolioId: string;
   if (existingPortfolio) {
@@ -89,7 +92,7 @@ export async function POST(req: NextRequest) {
     const pType = PORTFOLIO_TYPE_MAP[portfolioName] ?? 'personal';
     const { data: newPortfolio, error: portErr } = await supabase
       .from('portfolios')
-      .insert({ user_id: user.id, family_id: familyId, name: portfolioName, type: pType })
+      .insert({ user_id: targetUserId, family_id: familyId, name: portfolioName, type: pType })
       .select('id').single();
     if (portErr) return NextResponse.json({ error: portErr.message }, { status: 500 });
     portfolioId = newPortfolio.id;

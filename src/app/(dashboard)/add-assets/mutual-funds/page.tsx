@@ -1138,6 +1138,7 @@ export default function MutualFundsPage() {
         isSIP:          true,
         portfolioName:  portfolio,
         brokerId:       broker || undefined,
+        memberId:       member,
         currentNav:     navData?.nav,
         sipMetadata: {
           is_sip: true,
@@ -1182,6 +1183,7 @@ export default function MutualFundsPage() {
         isNFO,
         portfolioName:  portfolio,
         brokerId:       broker || undefined,
+        memberId:       member,
         currentNav:     navData?.nav ?? (isNFO ? 10 : undefined),
         holderDetails:  holderMeta,
       };
