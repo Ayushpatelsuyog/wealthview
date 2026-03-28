@@ -129,6 +129,8 @@ function GlobalStocksFormContent() {
 
   // Auth / family
   const [familyId, setFamilyId] = useState<string | null>(null);
+  const [families, setFamilies] = useState<{id: string; name: string}[]>([]);
+  const [selectedFamily, setSelectedFamily] = useState('');
   const [members,  setMembers]  = useState<FamilyMember[]>([]);
   const [member,   setMember]   = useState('');
 
@@ -196,15 +198,50 @@ function GlobalStocksFormContent() {
       const fid = profile.family_id;
       if (fid) {
         setFamilyId(fid);
+        setSelectedFamily(fid);
         const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', fid);
         setMembers(fUsers ?? [{ id: profile.id, name: profile.name }]);
         const { data: ports } = await supabase.from('portfolios').select('id, name, type').eq('family_id', fid).order('created_at');
         setPortfolios(ports ?? []);
+
+        // Load families the user has access to
+        try {
+          const { data: primaryFam } = await supabase.from('families').select('id, name').eq('id', fid).single();
+          const famList = primaryFam ? [primaryFam] : [];
+
+          try {
+            const { data: extraFams } = await supabase
+              .from('family_memberships')
+              .select('families(id, name)')
+              .eq('auth_user_id', user.id);
+            if (extraFams) {
+              for (const m of extraFams) {
+                const f = (m as Record<string, unknown>).families as {id: string; name: string} | undefined;
+                if (f && !famList.find(x => x.id === f.id)) famList.push(f);
+              }
+            }
+          } catch { /* table may not exist */ }
+
+          setFamilies(famList);
+        } catch { /* ignore */ }
       } else {
         setMembers([{ id: profile.id, name: profile.name }]);
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Reload members/portfolios when family changes ─────────────────────────
+  useEffect(() => {
+    if (!selectedFamily) return;
+    setFamilyId(selectedFamily);
+    (async () => {
+      const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
+      setMembers(fUsers ?? []);
+      if (fUsers?.length) setMember(fUsers[0].id);
+      const { data: ports } = await supabase.from('portfolios').select('id, name, type').eq('family_id', selectedFamily).order('created_at');
+      setPortfolios(ports ?? []);
+    })();
+  }, [selectedFamily]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Auto-set today for date ─────────────────────────────────────────────────
   useEffect(() => {
@@ -618,6 +655,27 @@ function GlobalStocksFormContent() {
             <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
               Step 1 &mdash; Portfolio &amp; Distributor
             </p>
+
+            {/* Family selector */}
+            {families.length > 1 && (
+              <div className="space-y-1.5 mb-4">
+                <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+                <div className="flex flex-wrap gap-2">
+                  {families.map(f => (
+                    <button key={f.id}
+                      onClick={() => setSelectedFamily(f.id)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border"
+                      style={{
+                        backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
+                        color: selectedFamily === f.id ? 'white' : '#6B7280',
+                        borderColor: selectedFamily === f.id ? '#1B2A4A' : '#E8E5DD',
+                      }}>
+                      {f.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Family member */}
             {members.length > 1 && (

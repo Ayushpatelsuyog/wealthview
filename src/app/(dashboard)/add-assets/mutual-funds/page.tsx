@@ -785,6 +785,8 @@ export default function MutualFundsPage() {
 
   // ── Auth & family data ─────────────────────────────────────────────────────
   const [familyId,    setFamilyId]    = useState<string | null>(null);
+  const [families,    setFamilies]    = useState<{id: string; name: string}[]>([]);
+  const [selectedFamily, setSelectedFamily] = useState('');
   const [members,     setMembers]     = useState<FamilyMember[]>([]);
   const [dbPortfolios, setDbPortfolios] = useState<Portfolio[]>([]);
   const [member,      setMember]      = useState('');
@@ -849,19 +851,42 @@ export default function MutualFundsPage() {
       if (!profile) return;
       setMember(profile.id);
       setMemberName(profile.name ?? '');
-      if (profile.family_id) setFamilyId(profile.family_id);
 
-      if (profile.family_id) {
+      const fid = profile.family_id;
+      if (fid) {
+        setFamilyId(fid);
+        setSelectedFamily(fid);
         const { data: familyUsers } = await supabase
-          .from('users').select('id, name').eq('family_id', profile.family_id);
+          .from('users').select('id, name').eq('family_id', fid);
         setMembers(familyUsers ?? [{ id: profile.id, name: profile.name }]);
+
+        // Load families the user has access to
+        try {
+          const { data: primaryFam } = await supabase.from('families').select('id, name').eq('id', fid).single();
+          const famList = primaryFam ? [primaryFam] : [];
+
+          try {
+            const { data: extraFams } = await supabase
+              .from('family_memberships')
+              .select('families(id, name)')
+              .eq('auth_user_id', user.id);
+            if (extraFams) {
+              for (const m of extraFams) {
+                const f = (m as Record<string, unknown>).families as {id: string; name: string} | undefined;
+                if (f && !famList.find(x => x.id === f.id)) famList.push(f);
+              }
+            }
+          } catch { /* table may not exist */ }
+
+          setFamilies(famList);
+        } catch { /* ignore */ }
       } else {
         setMembers([{ id: profile.id, name: profile.name }]);
       }
 
       const { data: portfolios } = await supabase
         .from('portfolios').select('id, name, type')
-        .eq('family_id', profile.family_id ?? user.id)
+        .eq('family_id', fid ?? user.id)
         .order('created_at');
       if (portfolios?.length) {
         setDbPortfolios(portfolios);
@@ -870,6 +895,19 @@ export default function MutualFundsPage() {
     }
     loadUser();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Reload members/portfolios when family changes ─────────────────────────
+  useEffect(() => {
+    if (!selectedFamily) return;
+    setFamilyId(selectedFamily);
+    (async () => {
+      const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
+      setMembers(fUsers ?? []);
+      if (fUsers?.length) setMember(fUsers[0].id);
+      const { data: ports } = await supabase.from('portfolios').select('id, name, type').eq('family_id', selectedFamily).order('created_at');
+      setDbPortfolios(ports ?? []);
+    })();
+  }, [selectedFamily]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Update memberName when member changes
   useEffect(() => {
@@ -1474,6 +1512,27 @@ export default function MutualFundsPage() {
           <div className="wv-card p-5">
             <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Step 1 — Portfolio &amp; Distributor</p>
             <div className="space-y-4">
+              {/* Family selector */}
+              {families.length > 1 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {families.map(f => (
+                      <button key={f.id}
+                        onClick={() => setSelectedFamily(f.id)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border"
+                        style={{
+                          backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
+                          color: selectedFamily === f.id ? 'white' : '#6B7280',
+                          borderColor: selectedFamily === f.id ? '#1B2A4A' : '#E8E5DD',
+                        }}>
+                        {f.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>

@@ -210,6 +210,13 @@ export default function SettingsPage() {
   const [newMemberRole, setNewMemberRole] = useState('member');
   const [addingMember, setAddingMember] = useState(false);
 
+  // Multi-Family
+  const [allFamilies, setAllFamilies] = useState<{id: string; name: string; created_by: string}[]>([]);
+  const [selectedFamilyTab, setSelectedFamilyTab] = useState<string>('');
+  const [showCreateFamily, setShowCreateFamily] = useState(false);
+  const [newFamilyName, setNewFamilyName] = useState('');
+  const [creatingFamily, setCreatingFamily] = useState(false);
+
   // Distributors/Brokers
   const [brokers, setBrokers] = useState<BrokerRow[]>([]);
   const [brokerCml, setBrokerCml] = useState<Record<string, CmlFields>>({});
@@ -321,6 +328,42 @@ export default function SettingsPage() {
             }
           } catch { /* ignore — metadata column may not exist yet */ }
         }
+
+        // Load all families (via family_memberships or created_by)
+        const famList: {id: string; name: string; created_by: string}[] = [];
+
+        if (userData.family_id) {
+          try {
+            const { data: primaryFamily } = await supabase
+              .from('families')
+              .select('id, name, created_by')
+              .eq('id', userData.family_id)
+              .single();
+            if (primaryFamily) famList.push(primaryFamily as {id: string; name: string; created_by: string});
+          } catch { /* ignore */ }
+        }
+
+        // Add families from memberships (table may not exist yet)
+        try {
+          const { data: membershipFamilies } = await supabase
+            .from('family_memberships')
+            .select('family_id, role, families(id, name, created_by)')
+            .eq('auth_user_id', user.id);
+
+          if (membershipFamilies) {
+            for (const m of membershipFamilies) {
+              const f = (m as Record<string, unknown>).families as {id: string; name: string; created_by: string} | null;
+              if (f && !famList.find(x => x.id === f.id)) {
+                famList.push(f);
+              }
+            }
+          }
+        } catch { /* family_memberships table may not exist yet */ }
+
+        setAllFamilies(famList);
+        if (famList.length > 0 && !selectedFamilyTab) {
+          setSelectedFamilyTab(famList[0].id);
+        }
       }
       setLoading(false);
     }
@@ -368,6 +411,40 @@ export default function SettingsPage() {
     setFamilySaving(false);
     if (error) showToast('error', error.message);
     else showToast('success', 'Family settings saved');
+  }
+
+  async function createFamily() {
+    if (!newFamilyName.trim()) return;
+    setCreatingFamily(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setCreatingFamily(false); return; }
+
+    const { data: newFamily, error } = await supabase
+      .from('families')
+      .insert({ name: newFamilyName.trim(), created_by: user.id })
+      .select('id, name, created_by')
+      .single();
+
+    if (error) {
+      showToast('error', error.message);
+    } else if (newFamily) {
+      // Try to create membership record (table may not exist yet)
+      try {
+        await supabase.from('family_memberships').insert({
+          auth_user_id: user.id,
+          family_id: (newFamily as {id: string}).id,
+          role: 'admin',
+        });
+      } catch { /* table may not exist yet */ }
+
+      const fam = newFamily as {id: string; name: string; created_by: string};
+      setAllFamilies(prev => [...prev, fam]);
+      setSelectedFamilyTab(fam.id);
+      setNewFamilyName('');
+      setShowCreateFamily(false);
+      showToast('success', `Family "${fam.name}" created`);
+    }
+    setCreatingFamily(false);
   }
 
   async function saveMember(id: string, data: Partial<UserRow>) {
@@ -554,6 +631,65 @@ export default function SettingsPage() {
         {/* ─── Family Tab ──────────────────────────────────────────── */}
         <TabsContent value="family">
           <div className="space-y-4">
+            {/* Family selector */}
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              {allFamilies.map(f => (
+                <button key={f.id}
+                  onClick={() => {
+                    setSelectedFamilyTab(f.id);
+                    // Reload members for this family
+                    supabase.from('users').select('*').eq('family_id', f.id).then(({ data }) => {
+                      if (data) setMembers(data as UserRow[]);
+                    });
+                    // Reload family settings for this family
+                    supabase.from('families').select('*').eq('id', f.id).single().then(({ data }) => {
+                      if (data) {
+                        setFamilyName((data as FamilyRow).name ?? '');
+                        setFamilyCurrency((data as FamilyRow).currency_default ?? 'INR');
+                        setFamilyId(f.id);
+                      }
+                    });
+                  }}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all border"
+                  style={{
+                    backgroundColor: selectedFamilyTab === f.id ? '#1B2A4A' : 'white',
+                    color: selectedFamilyTab === f.id ? 'white' : '#374151',
+                    borderColor: selectedFamilyTab === f.id ? '#1B2A4A' : '#E5E7EB',
+                  }}>
+                  {f.name}
+                </button>
+              ))}
+              {!showCreateFamily ? (
+                <button
+                  onClick={() => setShowCreateFamily(true)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium border transition-all flex items-center gap-1.5"
+                  style={{ borderColor: '#C9A84C', color: '#C9A84C' }}>
+                  <Plus className="w-3.5 h-3.5" />New Family
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    value={newFamilyName}
+                    onChange={e => setNewFamilyName(e.target.value)}
+                    placeholder="Family name..."
+                    className="h-9 px-3 text-sm border rounded-lg"
+                    style={{ borderColor: '#E5E7EB' }}
+                    onKeyDown={e => { if (e.key === 'Enter') createFamily(); }}
+                    autoFocus
+                  />
+                  <button onClick={createFamily} disabled={creatingFamily}
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium text-white"
+                    style={{ backgroundColor: '#1B2A4A' }}>
+                    {creatingFamily ? 'Creating...' : 'Create'}
+                  </button>
+                  <button onClick={() => { setShowCreateFamily(false); setNewFamilyName(''); }}
+                    className="text-gray-400 hover:text-gray-600 text-sm">
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+
             <Card className="p-6 border-0 shadow-sm space-y-5">
               <h2 className="font-semibold text-gray-900">Family Settings</h2>
               <Separator />

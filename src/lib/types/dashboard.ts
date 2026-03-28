@@ -51,6 +51,7 @@ export interface DashboardSnapshot {
   loanExposure: number;
   rebalancingDrift: number;
 
+  families?: { id: string; name: string; memberCount: number }[];
   members: DashboardMember[];
   cashFlows: DashboardCashFlow[];
 

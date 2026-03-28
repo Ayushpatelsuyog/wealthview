@@ -13,6 +13,7 @@ import { CashFlows }            from '@/components/dashboard/CashFlows';
 import { ProjectionEngine }     from '@/components/dashboard/ProjectionEngine';
 import { AICta }                from '@/components/dashboard/AICta';
 import type { DashboardSnapshot } from '@/lib/types/dashboard';
+import { useFamilyStore } from '@/lib/stores/familyStore';
 
 function SkeletonBox({ className }: { className?: string }) {
   return <div className={`animate-pulse rounded-xl bg-gray-100 ${className ?? ''}`} />;
@@ -65,6 +66,7 @@ export function DashboardClient() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
+  const { setFamilies: setStoreFamilies, setMembers: setStoreMembers } = useFamilyStore();
 
   const load = useCallback(async (force = false) => {
     if (force) setIsRefreshing(true);
@@ -80,6 +82,13 @@ export function DashboardClient() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: DashboardSnapshot = await res.json();
       setSnapshot(data);
+      // Sync to family store for cross-page persistence
+      if (data.families?.length) {
+        setStoreFamilies(data.families);
+      }
+      if (data.members?.length) {
+        setStoreMembers(data.members.map(m => ({ id: m.id, name: m.name, role: m.role })));
+      }
       // Initialize all members as selected
       if (data.members?.length) {
         setSelectedMembers(new Set(data.members.map(m => m.id)));

@@ -277,6 +277,7 @@ export default function GlobalStocksPortfolioPage() {
   const [filterCountries,  setFilterCountries]  = useState<Set<string>>(new Set());
   const [sortKey,          setSortKey]          = useState<SortKey>('value');
   const [searchQuery,      setSearchQuery]      = useState('');
+  const [filterMemberId,   setFilterMemberId]   = useState<string | ''>(''); // '' = all family
 
   function toggleSet(set: Set<string>, setFn: (s: Set<string>) => void, val: string) {
     const next = new Set(set);
@@ -379,6 +380,8 @@ export default function GlobalStocksPortfolioPage() {
     });
 
     setHoldings(rows);
+    // Default to logged-in user if not already set
+    if (!filterMemberId) setFilterMemberId(user.id);
     setLoading(false);
 
     // Batch-fetch all prices in a single request
@@ -487,10 +490,22 @@ export default function GlobalStocksPortfolioPage() {
   const portfolios = useMemo(() => Array.from(new Set(holdings.map(h => h.portfolios?.name ?? 'My Portfolio').filter(Boolean))), [holdings]);
   const countries  = useMemo(() => Array.from(new Set(holdings.map(h => h.country).filter(Boolean))).sort(), [holdings]);
 
+  const membersList = useMemo(() => {
+    const map = new Map<string, string>();
+    holdings.forEach(h => {
+      const uid = h.portfolios?.user_id ?? '';
+      const name = h.memberName || uid;
+      if (uid && name) map.set(uid, name);
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [holdings]);
+
   // ── Filtered + sorted holdings ────────────────────────────────────────────
 
   const filtered = useMemo(() => {
-    let rows = holdings;
+    let rows = filterMemberId
+      ? holdings.filter(h => h.portfolios?.user_id === filterMemberId)
+      : holdings;
     if (filterBrokers.size > 0)    rows = rows.filter(h => filterBrokers.has(h.brokers?.name ?? '—'));
     if (filterPortfolios.size > 0) rows = rows.filter(h => filterPortfolios.has(h.portfolios?.name ?? 'My Portfolio'));
     if (filterCountries.size > 0)  rows = rows.filter(h => filterCountries.has(h.country));
@@ -507,7 +522,7 @@ export default function GlobalStocksPortfolioPage() {
         default:       return 0;
       }
     });
-  }, [holdings, filterBrokers, filterPortfolios, filterCountries, searchQuery, sortKey]);
+  }, [holdings, filterMemberId, filterBrokers, filterPortfolios, filterCountries, searchQuery, sortKey]);
 
   // ── Grouped holdings (multi-distributor consolidation) ────────────────────
 
@@ -893,6 +908,35 @@ export default function GlobalStocksPortfolioPage() {
 
           {/* Filter bar */}
           <div className="wv-card p-3 space-y-3">
+            {/* Member filter */}
+            {membersList.length > 1 && (
+              <div className="flex items-center gap-2 flex-wrap pb-2 border-b" style={{ borderColor: '#F0EDE6' }}>
+                <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: '#9CA3AF' }}>Member:</span>
+                <button
+                  onClick={() => setFilterMemberId('')}
+                  className="px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors"
+                  style={{
+                    backgroundColor: !filterMemberId ? '#1B2A4A' : '#F7F5F0',
+                    color: !filterMemberId ? 'white' : '#6B7280',
+                    border: `1px solid ${!filterMemberId ? '#1B2A4A' : '#E8E5DD'}`,
+                  }}>
+                  All Family
+                </button>
+                {membersList.map(m => (
+                  <button key={m.id}
+                    onClick={() => setFilterMemberId(m.id)}
+                    className="px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors"
+                    style={{
+                      backgroundColor: filterMemberId === m.id ? '#C9A84C' : '#F7F5F0',
+                      color: filterMemberId === m.id ? 'white' : '#6B7280',
+                      border: `1px solid ${filterMemberId === m.id ? '#C9A84C' : '#E8E5DD'}`,
+                    }}>
+                    {m.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#9CA3AF' }} />
