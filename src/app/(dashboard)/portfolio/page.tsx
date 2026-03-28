@@ -12,12 +12,6 @@ import { FamilyMemberSelector } from '@/components/shared/FamilyMemberSelector';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface MemberRow {
-  id: string;
-  name: string;
-  email: string;
-}
-
 interface RawHolding {
   asset_type: string;
   symbol: string;
@@ -144,9 +138,6 @@ export default function PortfolioPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [viewMode, setViewMode] = useState<'family' | 'individual'>('family');
-  const [members, setMembers] = useState<MemberRow[]>([]);
-  const [selectedMemberId, setSelectedMemberId] = useState<string>('');
   const [holdings, setHoldings] = useState<RawHolding[]>([]);
   const [loading, setLoading] = useState(true);
   const [navLoading, setNavLoading] = useState(false);
@@ -166,31 +157,6 @@ export default function PortfolioPage() {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
-
-    // Get current user's family_id
-    let familyId: string | null = null;
-    try {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('family_id')
-        .eq('id', user.id)
-        .single();
-      familyId = (userData as { family_id: string | null } | null)?.family_id ?? null;
-    } catch { familyId = null; }
-
-    // Load family members
-    if (familyId) {
-      try {
-        const { data: membersData } = await supabase
-          .from('users')
-          .select('id, name, email')
-          .eq('family_id', familyId);
-        if (membersData) {
-          setMembers(membersData as MemberRow[]);
-          if (membersData.length > 0) setSelectedMemberId((membersData as MemberRow[])[0].id);
-        }
-      } catch { /* ignore */ }
-    }
 
     // Load holdings — check client cache first
     let loadedHoldings: RawHolding[] = [];
@@ -374,12 +340,11 @@ export default function PortfolioPage() {
     await loadData(true);
   }, [loadData]);
 
-  const filterUserId = viewMode === 'individual' ? (selectedMemberId || null) : null;
-  // Also apply family member selector filter
+  // Filter holdings by selected family/members from FamilyMemberSelector
   const memberFilteredHoldings = activeMemberIds.length > 0
     ? holdings.filter(h => activeMemberIds.includes(h.portfolios?.user_id ?? ''))
     : holdings;
-  const rows = buildRows(memberFilteredHoldings, filterUserId, navMap, stockPriceMap, globalStockINRMap);
+  const rows = buildRows(memberFilteredHoldings, null, navMap, stockPriceMap, globalStockINRMap);
   const stats = computeStats(rows);
 
   const totalHoldings = rows.reduce((s, r) => s + r.holdings, 0);
@@ -418,53 +383,10 @@ export default function PortfolioPage() {
           <RefreshCw className={`w-3.5 h-3.5 ${navLoading || stockPriceLoading ? 'animate-spin' : ''}`} />
           {navLoading || stockPriceLoading || globalStockLoading ? 'Refreshing…' : 'Refresh'}
         </button>
-
-        {/* View Toggle */}
-        <div className="flex items-center gap-1 p-1 rounded-full border border-gray-200 bg-white">
-          <button
-            onClick={() => setViewMode('family')}
-            className="px-4 py-1.5 rounded-full text-sm font-medium transition-all"
-            style={viewMode === 'family'
-              ? { backgroundColor: '#1B2A4A', color: '#fff' }
-              : { color: '#6B7280' }}
-          >
-            Family View
-          </button>
-          <button
-            onClick={() => setViewMode('individual')}
-            className="px-4 py-1.5 rounded-full text-sm font-medium transition-all"
-            style={viewMode === 'individual'
-              ? { backgroundColor: '#1B2A4A', color: '#fff' }
-              : { color: '#6B7280' }}
-          >
-            Individual
-          </button>
-        </div>
         </div>
       </div>
 
       <FamilyMemberSelector onSelectionChange={handleSelectionChange} />
-
-      {/* Member selector (Individual mode) */}
-      {viewMode === 'individual' && members.length > 0 && (
-        <div className="mb-4 flex items-center gap-2">
-          <span className="text-sm text-gray-600 font-medium">Member:</span>
-          <div className="flex gap-1.5 flex-wrap">
-            {members.map(m => (
-              <button
-                key={m.id}
-                onClick={() => setSelectedMemberId(m.id)}
-                className="px-3 py-1 rounded-full text-xs font-medium border transition-all"
-                style={selectedMemberId === m.id
-                  ? { backgroundColor: '#C9A84C', color: '#fff', borderColor: '#C9A84C' }
-                  : { backgroundColor: '#fff', color: '#374151', borderColor: '#E5E7EB' }}
-              >
-                {m.name || m.email}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Error banner */}
       {error && (
