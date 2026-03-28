@@ -19,19 +19,23 @@ async function fetchBatchNavs(codes: string[], nocache: boolean): Promise<Record
   if (uncached.length > 0) {
     await Promise.allSettled(uncached.map(async (code) => {
       try {
-        const res = await fetch(`https://api.mfapi.in/mf/${code}/latest`, {
+        const res = await fetch(`https://api.mfapi.in/mf/${code}`, {
           next: { revalidate: 86400 },
         });
         if (!res.ok) { results[code] = null; return; }
         const json = await res.json();
         if (json.status !== 'SUCCESS' || !json.data?.length) { results[code] = null; return; }
+        const dataArr = json.data ?? [];
+        const currentNav = parseFloat(dataArr[0]?.nav) || 0;
+        const previousNav = dataArr.length > 1 ? (parseFloat(dataArr[1]?.nav) || null) : null;
         const data: MFNavData = {
           schemeCode: parseInt(code),
           fundName:   json.meta?.scheme_name ?? '',
           fundHouse:  json.meta?.fund_house   ?? '',
           category:   json.meta?.scheme_category ?? '',
-          nav:        parseFloat(json.data[0].nav),
-          navDate:    json.data[0].date,
+          nav:        currentNav,
+          navDate:    dataArr[0].date,
+          previousNav,
         };
         cacheSet(`mf_nav_${code}`, data, NAV_CACHE_TTL);
         results[code] = data;

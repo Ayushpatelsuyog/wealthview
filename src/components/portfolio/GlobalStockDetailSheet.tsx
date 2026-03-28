@@ -21,61 +21,82 @@ interface Transaction {
   type: string;
   fees: number;
   notes?: string;
+  metadata?: Record<string, unknown>;
 }
 
-export interface StockHoldingDetail {
+export interface GlobalStockHoldingDetail {
   id: string;
   symbol: string;
   name: string;
   quantity: number;
   avg_buy_price: number;
   metadata: Record<string, unknown>;
+  transactions: Transaction[];
   portfolios: { id: string; name: string; type: string; user_id: string } | null;
   brokers: { id: string; name: string; platform_type: string } | null;
-  transactions: Transaction[];
-  currentPrice: number | null;
-  priceLoading: boolean;
   investedValue: number;
   currentValue: number | null;
   gainLoss: number | null;
   gainLossPct: number | null;
-  xirr: number | null;
-  memberName: string;
+  currentPrice: number | null;
+  currency: string;
+  country: string;
+  fxRate: number | null;
+  investedINR: number;
+  currentValueINR: number | null;
 }
 
-// ─── Transaction config ────────────────────────────────────────────────────────
+// ─── Country flags ────────────────────────────────────────────────────────────
 
-const TXN_CONFIG: Record<string, { label: string; bg: string; text: string; sign: number }> = {
-  buy:      { label: 'Buy',      bg: 'rgba(27,42,74,0.10)',   text: '#1B2A4A', sign:  1 },
-  sell:     { label: 'Sell',     bg: 'rgba(220,38,38,0.10)',  text: '#DC2626', sign: -1 },
-  dividend: { label: 'Dividend', bg: 'rgba(5,150,105,0.10)',  text: '#059669', sign:  1 },
-  sip:      { label: 'Buy',      bg: 'rgba(59,130,246,0.12)', text: '#2563EB', sign:  1 },
+const COUNTRY_FLAG: Record<string, string> = {
+  US: '🇺🇸', UK: '🇬🇧', DE: '🇩🇪', FR: '🇫🇷',
+  JP: '🇯🇵', HK: '🇭🇰', AU: '🇦🇺', SG: '🇸🇬',
+  CA: '🇨🇦', CH: '🇨🇭', CN: '🇨🇳', KR: '🇰🇷',
+  NL: '🇳🇱', SE: '🇸🇪', IT: '🇮🇹', ES: '🇪🇸',
+  IE: '🇮🇪', BR: '🇧🇷', AE: '🇦🇪', IN: '🇮🇳',
+};
+
+function countryFlag(code: string): string {
+  return COUNTRY_FLAG[code] ?? '🌍';
+}
+
+// ─── Transaction config ──────────────────────────────────────────────────────
+
+const TXN_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
+  buy:      { label: 'Buy',      bg: 'rgba(27,42,74,0.10)',   text: '#1B2A4A' },
+  sell:     { label: 'Sell',     bg: 'rgba(220,38,38,0.10)',  text: '#DC2626' },
+  dividend: { label: 'Dividend', bg: 'rgba(5,150,105,0.10)',  text: '#059669' },
+  sip:      { label: 'Buy',     bg: 'rgba(59,130,246,0.12)', text: '#2563EB' },
 };
 
 function txnLabel(txn: Transaction): string {
   const notes = txn.notes?.toLowerCase() ?? '';
   if (notes.includes('bonus'))  return 'Bonus';
   if (notes.includes('split'))  return 'Split';
-  if (notes.includes('rights')) return 'Rights';
   return TXN_CONFIG[txn.type]?.label ?? txn.type;
 }
 function txnBg(txn: Transaction): string {
   const notes = txn.notes?.toLowerCase() ?? '';
-  if (notes.includes('bonus'))  return 'rgba(201,168,76,0.12)';
-  if (notes.includes('split'))  return 'rgba(99,102,241,0.10)';
-  if (notes.includes('rights')) return 'rgba(46,139,139,0.10)';
+  if (notes.includes('bonus')) return 'rgba(201,168,76,0.12)';
+  if (notes.includes('split')) return 'rgba(99,102,241,0.10)';
   return TXN_CONFIG[txn.type]?.bg ?? '#F3F4F6';
 }
 function txnColor(txn: Transaction): string {
   const notes = txn.notes?.toLowerCase() ?? '';
-  if (notes.includes('bonus'))  return '#C9A84C';
-  if (notes.includes('split'))  return '#4338CA';
-  if (notes.includes('rights')) return '#2E8B8B';
+  if (notes.includes('bonus')) return '#C9A84C';
+  if (notes.includes('split')) return '#4338CA';
   return TXN_CONFIG[txn.type]?.text ?? '#6B7280';
 }
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function fmtLocal(v: number, currency: string): string {
+  const sym = currency === 'GBP' || currency === 'GBp' ? '£' : currency === 'EUR' ? '€' : currency === 'JPY' ? '¥' : '$';
+  const divisor = currency === 'GBp' ? 100 : 1;
+  const val = v / divisor;
+  return `${sym}${val.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 }
 
 function holdingPeriodStr(buyDate: string): string {
@@ -88,36 +109,10 @@ function holdingPeriodStr(buyDate: string): string {
   return rem > 0 ? `${yrs}y ${rem}m` : `${yrs}y`;
 }
 
-// ─── STCG / LTCG split from buy lots ─────────────────────────────────────────
+// ─── Component ───────────────────────────────────────────────────────────────
 
-function computeTaxSplit(transactions: Transaction[]) {
-  const buyLots = transactions
-    .filter(t => (t.type === 'buy' || t.type === 'sip') && Number(t.quantity) > 0)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  const now = new Date();
-  let stcgQty = 0, ltcgQty = 0;
-  let stcgInvested = 0, ltcgInvested = 0;
-
-  for (const lot of buyLots) {
-    const msPerYear = 365.25 * 24 * 3600 * 1000;
-    const yearsHeld = (now.getTime() - new Date(lot.date).getTime()) / msPerYear;
-    if (yearsHeld >= 1) {
-      ltcgQty      += Number(lot.quantity);
-      ltcgInvested += Number(lot.quantity) * Number(lot.price);
-    } else {
-      stcgQty      += Number(lot.quantity);
-      stcgInvested += Number(lot.quantity) * Number(lot.price);
-    }
-  }
-
-  return { stcgQty, ltcgQty, stcgInvested, ltcgInvested };
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
-
-interface StockDetailSheetProps {
-  holding: StockHoldingDetail | null;
+interface GlobalStockDetailSheetProps {
+  holding: GlobalStockHoldingDetail | null;
   open: boolean;
   onClose: () => void;
   onDelete: (id: string) => void;
@@ -125,20 +120,20 @@ interface StockDetailSheetProps {
   onHoldingChanged?: () => void;
 }
 
-export function StockDetailSheet({
+export function GlobalStockDetailSheet({
   holding, open, onClose, onDelete, onRefreshPrice, onHoldingChanged,
-}: StockDetailSheetProps) {
-  const router   = useRouter();
-  const supabase = createClient();
+}: GlobalStockDetailSheetProps) {
+  const router    = useRouter();
+  const supabase  = createClient();
   const [showAllTxns, setShowAllTxns] = useState(false);
   const [deleting,    setDeleting]    = useState<string | null>(null);
   const [editingSector, setEditingSector] = useState(false);
   const [sectorValue, setSectorValue] = useState('');
 
-  const SECTORS = ['IT', 'Banking', 'Pharma', 'Auto', 'FMCG', 'Energy', 'Metals', 'Chemicals',
-    'Industrials', 'Infrastructure', 'Real Estate', 'Media', 'Telecom', 'Textiles', 'Healthcare',
-    'Consumer Durables', 'Financial Services', 'Cement', 'Fertilizers', 'Oil & Gas', 'Power',
-    'Mining', 'Logistics', 'Defence', 'Insurance', 'Capital Goods', 'Retail', 'Other'];
+  const SECTORS = ['Technology', 'Healthcare', 'Finance', 'Consumer', 'Energy', 'Materials',
+    'Industrials', 'Communication', 'Real Estate', 'Utilities', 'ETF', 'Semiconductors',
+    'Software', 'E-Commerce', 'Automotive', 'Aerospace', 'Pharmaceuticals', 'Biotech',
+    'Banking', 'Insurance', 'Mining', 'Oil & Gas', 'Renewable Energy', 'Other'];
 
   async function saveSector(newSector: string) {
     if (!holding) return;
@@ -155,16 +150,13 @@ export function StockDetailSheet({
 
   const visible = showAllTxns ? sorted : sorted.slice(0, 5);
 
-  const taxSplit: { stcgQty: number; ltcgQty: number; stcgInvested: number; ltcgInvested: number } | null
-    = holding ? computeTaxSplit(holding.transactions) : null;
-
   async function deleteTxn(txn: Transaction) {
     if (!holding) return;
     if (!confirm(`Delete this ${txnLabel(txn)} transaction?`)) return;
     setDeleting(txn.id);
     try {
       const res = await fetch(
-        `/api/stocks/delete-transaction?txn_id=${txn.id}&holding_id=${holding.id}`,
+        `/api/stocks/global/delete-transaction?txn_id=${txn.id}&holding_id=${holding.id}`,
         { method: 'DELETE' }
       );
       const data = await res.json();
@@ -173,7 +165,6 @@ export function StockDetailSheet({
         onClose();
         onDelete(holding.id);
       } else {
-        // Notify parent to refresh holdings from DB
         onHoldingChanged?.();
       }
     } catch (e) {
@@ -184,20 +175,25 @@ export function StockDetailSheet({
 
   if (!holding) return null;
 
-  const investedValue  = holding.investedValue;
-  const currentValue   = holding.currentValue ?? investedValue;
-  const gainLoss       = holding.gainLoss ?? 0;
+  const currency       = holding.currency;
+  const fxRate         = holding.fxRate ?? 1;
+  const investedLocal  = holding.investedValue;
+  const investedINR    = holding.investedINR;
+  const currentLocal   = holding.currentValue ?? investedLocal;
+  const currentINR     = holding.currentValueINR ?? investedINR;
+  const gainLossINR    = holding.gainLoss ?? 0;
   const gainLossPct    = holding.gainLossPct ?? 0;
-  const isGain         = gainLoss >= 0;
-  const sector         = String(holding.metadata?.sector ?? '');
-  const demat          = String(holding.metadata?.demat ?? '');
-  const isin           = String(holding.metadata?.isin ?? '');
-  const exchange       = String(holding.metadata?.exchange ?? 'NSE');
-  const bseCode        = taxSplit !== null && holding.metadata?.bse_code != null
-    ? String(holding.metadata.bse_code) : '';
+  const isGain         = gainLossINR >= 0;
+  const exchange       = String(holding.metadata?.exchange ?? '');
+  const country        = holding.country;
+
+  // FX impact estimation: compare local P&L with INR P&L
+  const localGainLoss  = currentLocal - investedLocal;
+  const localGainINR   = localGainLoss * fxRate; // P&L from stock movement alone
+  const fxImpact       = gainLossINR - localGainINR; // P&L from currency movement
 
   return (
-    <Sheet open={open} onOpenChange={open => { if (!open) onClose(); }}>
+    <Sheet open={open} onOpenChange={o => { if (!o) onClose(); }}>
       <SheetContent side="right" className="w-full sm:max-w-lg p-0 overflow-y-auto"
         style={{ backgroundColor: '#F7F5F0', border: 'none' }}>
 
@@ -211,32 +207,39 @@ export function StockDetailSheet({
                 style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'white' }}>
                 {holding.symbol}
               </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded"
-                style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#A0AEC0' }}>
-                {exchange}
-              </span>
+              {exchange && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#A0AEC0' }}>
+                  {exchange}
+                </span>
+              )}
             </div>
-            {/* Editable sector */}
-            <div className="flex items-center gap-1.5 mt-1 relative">
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <span className="text-xs" style={{ color: '#A0AEC0' }}>
+                {countryFlag(country)} {country}
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                style={{ backgroundColor: 'rgba(37,99,235,0.15)', color: '#93C5FD' }}>
+                {currency}
+              </span>
+              {/* Editable sector */}
               {editingSector ? (
-                <div className="flex items-center gap-1 flex-wrap">
-                  <select
-                    autoFocus
-                    value={sectorValue}
-                    onChange={e => { const v = e.target.value; if (v === '__custom__') return; setSectorValue(v); saveSector(v); }}
-                    onBlur={() => setEditingSector(false)}
-                    className="h-6 text-[10px] rounded px-1 border-none outline-none"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'white' }}>
-                    <option value="" style={{ color: '#1A1A2E' }}>Select sector…</option>
-                    {SECTORS.map(s => <option key={s} value={s} style={{ color: '#1A1A2E' }}>{s}</option>)}
-                  </select>
-                </div>
-              ) : sector ? (
+                <select
+                  autoFocus
+                  value={sectorValue}
+                  onChange={e => { const v = e.target.value; setSectorValue(v); saveSector(v); }}
+                  onBlur={() => setEditingSector(false)}
+                  className="h-5 text-[10px] rounded px-1 border-none outline-none"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'white' }}>
+                  <option value="" style={{ color: '#1A1A2E' }}>Select…</option>
+                  {SECTORS.map(s => <option key={s} value={s} style={{ color: '#1A1A2E' }}>{s}</option>)}
+                </select>
+              ) : String(holding.metadata?.sector ?? '') ? (
                 <button
-                  onClick={() => { setSectorValue(sector); setEditingSector(true); }}
+                  onClick={() => { setSectorValue(String(holding.metadata?.sector ?? '')); setEditingSector(true); }}
                   className="text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 transition-colors hover:bg-white/20"
                   style={{ backgroundColor: 'rgba(201,168,76,0.20)', color: '#F6E27A' }}>
-                  <Tag className="w-2.5 h-2.5" />{sector}
+                  <Tag className="w-2.5 h-2.5" />{String(holding.metadata?.sector ?? '')}
                   <Pencil className="w-2 h-2 opacity-50" />
                 </button>
               ) : (
@@ -249,15 +252,13 @@ export function StockDetailSheet({
               )}
             </div>
             {/* Live price */}
-            {holding.priceLoading ? (
-              <div className="flex items-center gap-1 mt-1">
-                <Loader2 className="w-3 h-3 animate-spin text-white/60" />
-                <span className="text-[10px] text-white/60">Fetching price…</span>
-              </div>
-            ) : holding.currentPrice ? (
-              <div className="flex items-center gap-2 mt-1">
+            {holding.currentPrice ? (
+              <div className="flex items-center gap-2 mt-1.5">
                 <span className="text-lg font-bold text-white">
-                  ₹{holding.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                  {fmtLocal(holding.currentPrice, currency)}
+                </span>
+                <span className="text-xs text-white/60">
+                  ₹{(holding.currentPrice * fxRate).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                 </span>
                 <span className="text-xs font-medium flex items-center gap-0.5"
                   style={{ color: isGain ? '#6EE7B7' : '#FCA5A5' }}>
@@ -287,18 +288,22 @@ export function StockDetailSheet({
           {/* Summary stats */}
           <div className="wv-card p-4 grid grid-cols-2 gap-4">
             {[
-              { label: 'Invested',     value: formatLargeINR(investedValue) },
-              { label: 'Current Value',value: formatLargeINR(currentValue) },
-              { label: 'P&L',
-                value: `${isGain ? '+' : ''}${formatLargeINR(gainLoss)}`,
+              { label: `Invested (${currency})`, value: fmtLocal(investedLocal, currency) },
+              { label: 'Invested (INR)',          value: formatLargeINR(investedINR) },
+              { label: `Value (${currency})`,     value: fmtLocal(currentLocal, currency) },
+              { label: 'Value (INR)',             value: formatLargeINR(currentINR) },
+              { label: 'P&L (INR)',
+                value: `${isGain ? '+' : ''}${formatLargeINR(gainLossINR)}`,
                 color: isGain ? '#059669' : '#DC2626' },
               { label: 'Returns',
                 value: `${isGain ? '+' : ''}${gainLossPct.toFixed(2)}%`,
                 color: isGain ? '#059669' : '#DC2626' },
               { label: 'Shares Held',  value: Number(holding.quantity).toLocaleString('en-IN', { maximumFractionDigits: 4 }) },
-              { label: 'Avg Buy Price',value: `₹${Number(holding.avg_buy_price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
-              { label: 'Broker',       value: holding.brokers?.name ?? '—' },
-              { label: 'Portfolio',    value: holding.portfolios?.name ?? '—' },
+              { label: `Avg Price (${currency})`, value: fmtLocal(Number(holding.avg_buy_price), currency) },
+              { label: 'FX Rate',     value: `1 ${currency} = ₹${fxRate.toFixed(4)}` },
+              { label: 'Broker',      value: holding.brokers?.name ?? '—' },
+              { label: 'Portfolio',   value: holding.portfolios?.name ?? '—' },
+              { label: 'Country',     value: `${countryFlag(country)} ${country}` },
             ].map(({ label, value, color }) => (
               <div key={label}>
                 <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{label}</p>
@@ -307,58 +312,41 @@ export function StockDetailSheet({
             ))}
           </div>
 
-          {taxSplit !== null && (taxSplit.stcgQty > 0 || taxSplit.ltcgQty > 0) ? (
-            <div className="wv-card p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#9CA3AF' }}>
-                Tax Position
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.12)' }}>
-                  <p className="text-[10px] font-bold" style={{ color: '#DC2626' }}>STCG (&lt;1 yr)</p>
-                  <p className="text-sm font-bold mt-1" style={{ color: '#1A1A2E' }}>
-                    {taxSplit.stcgQty.toLocaleString('en-IN')} shares
-                  </p>
-                  <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                    Cost: {formatLargeINR(taxSplit.stcgInvested)}
-                  </p>
-                </div>
-                <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.12)' }}>
-                  <p className="text-[10px] font-bold" style={{ color: '#059669' }}>LTCG (≥1 yr)</p>
-                  <p className="text-sm font-bold mt-1" style={{ color: '#1A1A2E' }}>
-                    {taxSplit.ltcgQty.toLocaleString('en-IN')} shares
-                  </p>
-                  <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                    Cost: {formatLargeINR(taxSplit.ltcgInvested)}
-                  </p>
-                </div>
+          {/* FX Impact section */}
+          <div className="wv-card p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#9CA3AF' }}>
+              FX Impact Breakdown
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.12)' }}>
+                <p className="text-[10px] font-bold" style={{ color: '#1B2A4A' }}>Stock Movement</p>
+                <p className="text-sm font-bold mt-1" style={{ color: localGainINR >= 0 ? '#059669' : '#DC2626' }}>
+                  {localGainINR >= 0 ? '+' : ''}{formatLargeINR(localGainINR)}
+                </p>
+                <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                  {localGainLoss >= 0 ? '+' : ''}{fmtLocal(localGainLoss, currency)} in local
+                </p>
+              </div>
+              <div className="p-3 rounded-xl" style={{ backgroundColor: fxImpact >= 0 ? 'rgba(5,150,105,0.06)' : 'rgba(220,38,38,0.06)', border: `1px solid ${fxImpact >= 0 ? 'rgba(5,150,105,0.12)' : 'rgba(220,38,38,0.12)'}` }}>
+                <p className="text-[10px] font-bold" style={{ color: fxImpact >= 0 ? '#059669' : '#DC2626' }}>Currency Impact</p>
+                <p className="text-sm font-bold mt-1" style={{ color: fxImpact >= 0 ? '#059669' : '#DC2626' }}>
+                  {fxImpact >= 0 ? '+' : ''}{formatLargeINR(fxImpact)}
+                </p>
+                <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                  {currency}/INR movement
+                </p>
               </div>
             </div>
-          ) : null}
-
-          {/* Additional info */}
-          {(isin || demat || bseCode) ? (
-            <div className="wv-card p-4 space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#9CA3AF' }}>Details</p>
-              {isin ? (
-                <div className="flex justify-between">
-                  <span className="text-xs" style={{ color: '#6B7280' }}>ISIN</span>
-                  <span className="text-xs font-mono" style={{ color: '#1A1A2E' }}>{isin}</span>
-                </div>
-              ) : null}
-              {demat ? (
-                <div className="flex justify-between">
-                  <span className="text-xs" style={{ color: '#6B7280' }}>Demat / DP ID</span>
-                  <span className="text-xs font-mono" style={{ color: '#1A1A2E' }}>{demat}</span>
-                </div>
-              ) : null}
-              {bseCode ? (
-                <div className="flex justify-between">
-                  <span className="text-xs" style={{ color: '#6B7280' }}>BSE Code</span>
-                  <span className="text-xs" style={{ color: '#1A1A2E' }}>{bseCode}</span>
-                </div>
-              ) : null}
+            <div className="mt-3 p-2 rounded-lg text-center" style={{ backgroundColor: 'rgba(201,168,76,0.06)' }}>
+              <p className="text-[10px]" style={{ color: '#6B7280' }}>
+                Total P&L:{' '}
+                <span className="font-bold" style={{ color: gainLossINR >= 0 ? '#059669' : '#DC2626' }}>
+                  {gainLossINR >= 0 ? '+' : ''}{formatLargeINR(gainLossINR)}
+                </span>
+                {' '}= Stock ({localGainINR >= 0 ? '+' : ''}{formatLargeINR(localGainINR)}) + FX ({fxImpact >= 0 ? '+' : ''}{formatLargeINR(fxImpact)})
+              </p>
             </div>
-          ) : null}
+          </div>
 
           {/* Transaction history */}
           <div className="wv-card">
@@ -379,10 +367,8 @@ export function StockDetailSheet({
               </div>
             ) : (
               <div className="divide-y" style={{ borderColor: '#F7F5F0' }}>
-                {/* Running balance tracker */}
                 {(() => {
                   let running = 0;
-                  // compute balances forwards
                   const withBalance = [...sorted].reverse().map(t => {
                     const sign = t.type === 'sell' ? -1 : 1;
                     running += sign * Number(t.quantity);
@@ -390,11 +376,13 @@ export function StockDetailSheet({
                   }).reverse();
 
                   return visible.map(t => {
-                    const wb = withBalance.find(x => x.id === t.id);
+                    const wb     = withBalance.find(x => x.id === t.id);
                     const label  = txnLabel(t);
                     const bg     = txnBg(t);
                     const color  = txnColor(t);
-                    const amt    = Number(t.quantity) * Number(t.price);
+                    const amtLocal = Number(t.quantity) * Number(t.price);
+                    const txnFx  = (t.metadata as Record<string, unknown>)?.fx_rate ? Number((t.metadata as Record<string, unknown>).fx_rate) : fxRate;
+                    const amtINR = amtLocal * txnFx;
                     const isBonus = label === 'Bonus';
                     return (
                       <div key={t.id} className="px-4 py-3 flex items-start gap-3 hover:bg-white/50 transition-colors group">
@@ -411,20 +399,27 @@ export function StockDetailSheet({
                             </span>
                             {!isBonus && Number(t.price) > 0 && (
                               <span className="text-[10px]" style={{ color: '#6B7280' }}>
-                                @ ₹{Number(t.price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                                @ {fmtLocal(Number(t.price), currency)}
                               </span>
                             )}
-                            {amt > 0 && !isBonus && (
-                              <span className="text-[10px] font-medium" style={{ color: '#1A1A2E' }}>
-                                = {formatLargeINR(amt + Number(t.fees || 0))}
-                              </span>
+                          </div>
+                          <div className="flex items-baseline gap-2 mt-0.5 flex-wrap">
+                            {amtLocal > 0 && !isBonus && (
+                              <>
+                                <span className="text-[10px] font-medium" style={{ color: '#1A1A2E' }}>
+                                  {fmtLocal(amtLocal, currency)}
+                                </span>
+                                <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                                  ≈ {formatLargeINR(amtINR)}
+                                </span>
+                              </>
                             )}
                           </div>
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                             <span className="text-[10px]" style={{ color: '#9CA3AF' }}>{fmtDate(t.date)}</span>
                             {Number(t.fees) > 0 && (
                               <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
-                                charges: ₹{Number(t.fees).toFixed(2)}
+                                fees: {fmtLocal(Number(t.fees), currency)}
                               </span>
                             )}
                             {wb && (
@@ -437,6 +432,9 @@ export function StockDetailSheet({
                                 held: {holdingPeriodStr(t.date)}
                               </span>
                             )}
+                            <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                              FX: {txnFx.toFixed(2)}
+                            </span>
                           </div>
                           {t.notes && !t.notes.startsWith('Buy') && !t.notes.startsWith('Sell at') && (
                             <p className="text-[10px] mt-0.5 truncate" style={{ color: '#9CA3AF' }}>{t.notes}</p>
@@ -447,7 +445,7 @@ export function StockDetailSheet({
                             className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-blue-50 transition-all"
                             onClick={() => {
                               onClose();
-                              router.push(`/add-assets/indian-stocks?edit_txn=${t.id}&holding_id=${holding.id}`);
+                              router.push(`/add-assets/global-stocks?edit_txn=${t.id}&holding_id=${holding.id}`);
                             }}
                             title="Edit transaction">
                             <Pencil className="w-3 h-3" style={{ color: '#3B82F6' }} />
@@ -486,15 +484,10 @@ export function StockDetailSheet({
             <Button
               className="h-9 text-xs gap-1.5"
               style={{ backgroundColor: '#1B2A4A', color: 'white' }}
-              onClick={() => { onClose(); router.push(`/add-assets/indian-stocks?add_to=${holding.id}`); }}>
+              onClick={() => { onClose(); router.push(`/add-assets/global-stocks`); }}>
               <Plus className="w-3.5 h-3.5" />Add More Shares
             </Button>
-            <Button variant="outline" className="h-9 text-xs gap-1.5"
-              style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
-              onClick={() => { onClose(); router.push(`/add-assets/indian-stocks`); }}>
-              Record Corporate Action
-            </Button>
-            <Button variant="outline" className="h-9 text-xs gap-1.5 col-span-2"
+            <Button variant="outline" className="h-9 text-xs gap-1.5 col-span-1"
               style={{ borderColor: 'rgba(220,38,38,0.2)', color: '#DC2626' }}
               onClick={() => { if (confirm('Delete this holding and all its transactions?')) { onDelete(holding.id); onClose(); } }}>
               <Trash2 className="w-3.5 h-3.5" />Delete Holding

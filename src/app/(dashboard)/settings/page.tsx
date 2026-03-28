@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, User, Bell, Shield, Users, Eye, EyeOff, Loader2, Building2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Settings, User, Bell, Shield, Users, Eye, EyeOff, Loader2, Building2, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -28,6 +28,14 @@ interface FamilyRow {
   id: string;
   name: string;
   currency_default: string;
+}
+
+interface FamilyMemberRow {
+  id: string;
+  family_id: string;
+  name: string;
+  email: string | null;
+  role: string;
 }
 
 interface BrokerRow {
@@ -201,6 +209,12 @@ export default function SettingsPage() {
   const [familyCurrency, setFamilyCurrency] = useState('INR');
   const [familySaving, setFamilySaving] = useState(false);
   const [members, setMembers] = useState<UserRow[]>([]);
+  const [extraMembers, setExtraMembers] = useState<FamilyMemberRow[]>([]);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberRole, setNewMemberRole] = useState('member');
+  const [addingMember, setAddingMember] = useState(false);
 
   // Distributors/Brokers
   const [brokers, setBrokers] = useState<BrokerRow[]>([]);
@@ -265,7 +279,7 @@ export default function SettingsPage() {
             }
           } catch { /* ignore */ }
 
-          // Load all family members
+          // Load all family members (auth users + extra members)
           try {
             const { data: membersData } = await supabase
               .from('users')
@@ -273,6 +287,15 @@ export default function SettingsPage() {
               .eq('family_id', userData.family_id);
             if (membersData) setMembers(membersData as UserRow[]);
           } catch { /* ignore */ }
+
+          try {
+            const { data: extraData } = await supabase
+              .from('family_members')
+              .select('id, family_id, name, email, role')
+              .eq('family_id', userData.family_id)
+              .order('created_at');
+            if (extraData) setExtraMembers(extraData as FamilyMemberRow[]);
+          } catch { /* ignore — table may not exist yet */ }
 
           // Load brokers
           try {
@@ -366,6 +389,44 @@ export default function SettingsPage() {
       .eq('id', id);
     if (error) showToast('error', error.message);
     else showToast('success', 'Member saved');
+  }
+
+  async function addFamilyMember() {
+    if (!familyId || !newMemberName.trim()) return;
+    setAddingMember(true);
+    const { data, error } = await supabase
+      .from('family_members')
+      .insert({
+        family_id: familyId,
+        name: newMemberName.trim(),
+        email: newMemberEmail.trim() || null,
+        role: newMemberRole,
+      })
+      .select('id, family_id, name, email, role')
+      .single();
+    setAddingMember(false);
+    if (error) {
+      showToast('error', error.message);
+    } else if (data) {
+      setExtraMembers(prev => [...prev, data as FamilyMemberRow]);
+      setNewMemberName('');
+      setNewMemberEmail('');
+      setNewMemberRole('member');
+      setShowAddMember(false);
+      showToast('success', 'Family member added');
+    }
+  }
+
+  async function deleteFamilyMember(id: string) {
+    const { error } = await supabase
+      .from('family_members')
+      .delete()
+      .eq('id', id);
+    if (error) showToast('error', error.message);
+    else {
+      setExtraMembers(prev => prev.filter(m => m.id !== id));
+      showToast('success', 'Family member removed');
+    }
   }
 
   async function saveBrokerCml(brokerId: string) {
@@ -529,20 +590,124 @@ export default function SettingsPage() {
               </Button>
             </Card>
 
-            {members.length > 0 && (
-              <Card className="p-6 border-0 shadow-sm space-y-4">
+            <Card className="p-6 border-0 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
                 <div>
                   <h2 className="font-semibold text-gray-900">Family Members</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">{members.length} member{members.length !== 1 ? 's' : ''} in this family</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {members.length + extraMembers.length} member{members.length + extraMembers.length !== 1 ? 's' : ''} in this family
+                  </p>
                 </div>
-                <Separator />
-                <div className="space-y-3">
-                  {members.map(m => (
-                    <MemberCard key={m.id} member={m} onSave={saveMember} />
-                  ))}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowAddMember(v => !v)}
+                  className="text-xs gap-1.5"
+                  style={{ borderColor: '#C9A84C', color: '#C9A84C' }}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Member
+                </Button>
+              </div>
+              <Separator />
+
+              {/* Add Member inline form */}
+              {showAddMember && (
+                <div className="border rounded-lg p-4 space-y-3" style={{ borderColor: '#C9A84C', backgroundColor: '#FDFBF5' }}>
+                  <p className="text-xs font-semibold" style={{ color: '#1B2A4A' }}>New Family Member</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Full Name <span className="text-red-400">*</span></Label>
+                      <Input
+                        value={newMemberName}
+                        onChange={e => setNewMemberName(e.target.value)}
+                        placeholder="e.g. Priya Sharma"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Email</Label>
+                      <Input
+                        value={newMemberEmail}
+                        onChange={e => setNewMemberEmail(e.target.value)}
+                        placeholder="priya@example.com"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Role</Label>
+                      <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Owner</SelectItem>
+                          <SelectItem value="member">Member</SelectItem>
+                          <SelectItem value="advisor">Advisor</SelectItem>
+                          <SelectItem value="guest">Guest</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={addFamilyMember}
+                      disabled={addingMember || !newMemberName.trim()}
+                      className="text-white text-xs"
+                      style={{ backgroundColor: '#1B2A4A' }}
+                    >
+                      {addingMember ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                      Save Member
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => { setShowAddMember(false); setNewMemberName(''); setNewMemberEmail(''); setNewMemberRole('member'); }}
+                      className="text-xs text-gray-500"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
-              </Card>
-            )}
+              )}
+
+              <div className="space-y-3">
+                {/* Auth-linked members (from users table) */}
+                {members.map(m => (
+                  <MemberCard key={m.id} member={m} onSave={saveMember} />
+                ))}
+
+                {/* Extra family members (from family_members table) */}
+                {extraMembers.map(m => (
+                  <div key={m.id} className="border border-gray-100 rounded-lg p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold text-white"
+                          style={{ backgroundColor: '#C9A84C' }}>
+                          {m.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{m.name}</p>
+                          <p className="text-xs text-gray-400">
+                            {m.email ?? 'No email'} &middot; <span className="capitalize">{m.role}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => deleteFamilyMember(m.id)}
+                        className="text-gray-300 hover:text-red-500 transition-colors"
+                        title="Remove member"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {members.length === 0 && extraMembers.length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-4">No family members yet. Click &ldquo;Add Member&rdquo; to get started.</p>
+                )}
+              </div>
+            </Card>
           </div>
         </TabsContent>
 

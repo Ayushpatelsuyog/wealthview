@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
+import { holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
 import { calculateXIRR }  from '@/lib/utils/calculations';
 import { BrokerSelector } from '@/components/forms/BrokerSelector';
 import { CASImporter }    from '@/components/forms/CASImporter';
@@ -853,7 +854,9 @@ export default function MutualFundsPage() {
       if (profile.family_id) {
         const { data: familyUsers } = await supabase
           .from('users').select('id, name').eq('family_id', profile.family_id);
-        setMembers(familyUsers ?? [{ id: profile.id, name: profile.name }]);
+        const { data: extraMembers } = await supabase
+          .from('family_members').select('id, name').eq('family_id', profile.family_id);
+        setMembers([...(familyUsers ?? [{ id: profile.id, name: profile.name }]), ...(extraMembers ?? [])]);
       } else {
         setMembers([{ id: profile.id, name: profile.name }]);
       }
@@ -1205,6 +1208,7 @@ export default function MutualFundsPage() {
         ? `Units added to existing ${fundShortName} holding!`
         : `${fundShortName} saved!`;
       setToast({ type: 'success', message: successMsg });
+      holdingsCacheClearAll();
 
       if (andAnother) {
         setSavedHolder({ ...holder });
@@ -1248,6 +1252,7 @@ export default function MutualFundsPage() {
       const json = await res.json();
       if (!res.ok) { setToast({ type: 'error', message: json.error ?? 'Update failed' }); return; }
       setToast({ type: 'success', message: 'Transaction updated' });
+      holdingsCacheClearAll();
       setTimeout(() => router.push('/portfolio/mutual-funds'), 1200);
     } catch (e) {
       setToast({ type: 'error', message: String(e) });

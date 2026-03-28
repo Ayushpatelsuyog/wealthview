@@ -26,8 +26,9 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     title: 'EQUITY & FUNDS',
     items: [
       { label: 'Indian Stocks',  href: '/portfolio/indian-stocks',  icon: TrendingUp, addHref: '/add-assets/indian-stocks' },
-      { label: 'Global Stocks',  href: '/add-assets/global-stocks', icon: Globe },
+      { label: 'Global Stocks',  href: '/portfolio/global-stocks',  icon: Globe, addHref: '/add-assets/global-stocks' },
       { label: 'Mutual Funds',   href: '/portfolio/mutual-funds',   icon: BarChart3,  addHref: '/add-assets/mutual-funds' },
+      { label: 'SIF',            href: '/add-assets/sif',           icon: Shield,     addHref: '/add-assets/sif' },
       { label: 'PMS',            href: '/add-assets/pms',           icon: Layers },
       { label: 'AIF',            href: '/add-assets/aif',           icon: Building2 },
     ],

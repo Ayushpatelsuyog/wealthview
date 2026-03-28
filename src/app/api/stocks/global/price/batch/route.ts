@@ -1,65 +1,88 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cacheGet, cacheSet } from '@/lib/utils/price-cache';
-import type { StockPriceData } from '@/app/api/stocks/price/route';
 
-function isMarketOpen(): boolean {
+export interface GlobalStockPriceData {
+  symbol: string;
+  price: number;
+  change: number;
+  changePct: number;
+  previousClose: number;
+  currency: string;
+  dayHigh: number;
+  dayLow: number;
+  volume: number;
+  lastUpdated: string;
+}
+
+// US market hours: 9:30 AM - 4:00 PM ET (Mon-Fri)
+// Simplify: ET = UTC-5 always
+function isUSMarketOpen(): boolean {
   const now = new Date();
   const day = now.getUTCDay();
   if (day === 0 || day === 6) return false;
-  const istMinutes = (now.getUTCHours() * 60 + now.getUTCMinutes() + 330) % 1440;
-  return istMinutes >= 9 * 60 + 15 && istMinutes < 15 * 60 + 30;
+  const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const etMinutes = ((utcMinutes - 300) % 1440 + 1440) % 1440;
+  return etMinutes >= 570 && etMinutes < 960;
 }
 
 function cacheTTL(): number {
-  return isMarketOpen() ? 15 * 60 * 1000 : 6 * 60 * 60 * 1000; // 15 min market hours, 6h after
+  return isUSMarketOpen() ? 15 * 60 * 1000 : 6 * 60 * 60 * 1000;
 }
 
-async function fetchYahooPrice(symbol: string): Promise<StockPriceData | null> {
+async function fetchYahooPrice(symbol: string): Promise<GlobalStockPriceData | null> {
   const headers: Record<string, string> = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept': 'application/json',
   };
+
   for (const host of ['query1', 'query2']) {
     try {
       const controller = new AbortController();
       const tid = setTimeout(() => controller.abort(), 8_000);
-      const res = await fetch(
-        `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}.NS?interval=1d&range=1d`,
-        { headers, signal: controller.signal },
-      );
+      // Global stocks: do NOT append .NS — symbols are already in Yahoo format
+      const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
+      const res = await fetch(url, { headers, signal: controller.signal });
       clearTimeout(tid);
       if (!res.ok) continue;
+
       const json = await res.json();
-      const meta = json?.chart?.result?.[0]?.meta;
+      const result = json?.chart?.result?.[0];
+      if (!result) continue;
+
+      const meta  = result.meta;
       const price = meta?.regularMarketPrice;
       if (!price || price <= 0) continue;
+
+      const currency = meta?.currency ?? 'USD';
       const prevClose = meta.chartPreviousClose ?? meta.regularMarketPreviousClose ?? 0;
       const change = meta.regularMarketChange ?? (prevClose > 0 ? price - prevClose : 0);
       const changePct = meta.regularMarketChangePercent ?? (prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0);
+
       return {
         symbol,
         price:         Math.round(price * 100) / 100,
         change:        Math.round(change * 100) / 100,
         changePct:     Math.round(changePct * 100) / 100,
         previousClose: Math.round((prevClose || price) * 100) / 100,
+        currency,
         dayHigh:       Math.round((meta.regularMarketDayHigh  ?? price) * 100) / 100,
         dayLow:        Math.round((meta.regularMarketDayLow   ?? price) * 100) / 100,
         volume:        meta.regularMarketVolume ?? 0,
         lastUpdated:   new Date().toISOString(),
       };
-    } catch { /* try next */ }
+    } catch { /* try next host */ }
   }
   return null;
 }
 
-async function fetchBatchPrices(symbols: string[], nocache: boolean): Promise<Record<string, StockPriceData | null>> {
+async function fetchBatchPrices(symbols: string[], nocache: boolean): Promise<Record<string, GlobalStockPriceData | null>> {
   const ttl = cacheTTL();
-  const results: Record<string, StockPriceData | null> = {};
+  const results: Record<string, GlobalStockPriceData | null> = {};
   const uncached: string[] = [];
 
   for (const sym of symbols) {
     if (!nocache) {
-      const cached = cacheGet<StockPriceData>(`stock_price_${sym}`);
+      const cached = cacheGet<GlobalStockPriceData>(`global_stock_price_${sym}`);
       if (cached) { results[sym] = cached; continue; }
     }
     uncached.push(sym);
@@ -68,7 +91,7 @@ async function fetchBatchPrices(symbols: string[], nocache: boolean): Promise<Re
   if (uncached.length > 0) {
     await Promise.allSettled(uncached.map(async (sym) => {
       const data = await fetchYahooPrice(sym);
-      if (data) cacheSet(`stock_price_${sym}`, data, ttl);
+      if (data) cacheSet(`global_stock_price_${sym}`, data, ttl);
       results[sym] = data;
     }));
   }
@@ -80,7 +103,7 @@ export async function GET(req: NextRequest) {
   const raw = (req.nextUrl.searchParams.get('symbols') ?? '').trim();
   if (!raw) return NextResponse.json({ error: 'symbols required' }, { status: 400 });
 
-  const symbols = raw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean).slice(0, 30);
+  const symbols = raw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean).slice(0, 50);
   if (symbols.length === 0) return NextResponse.json({ results: {} });
 
   const nocache = req.nextUrl.searchParams.get('nocache') === '1';
@@ -96,7 +119,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'symbols array required' }, { status: 400 });
     }
 
-    const symbols = rawSymbols.map(s => String(s).trim().toUpperCase()).filter(Boolean).slice(0, 30);
+    const symbols = rawSymbols.map(s => String(s).trim().toUpperCase()).filter(Boolean).slice(0, 50);
     if (symbols.length === 0) return NextResponse.json({ results: {} });
 
     const nocache = body?.nocache === true;

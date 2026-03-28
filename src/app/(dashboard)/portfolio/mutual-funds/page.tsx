@@ -40,6 +40,8 @@ interface HoldingRow extends RawHolding {
   gainLossPct:   number | null;
   xirr:          number | null;
   memberName:    string;
+  dayChange:     number | null;    // NAV change from previous day
+  dayChangePct:  number | null;    // NAV change percentage
 }
 
 type SortKey = 'value' | 'pnlPct' | 'xirr' | 'name' | 'recent';
@@ -436,6 +438,7 @@ export default function MutualFundsPortfolioPage() {
         currentNav: null, navDate: null, navLoading: true,
         investedValue: invested,
         currentValue: null, gainLoss: null, gainLossPct: null, xirr: null,
+        dayChange: null, dayChangePct: null,
         memberName: names[ownerId] ?? '',
       };
     });
@@ -449,7 +452,7 @@ export default function MutualFundsPortfolioPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function applyNavResults(
-    navMap: Record<string, { nav: number; navDate: string } | null>,
+    navMap: Record<string, { nav: number; navDate: string; previousNav: number | null } | null>,
     baseRows?: HoldingRow[],
   ) {
     setHoldings(prev => {
@@ -459,9 +462,12 @@ export default function MutualFundsPortfolioPage() {
         if (!navResult) return { ...h, navLoading: false };
         const currentNav  = navResult.nav;
         const navDate     = navResult.navDate;
+        const previousNav = navResult.previousNav;
         const currentValue = Number(h.quantity) * currentNav;
         const gainLoss    = currentValue - h.investedValue;
         const gainLossPct = h.investedValue > 0 ? (gainLoss / h.investedValue) * 100 : 0;
+        const dayChange = previousNav != null ? currentNav - previousNav : null;
+        const dayChangePct = previousNav != null && previousNav > 0 ? ((currentNav - previousNav) / previousNav) * 100 : null;
         let xirr: number | null = null;
         const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip');
         if (buyTxns.length) {
@@ -474,14 +480,14 @@ export default function MutualFundsPortfolioPage() {
             } catch { /* skip */ }
           }
         }
-        return { ...h, currentNav, navDate, navLoading: false, currentValue, gainLoss, gainLossPct, xirr };
+        return { ...h, currentNav, navDate, navLoading: false, currentValue, gainLoss, gainLossPct, xirr, dayChange, dayChangePct };
       });
     });
   }
 
   async function fetchNavBatch(symbols: string[], baseRows?: HoldingRow[], nocache = false): Promise<number> {
     // Check client cache first for non-refresh fetches
-    const navMap: Record<string, { nav: number; navDate: string } | null> = {};
+    const navMap: Record<string, { nav: number; navDate: string; previousNav: number | null } | null> = {};
     const toFetch: string[] = [];
 
     if (!nocache) {
@@ -503,11 +509,11 @@ export default function MutualFundsPortfolioPage() {
         });
         if (res.ok) {
           const json = await res.json();
-          const batchResults: Record<string, { nav: number; navDate: string; fundName: string; fundHouse: string } | null> = json.results ?? {};
+          const batchResults: Record<string, { nav: number; navDate: string; fundName: string; fundHouse: string; previousNav?: number | null } | null> = json.results ?? {};
           for (const [sym, data] of Object.entries(batchResults)) {
             if (data) {
-              navCacheSet(sym, data.nav, data.navDate);
-              navMap[sym] = { nav: data.nav, navDate: data.navDate };
+              navCacheSet(sym, data.nav, data.navDate, data.previousNav ?? null);
+              navMap[sym] = { nav: data.nav, navDate: data.navDate, previousNav: data.previousNav ?? null };
             } else {
               navMap[sym] = null;
             }
@@ -824,20 +830,29 @@ export default function MutualFundsPortfolioPage() {
       {holdings.length > 0 && (
         <>
           {/* ── Summary bar ────────────────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            {[
-              { label: 'Total Invested',  value: formatLargeINR(totalInvested),     color: undefined },
-              { label: 'Current Value',   value: formatLargeINR(totalCurrentValue), color: undefined },
-              { label: 'Total P&L',       value: (totalGainLoss >= 0 ? '+' : '') + formatLargeINR(totalGainLoss), color: totalGainLoss >= 0 ? '#059669' : '#DC2626' },
-              { label: 'Absolute Return', value: (totalGainLossPct >= 0 ? '+' : '') + totalGainLossPct.toFixed(2) + '%', color: totalGainLossPct >= 0 ? '#059669' : '#DC2626' },
-              { label: 'Overall XIRR',    value: overallXirr != null ? `${overallXirr >= 0 ? '+' : ''}${overallXirr.toFixed(1)}%` : '—', color: overallXirr != null ? (overallXirr >= 0 ? '#059669' : '#DC2626') : '#9CA3AF' },
-            ].map((c) => (
-              <div key={c.label} className="wv-card p-4">
-                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: '#9CA3AF' }}>{c.label}</p>
-                <p className="font-display text-lg font-semibold" style={{ color: c.color ?? '#1B2A4A' }}>{c.value}</p>
+          {(() => {
+            const totalDayPnl = filtered.reduce((s, h) => {
+              if (h.dayChange == null) return s;
+              return s + Number(h.quantity) * h.dayChange;
+            }, 0);
+            return (
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                {[
+                  { label: 'Total Invested',  value: formatLargeINR(totalInvested),     color: undefined },
+                  { label: 'Current Value',   value: formatLargeINR(totalCurrentValue), color: undefined },
+                  { label: 'Total P&L',       value: (totalGainLoss >= 0 ? '+' : '') + formatLargeINR(totalGainLoss), color: totalGainLoss >= 0 ? '#059669' : '#DC2626' },
+                  { label: 'Absolute Return', value: (totalGainLossPct >= 0 ? '+' : '') + totalGainLossPct.toFixed(2) + '%', color: totalGainLossPct >= 0 ? '#059669' : '#DC2626' },
+                  { label: 'Overall XIRR',    value: overallXirr != null ? `${overallXirr >= 0 ? '+' : ''}${overallXirr.toFixed(1)}%` : '—', color: overallXirr != null ? (overallXirr >= 0 ? '#059669' : '#DC2626') : '#9CA3AF' },
+                  { label: 'Day P&L',          value: (totalDayPnl >= 0 ? '+' : '') + formatLargeINR(totalDayPnl), color: totalDayPnl >= 0 ? '#059669' : '#DC2626' },
+                ].map((c) => (
+                  <div key={c.label} className="wv-card p-4">
+                    <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: '#9CA3AF' }}>{c.label}</p>
+                    <p className="font-display text-lg font-semibold" style={{ color: c.color ?? '#1B2A4A' }}>{c.value}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            );
+          })()}
 
           {/* ── Filter bar ─────────────────────────────────────────────────────────── */}
           <div className="wv-card p-4 space-y-3">
@@ -937,23 +952,42 @@ export default function MutualFundsPortfolioPage() {
             brokerPalette={BROKER_PALETTE}
           />
 
+          {/* ── Top Gainer / Loser strip ──────────────────────────────────────────── */}
+          {filtered.length > 0 && (() => {
+            const withDay = filtered.filter(h => h.dayChangePct != null);
+            if (withDay.length === 0) return null;
+            const topG = withDay.reduce((b, h) => (h.dayChangePct ?? 0) > (b.dayChangePct ?? 0) ? h : b);
+            const topL = withDay.reduce((w, h) => (h.dayChangePct ?? 0) < (w.dayChangePct ?? 0) ? h : w);
+            return (
+              <div className="flex items-center gap-4 text-xs px-1 mb-2">
+                {(topG.dayChangePct ?? 0) > 0 && (
+                  <span style={{ color: '#059669' }}>Top Gainer: <strong>{topG.name.slice(0, 30)}</strong> +{(topG.dayChangePct ?? 0).toFixed(2)}%</span>
+                )}
+                {(topL.dayChangePct ?? 0) < 0 && (
+                  <span style={{ color: '#DC2626' }}>Top Loser: <strong>{topL.name.slice(0, 30)}</strong> {(topL.dayChangePct ?? 0).toFixed(2)}%</span>
+                )}
+              </div>
+            );
+          })()}
+
           {/* ── Holdings table ──────────────────────────────────────────────────────── */}
           <div className="wv-card overflow-hidden">
             <div className="overflow-x-auto">
               {/* min-width forces horizontal scroll rather than column overflow */}
               <table className="text-xs" style={{ tableLayout: 'fixed', width: '100%', minWidth: 960 }}>
                 <colgroup>
-                  <col style={{ width: '26%' }} /> {/* Fund — widest, wraps */}
-                  <col style={{ width: '9%'  }} /> {/* Broker — wraps to 2 lines */}
-                  <col style={{ width: '7%'  }} /> {/* Units */}
+                  <col style={{ width: '24%' }} /> {/* Fund — widest, wraps */}
+                  <col style={{ width: '8%'  }} /> {/* Broker — wraps to 2 lines */}
+                  <col style={{ width: '6%'  }} /> {/* Units */}
                   <col style={{ width: '7%'  }} /> {/* Avg NAV */}
                   <col style={{ width: '8%'  }} /> {/* Invested */}
                   <col style={{ width: '7%'  }} /> {/* Current NAV */}
                   <col style={{ width: '8%'  }} /> {/* Current Value */}
-                  <col style={{ width: '8%'  }} /> {/* P&L */}
+                  <col style={{ width: '6%'  }} /> {/* Day P&L */}
+                  <col style={{ width: '7%'  }} /> {/* P&L */}
                   <col style={{ width: '5%'  }} /> {/* P&L % */}
                   <col style={{ width: '5%'  }} /> {/* XIRR */}
-                  <col style={{ width: '7%'  }} /> {/* Portfolio */}
+                  <col style={{ width: '6%'  }} /> {/* Portfolio */}
                   <col style={{ width: '3%'  }} /> {/* Actions */}
                 </colgroup>
                 <thead>
@@ -966,6 +1000,7 @@ export default function MutualFundsPortfolioPage() {
                       { label: 'Invested',      align: 'right' },
                       { label: 'Current NAV',   align: 'right' },
                       { label: 'Current Value', align: 'right' },
+                      { label: 'Day',           align: 'right' },
                       { label: 'P&L',           align: 'right' },
                       { label: 'P&L %',         align: 'right' },
                       { label: 'XIRR',          align: 'right' },
@@ -981,7 +1016,7 @@ export default function MutualFundsPortfolioPage() {
                 </thead>
                 <tbody>
                   {groupedFiltered.length === 0 ? (
-                    <tr><td colSpan={12} className="px-4 py-8 text-center text-xs" style={{ color: '#9CA3AF' }}>No funds match the current filters</td></tr>
+                    <tr><td colSpan={13} className="px-4 py-8 text-center text-xs" style={{ color: '#9CA3AF' }}>No funds match the current filters</td></tr>
                   ) : groupedFiltered.map((group) => {
                     const renderFundRow = (h: HoldingRow, extraStyle?: React.CSSProperties) => {
                       const rowBg = h.gainLoss != null
@@ -1012,6 +1047,13 @@ export default function MutualFundsPortfolioPage() {
                             {h.navLoading ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#9CA3AF' }} /> : h.currentNav ? <span style={{ color: '#1A1A2E' }}>₹{h.currentNav.toFixed(4)}</span> : <span style={{ color: '#9CA3AF' }}>—</span>}
                           </td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#1A1A2E', fontWeight: 500, whiteSpace: 'nowrap', textAlign: 'right' }}>{h.currentValue ? formatLargeINR(h.currentValue) : '—'}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
+                            {h.dayChange != null ? (
+                              <span className="font-semibold" style={{ color: (Number(h.quantity) * h.dayChange) >= 0 ? '#059669' : '#DC2626' }}>
+                                {(Number(h.quantity) * h.dayChange) >= 0 ? '+' : ''}{formatLargeINR(Number(h.quantity) * h.dayChange)}
+                              </span>
+                            ) : '—'}
+                          </td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
                             {h.gainLoss != null ? <span className="font-semibold" style={{ color: h.gainLoss >= 0 ? '#059669' : '#DC2626' }}>{h.gainLoss >= 0 ? '+' : ''}{formatLargeINR(h.gainLoss)}</span> : '—'}
                           </td>
@@ -1065,6 +1107,18 @@ export default function MutualFundsPortfolioPage() {
                             {group.navLoading ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#9CA3AF' }} /> : group.currentNav ? <span style={{ color: '#1A1A2E' }}>₹{group.currentNav.toFixed(4)}</span> : <span style={{ color: '#9CA3AF' }}>—</span>}
                           </td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'right', color: '#1A1A2E' }}>{group.totalCurrentValue != null ? formatLargeINR(group.totalCurrentValue) : '—'}</td>
+                          {(() => {
+                            const hasDay = group.holdings.some(h => h.dayChange != null);
+                            if (!hasDay) return <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right', color: '#9CA3AF' }}>—</td>;
+                            const groupDayPnl = group.holdings.reduce((s, h) => s + (h.dayChange != null ? Number(h.quantity) * h.dayChange : 0), 0);
+                            return (
+                              <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
+                                <span className="font-semibold" style={{ color: groupDayPnl >= 0 ? '#059669' : '#DC2626' }}>
+                                  {groupDayPnl >= 0 ? '+' : ''}{formatLargeINR(groupDayPnl)}
+                                </span>
+                              </td>
+                            );
+                          })()}
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
                             {tGain != null ? <span className="font-semibold" style={{ color: tGain >= 0 ? '#059669' : '#DC2626' }}>{tGain >= 0 ? '+' : ''}{formatLargeINR(tGain)}</span> : '—'}
                           </td>

@@ -106,7 +106,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     const familyId = userProfile.family_id;
 
     // Fetch all data in parallel — RLS scopes everything to the family
-    const [holdingsRes, manualRes, insuranceRes, membersRes] = await Promise.all([
+    const [holdingsRes, manualRes, insuranceRes, membersRes, extraMembersRes] = await Promise.all([
       supabase
         .from('holdings')
         .select('id, portfolio_id, asset_type, symbol, name, quantity, avg_buy_price, metadata, portfolio:portfolios(id, user_id), transactions(id, type, quantity, price, date, fees)'),
@@ -122,12 +122,19 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
         .from('users')
         .select('id, name, role')
         .eq('family_id', familyId),
+      supabase
+        .from('family_members')
+        .select('id, name, role')
+        .eq('family_id', familyId),
     ]);
 
     const holdings: Row[] = holdingsRes.data ?? [];
     const manualAssets: Row[] = manualRes.data ?? [];
     const insurance: Row[] = insuranceRes.data ?? [];
-    const familyMembers: Row[] = membersRes.data ?? [];
+    const familyMembers: Row[] = [
+      ...(membersRes.data ?? []),
+      ...(extraMembersRes.data ?? []),
+    ];
 
     const hasRealData = holdings.length > 0 || manualAssets.length > 0;
 

@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   RefreshCw, PlusCircle, Loader2, AlertCircle, TrendingUp, TrendingDown,
-  MoreHorizontal, Search, Download, X, ChevronDown, ChevronRight,
+  MoreHorizontal, Search, Download, X, ChevronDown, ChevronRight, Globe,
 } from 'lucide-react';
-import { StockDetailSheet, type StockHoldingDetail } from '@/components/portfolio/StockDetailSheet';
+import { GlobalStockDetailSheet, type GlobalStockHoldingDetail } from '@/components/portfolio/GlobalStockDetailSheet';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR, formatPercentage } from '@/lib/utils/formatters';
 import { calculateXIRR } from '@/lib/utils/calculations';
@@ -30,45 +30,85 @@ interface RawHolding {
 }
 
 interface HoldingRow extends RawHolding {
-  currentPrice:    number | null;
-  priceLoading:    boolean;
+  currentPrice:     number | null;
+  priceLoading:     boolean;
   priceUnavailable: boolean;
-  manualPrice:     number | null;  // user-entered fallback price (session only)
-  investedValue:   number;
-  currentValue:    number | null;
-  gainLoss:        number | null;
-  gainLossPct:     number | null;
-  dayChange:       number | null;   // price change today (CMP - prev close)
-  dayChangePct:    number | null;   // day change percentage
-  xirr:            number | null;
-  memberName:      string;
-  sector:          string;
+  investedValue:    number;
+  currentValue:     number | null;
+  investedINR:      number;
+  currentValueINR:  number | null;
+  gainLoss:         number | null;
+  gainLossPct:      number | null;
+  xirr:             number | null;
+  dayChange:        number | null;
+  dayChangePct:     number | null;
+  memberName:       string;
+  country:          string;
+  currency:         string;
+  fxRate:           number | null;
 }
 
-type SortKey = 'value' | 'pnlPct' | 'xirr' | 'name' | 'recent';
+type SortKey = 'value' | 'pnlPct' | 'xirr' | 'name';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Country / Currency helpers ──────────────────────────────────────────────
 
-const _SECTORS = ['IT','Banking','Finance','FMCG','Auto','Pharma','Energy','Metals','Infrastructure','Chemicals','Consumer','Healthcare','Cement','Insurance','Telecom','Real Estate','Technology','Defense','Retail','Capital Goods','Other'];
+const COUNTRY_FLAG: Record<string, string> = {
+  US: '🇺🇸', UK: '🇬🇧', DE: '🇩🇪', FR: '🇫🇷',
+  JP: '🇯🇵', HK: '🇭🇰', AU: '🇦🇺', SG: '🇸🇬',
+  CA: '🇨🇦', CH: '🇨🇭', CN: '🇨🇳', KR: '🇰🇷',
+  NL: '🇳🇱', SE: '🇸🇪', IT: '🇮🇹', ES: '🇪🇸',
+  IE: '🇮🇪', BR: '🇧🇷', AE: '🇦🇪', IN: '🇮🇳',
+};
 
-function sectorColor(sector: string): string {
-  const COLORS: Record<string, string> = {
-    'IT':           '#3B82F6', 'Banking':      '#1B2A4A', 'Finance':     '#5C6BC0',
-    'FMCG':         '#059669', 'Auto':         '#EA580C', 'Pharma':      '#DB2777',
-    'Energy':       '#D97706', 'Metals':       '#6B7280', 'Infrastructure':'#8B5CF6',
-    'Chemicals':    '#14B8A6', 'Consumer':     '#F59E0B', 'Healthcare':  '#EC4899',
-    'Cement':       '#9CA3AF', 'Insurance':    '#2E8B8B', 'Telecom':     '#6366F1',
-    'Real Estate':  '#C9A84C', 'Technology':   '#2563EB', 'Defense':     '#374151',
-    'Retail':       '#7C3AED', 'Capital Goods':'#10B981', 'Other':       '#6B7280',
-  };
-  return COLORS[sector] ?? '#6B7280';
+const CURRENCY_COUNTRY: Record<string, string> = {
+  USD: 'US', GBP: 'UK', GBp: 'UK', EUR: 'DE', JPY: 'JP', HKD: 'HK',
+  AUD: 'AU', SGD: 'SG', CAD: 'CA', CHF: 'CH', CNY: 'CN', KRW: 'KR',
+  SEK: 'SE', BRL: 'BR', AED: 'AE', INR: 'IN',
+};
+
+const COUNTRY_REGION: Record<string, string> = {
+  US: 'US', CA: 'US',
+  UK: 'Europe', DE: 'Europe', FR: 'Europe', NL: 'Europe', SE: 'Europe', IT: 'Europe',
+  ES: 'Europe', IE: 'Europe', CH: 'Europe',
+  JP: 'Asia', HK: 'Asia', SG: 'Asia', AU: 'Asia', CN: 'Asia', KR: 'Asia', IN: 'Asia',
+  BR: 'LatAm', AE: 'Middle East',
+};
+
+function resolveCountry(meta: Record<string, unknown>, currency: string): string {
+  if (meta?.country) return String(meta.country);
+  return CURRENCY_COUNTRY[currency] ?? 'US';
 }
+
+function countryFlag(code: string): string {
+  return COUNTRY_FLAG[code] ?? '🌍';
+}
+
+function regionOf(country: string): string {
+  return COUNTRY_REGION[country] ?? 'Other';
+}
+
+const REGION_COLORS: Record<string, string> = {
+  US: '#1B2A4A', Europe: '#2563EB', Asia: '#059669', LatAm: '#EA580C', 'Middle East': '#D97706', Other: '#6B7280',
+};
+
+function countryColor(country: string): string {
+  return REGION_COLORS[regionOf(country)] ?? '#6B7280';
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function fmt(v: number): string {
   if (v >= 10_000_000) return `₹${(v / 10_000_000).toFixed(2)}Cr`;
   if (v >= 100_000)    return `₹${(v / 100_000).toFixed(2)}L`;
   if (v >= 1_000)      return `₹${(v / 1_000).toFixed(1)}K`;
   return `₹${Math.round(v)}`;
+}
+
+function fmtLocal(v: number, currency: string): string {
+  const sym = currency === 'GBP' || currency === 'GBp' ? '£' : currency === 'EUR' ? '€' : currency === 'JPY' ? '¥' : '$';
+  const divisor = currency === 'GBp' ? 100 : 1;
+  const val = v / divisor;
+  return `${sym}${val.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 }
 
 function _PnlBadge({ value, pct }: { value: number; pct: number }) {
@@ -86,7 +126,7 @@ function _PnlBadge({ value, pct }: { value: number; pct: number }) {
   );
 }
 
-// ─── Action Menu ──────────────────────────────────────────────────────────────
+// ─── Action Menu ─────────────────────────────────────────────────────────────
 
 function ActionMenu({
   holdingId, onDelete, onViewDetails,
@@ -98,13 +138,12 @@ function ActionMenu({
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const actions = [
-    { label: 'View details',         action: () => { onViewDetails(holdingId); setOpen(false); } },
-    { label: 'Edit',                 action: () => { router.push(`/add-assets/indian-stocks`); setOpen(false); } },
-    { label: 'Add More Shares',      action: () => { router.push(`/add-assets/indian-stocks`); setOpen(false); } },
-    { label: 'Sell',                 action: () => { router.push(`/add-assets/indian-stocks`); setOpen(false); } },
-    { label: 'Record Dividend',      action: () => { router.push(`/add-assets/indian-stocks`); setOpen(false); } },
-    { label: 'Record Corporate Action', action: () => { router.push(`/add-assets/indian-stocks`); setOpen(false); } },
-    { label: 'Delete',               action: () => { onDelete(holdingId); setOpen(false); }, danger: true },
+    { label: 'View details',    action: () => { onViewDetails(holdingId); setOpen(false); } },
+    { label: 'Edit',            action: () => { router.push(`/add-assets/global-stocks`); setOpen(false); } },
+    { label: 'Add More Shares', action: () => { router.push(`/add-assets/global-stocks`); setOpen(false); } },
+    { label: 'Sell',            action: () => { router.push(`/add-assets/global-stocks`); setOpen(false); } },
+    { label: 'Record Dividend', action: () => { router.push(`/add-assets/global-stocks`); setOpen(false); } },
+    { label: 'Delete',          action: () => { onDelete(holdingId); setOpen(false); }, danger: true },
   ];
   return (
     <div className="relative">
@@ -131,7 +170,7 @@ function ActionMenu({
   );
 }
 
-// ─── Donut Chart ──────────────────────────────────────────────────────────────
+// ─── Donut Chart ─────────────────────────────────────────────────────────────
 
 interface PieEntry { name: string; value: number }
 
@@ -197,9 +236,10 @@ function DonutChart({ title, data, getColor }: {
   );
 }
 
+const BROKER_PALETTE   = ['#1B2A4A', '#2E8B8B', '#C9A84C', '#059669', '#7C3AED', '#EA580C', '#2563EB', '#DB2777'];
 const PORTFOLIO_PALETTE = ['#7C3AED', '#2563EB', '#059669', '#EA580C', '#DB2777', '#D97706', '#0891B2'];
 
-// ─── Pill ─────────────────────────────────────────────────────────────────────
+// ─── Pill ────────────────────────────────────────────────────────────────────
 
 function Pill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
@@ -215,9 +255,9 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Page ────────────────────────────────────────────────────────────────────
 
-export default function IndianStocksPortfolioPage() {
+export default function GlobalStocksPortfolioPage() {
   const router   = useRouter();
   const supabase = createClient();
 
@@ -228,13 +268,13 @@ export default function IndianStocksPortfolioPage() {
   const [toast,          setToast]          = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [detailId,       setDetailId]       = useState<string | null>(null);
   const [_memberNames,   setMemberNames]    = useState<Record<string, string>>({});
-  const [manualPriceInput, setManualPriceInput] = useState<Record<string, string>>({}); // symbol → input string
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set()); // default expanded — populated on first group render
+  const [fxRates,        setFxRates]        = useState<Record<string, number>>({});
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // Filters
   const [filterBrokers,    setFilterBrokers]    = useState<Set<string>>(new Set());
   const [filterPortfolios, setFilterPortfolios] = useState<Set<string>>(new Set());
-  const [filterSectors,    setFilterSectors]    = useState<Set<string>>(new Set());
+  const [filterCountries,  setFilterCountries]  = useState<Set<string>>(new Set());
   const [sortKey,          setSortKey]          = useState<SortKey>('value');
   const [searchQuery,      setSearchQuery]      = useState('');
 
@@ -246,12 +286,27 @@ export default function IndianStocksPortfolioPage() {
 
   function clearFilters() {
     setFilterBrokers(new Set()); setFilterPortfolios(new Set());
-    setFilterSectors(new Set()); setSearchQuery('');
+    setFilterCountries(new Set()); setSearchQuery('');
   }
 
-  const isFiltered = filterBrokers.size > 0 || filterPortfolios.size > 0 || filterSectors.size > 0 || !!searchQuery;
+  const isFiltered = filterBrokers.size > 0 || filterPortfolios.size > 0 || filterCountries.size > 0 || !!searchQuery;
 
-  // ── Load holdings ────────────────────────────────────────────────────────────
+  // ── Fetch FX rates ──────────────────────────────────────────────────────────
+
+  async function fetchFxRates(currencies: string[]): Promise<Record<string, number>> {
+    const unique = Array.from(new Set(currencies.filter(c => c !== 'INR')));
+    const rates: Record<string, number> = { INR: 1 };
+    await Promise.allSettled(unique.map(async (cur) => {
+      try {
+        const res = await fetch(`/api/fx/rate?from=${cur}&to=INR`);
+        const json = await res.json();
+        if (json.rate) rates[cur] = json.rate;
+      } catch { /* use fallback if available later */ }
+    }));
+    return rates;
+  }
+
+  // ── Load holdings ──────────────────────────────────────────────────────────
 
   const loadHoldings = useCallback(async () => {
     setLoading(true); setError(null);
@@ -264,7 +319,7 @@ export default function IndianStocksPortfolioPage() {
     setMemberNames(names);
 
     // Check holdings cache first
-    const cachedHoldings = holdingsCacheGet<RawHolding[]>('stock_holdings');
+    const cachedHoldings = holdingsCacheGet<RawHolding[]>('global_stock_holdings');
     let data: unknown[] | null = cachedHoldings;
 
     if (!data) {
@@ -276,27 +331,50 @@ export default function IndianStocksPortfolioPage() {
           brokers(id, name, platform_type),
           transactions(id, date, price, quantity, type, fees, notes, metadata)
         `)
-        .eq('asset_type', 'indian_stock')
-        .gt('quantity', 0)  // only active holdings
+        .eq('asset_type', 'global_stock')
+        .gt('quantity', 0)
         .order('created_at', { ascending: false });
 
       if (dbErr) { setError(dbErr.message); setLoading(false); return; }
       data = freshData;
-      if (data) holdingsCacheSet('stock_holdings', data as unknown as RawHolding[]);
+      if (data) holdingsCacheSet('global_stock_holdings', data as unknown as RawHolding[]);
     }
 
     if (!data) { setError('Failed to load holdings'); setLoading(false); return; }
 
-    const rows: HoldingRow[] = (data as unknown as RawHolding[]).map(h => {
-      const invested = Number(h.quantity) * Number(h.avg_buy_price);
-      const ownerId  = h.portfolios?.user_id ?? '';
+    const rawRows = data as unknown as RawHolding[];
+
+    // Determine currencies from metadata
+    const currencySet = new Set<string>();
+    rawRows.forEach(h => {
+      const cur = String(h.metadata?.currency ?? 'USD');
+      currencySet.add(cur);
+    });
+
+    // Fetch FX rates for all currencies
+    const rates = await fetchFxRates(Array.from(currencySet));
+    setFxRates(rates);
+
+    const rows: HoldingRow[] = rawRows.map(h => {
+      const cur        = String(h.metadata?.currency ?? 'USD');
+      const country    = resolveCountry(h.metadata, cur);
+      const rate       = rates[cur] ?? null;
+      const invested   = Number(h.quantity) * Number(h.avg_buy_price);
+      const investedINR = rate != null ? invested * rate : invested;
+      const ownerId    = h.portfolios?.user_id ?? '';
       return {
         ...h,
-        currentPrice: null, priceLoading: true, priceUnavailable: false, manualPrice: null,
+        currentPrice: null, priceLoading: true, priceUnavailable: false,
         investedValue: invested,
-        currentValue: null, gainLoss: null, gainLossPct: null, dayChange: null, dayChangePct: null, xirr: null,
+        currentValue: null,
+        investedINR,
+        currentValueINR: null,
+        gainLoss: null, gainLossPct: null, xirr: null,
+        dayChange: null, dayChangePct: null,
         memberName: names[ownerId] ?? '',
-        sector: String(h.metadata?.sector ?? 'Other'),
+        country,
+        currency: cur,
+        fxRate: rate,
       };
     });
 
@@ -304,41 +382,49 @@ export default function IndianStocksPortfolioPage() {
     setLoading(false);
 
     // Batch-fetch all prices in a single request
-    const unique = Array.from(new Set(rows.map(r => r.symbol)));
-    await fetchPriceBatch(unique, rows, false);
+    const uniqueSymbols = Array.from(new Set(rows.map(r => r.symbol)));
+    await fetchPriceBatch(uniqueSymbols, rows, rates, false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function applyPrice(symbol: string, price: number) {
-    setHoldings(prev => prev.map(h => {
-      if (h.symbol !== symbol) return h;
-      const currentValue = Number(h.quantity) * price;
-      const gainLoss     = currentValue - h.investedValue;
-      const gainLossPct  = h.investedValue > 0 ? (gainLoss / h.investedValue) * 100 : 0;
-      let xirr: number | null = null;
-      const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip');
-      if (buyTxns.length > 0) {
-        const earliest = buyTxns.reduce((a, b) => new Date(a.date) < new Date(b.date) ? a : b);
-        const d0 = new Date(earliest.date);
-        if (new Date() > d0) {
-          try {
-            const r = calculateXIRR([-h.investedValue, currentValue], [d0, new Date()]);
-            if (isFinite(r)) xirr = r * 100;
-          } catch { /* skip */ }
-        }
+  function computeRow(h: HoldingRow, price: number, rates: Record<string, number>): HoldingRow {
+    const rate = rates[h.currency] ?? h.fxRate ?? 1;
+    const currentValue = Number(h.quantity) * price;
+    const currentValueINR = currentValue * rate;
+    const investedINR = h.investedValue * rate;
+    const gainLoss = currentValueINR - investedINR;
+    const gainLossPct = investedINR > 0 ? (gainLoss / investedINR) * 100 : 0;
+    let xirr: number | null = null;
+    const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip');
+    if (buyTxns.length > 0) {
+      const earliest = buyTxns.reduce((a, b) => new Date(a.date) < new Date(b.date) ? a : b);
+      const d0 = new Date(earliest.date);
+      if (new Date() > d0) {
+        try {
+          const r = calculateXIRR([-investedINR, currentValueINR], [d0, new Date()]);
+          if (isFinite(r)) xirr = r * 100;
+        } catch { /* skip */ }
       }
-      return { ...h, currentPrice: price, priceLoading: false, priceUnavailable: false, currentValue, gainLoss, gainLossPct, dayChange: null, dayChangePct: null, xirr };
-    }));
+    }
+    return {
+      ...h,
+      currentPrice: price, priceLoading: false, priceUnavailable: false,
+      currentValue, currentValueINR, investedINR,
+      gainLoss, gainLossPct, xirr, fxRate: rate,
+    };
   }
 
-  async function fetchPriceBatch(symbols: string[], baseRows?: HoldingRow[], nocache = false): Promise<number> {
+  async function fetchPriceBatch(
+    symbols: string[], baseRows?: HoldingRow[], rates?: Record<string, number>, nocache = false
+  ): Promise<number> {
+    const rateMap = rates ?? fxRates;
     try {
-      const res  = await fetch('/api/stocks/price/batch', {
+      const res = await fetch('/api/stocks/global/price/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ symbols, nocache }),
       });
       const json = await res.json();
-      const batchResults: Record<string, { price: number; change?: number; changePct?: number; previousClose?: number } | null> = json.results ?? {};
+      const batchResults: Record<string, { price: number; currency?: string; change?: number; changePct?: number; previousClose?: number } | null> = json.results ?? {};
       let succeeded = 0;
       setHoldings(prev => {
         const source = baseRows ?? prev;
@@ -347,22 +433,12 @@ export default function IndianStocksPortfolioPage() {
           const result = batchResults[h.symbol];
           if (!result) return { ...h, priceLoading: false, priceUnavailable: true };
           succeeded++;
-          const currentValue = Number(h.quantity) * result.price;
-          const gainLoss     = currentValue - h.investedValue;
-          const gainLossPct  = h.investedValue > 0 ? (gainLoss / h.investedValue) * 100 : 0;
-          let xirr: number | null = null;
-          const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip');
-          if (buyTxns.length > 0) {
-            const earliest = buyTxns.reduce((a, b) => new Date(a.date) < new Date(b.date) ? a : b);
-            const d0 = new Date(earliest.date);
-            if (new Date() > d0) {
-              try {
-                const r = calculateXIRR([-h.investedValue, currentValue], [d0, new Date()]);
-                if (isFinite(r)) xirr = r * 100;
-              } catch { /* skip */ }
-            }
-          }
-          return { ...h, currentPrice: result.price, priceLoading: false, priceUnavailable: false, currentValue, gainLoss, gainLossPct, dayChange: result.change ?? null, dayChangePct: result.changePct ?? null, xirr };
+          const updated = computeRow(h, result.price, rateMap);
+          return {
+            ...updated,
+            dayChange: result.change ?? null,
+            dayChangePct: result.changePct ?? null,
+          };
         });
       });
       return succeeded;
@@ -376,13 +452,8 @@ export default function IndianStocksPortfolioPage() {
     if (bypassCache) {
       setHoldings(prev => prev.map(h => h.symbol === symbol ? { ...h, priceLoading: true, priceUnavailable: false } : h));
     }
-    const count = await fetchPriceBatch([symbol], undefined, bypassCache);
+    const count = await fetchPriceBatch([symbol], undefined, undefined, bypassCache);
     return count > 0;
-  }
-
-  function submitManualPrice(symbol: string) {
-    const val = parseFloat(manualPriceInput[symbol] ?? '');
-    if (!isNaN(val) && val > 0) applyPrice(symbol, val);
   }
 
   useEffect(() => { loadHoldings(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -390,8 +461,12 @@ export default function IndianStocksPortfolioPage() {
   async function refreshAllPrices() {
     setPriceRefreshing(true);
     holdingsCacheClearAll();
+    // Refresh FX rates too
+    const currencySet = new Set(holdings.map(h => h.currency));
+    const freshRates = await fetchFxRates(Array.from(currencySet));
+    setFxRates(freshRates);
     const unique = Array.from(new Set(holdings.map(h => h.symbol)));
-    const succeeded = await fetchPriceBatch(unique, undefined, true);
+    const succeeded = await fetchPriceBatch(unique, undefined, freshRates, true);
     const total = unique.length;
     setPriceRefreshing(false);
     setToast({ type: succeeded === total ? 'success' : 'error',
@@ -410,38 +485,39 @@ export default function IndianStocksPortfolioPage() {
 
   const brokers    = useMemo(() => Array.from(new Set(holdings.map(h => h.brokers?.name ?? '—').filter(Boolean))), [holdings]);
   const portfolios = useMemo(() => Array.from(new Set(holdings.map(h => h.portfolios?.name ?? 'My Portfolio').filter(Boolean))), [holdings]);
-  const sectors    = useMemo(() => Array.from(new Set(holdings.map(h => h.sector).filter(Boolean))), [holdings]);
+  const countries  = useMemo(() => Array.from(new Set(holdings.map(h => h.country).filter(Boolean))).sort(), [holdings]);
 
-  // ── Filtered + sorted holdings ─────────────────────────────────────────────
+  // ── Filtered + sorted holdings ────────────────────────────────────────────
 
   const filtered = useMemo(() => {
     let rows = holdings;
     if (filterBrokers.size > 0)    rows = rows.filter(h => filterBrokers.has(h.brokers?.name ?? '—'));
     if (filterPortfolios.size > 0) rows = rows.filter(h => filterPortfolios.has(h.portfolios?.name ?? 'My Portfolio'));
-    if (filterSectors.size > 0)    rows = rows.filter(h => filterSectors.has(h.sector));
+    if (filterCountries.size > 0)  rows = rows.filter(h => filterCountries.has(h.country));
     if (searchQuery)               rows = rows.filter(h =>
       h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       h.symbol.toLowerCase().includes(searchQuery.toLowerCase())
     );
     return [...rows].sort((a, b) => {
       switch (sortKey) {
-        case 'value':  return (b.currentValue ?? b.investedValue) - (a.currentValue ?? a.investedValue);
+        case 'value':  return (b.currentValueINR ?? b.investedINR) - (a.currentValueINR ?? a.investedINR);
         case 'pnlPct': return (b.gainLossPct ?? 0) - (a.gainLossPct ?? 0);
         case 'xirr':   return (b.xirr ?? -Infinity) - (a.xirr ?? -Infinity);
         case 'name':   return a.name.localeCompare(b.name);
         default:       return 0;
       }
     });
-  }, [holdings, filterBrokers, filterPortfolios, filterSectors, searchQuery, sortKey]);
+  }, [holdings, filterBrokers, filterPortfolios, filterCountries, searchQuery, sortKey]);
 
-  // ── Grouped holdings (multi-broker consolidation) ─────────────────────────
+  // ── Grouped holdings (multi-distributor consolidation) ────────────────────
 
   interface StockGroup {
-    symbol: string; name: string; sector: string;
+    symbol: string; name: string; country: string; currency: string;
     holdings: HoldingRow[]; isMultiBroker: boolean;
-    totalQty: number; totalInvested: number;
-    totalCurrentValue: number | null;
+    totalQty: number; totalInvestedINR: number;
+    totalCurrentValueINR: number | null;
     currentPrice: number | null; priceLoading: boolean; priceUnavailable: boolean;
+    fxRate: number | null;
   }
 
   const groupedFiltered: StockGroup[] = useMemo(() => {
@@ -454,16 +530,18 @@ export default function IndianStocksPortfolioPage() {
     return Array.from(map.entries()).map(([symbol, rows]) => ({
       symbol,
       name: rows[0].name,
-      sector: rows[0].sector,
+      country: rows[0].country,
+      currency: rows[0].currency,
       holdings: rows,
       isMultiBroker: rows.length > 1,
       totalQty: rows.reduce((s, r) => s + Number(r.quantity), 0),
-      totalInvested: rows.reduce((s, r) => s + r.investedValue, 0),
-      totalCurrentValue: rows.every(r => r.currentValue != null)
-        ? rows.reduce((s, r) => s + (r.currentValue ?? 0), 0) : null,
+      totalInvestedINR: rows.reduce((s, r) => s + r.investedINR, 0),
+      totalCurrentValueINR: rows.every(r => r.currentValueINR != null)
+        ? rows.reduce((s, r) => s + (r.currentValueINR ?? 0), 0) : null,
       currentPrice: rows[0].currentPrice,
       priceLoading: rows.some(r => r.priceLoading),
       priceUnavailable: rows.every(r => r.priceUnavailable),
+      fxRate: rows[0].fxRate,
     }));
   }, [filtered]);
 
@@ -480,23 +558,32 @@ export default function IndianStocksPortfolioPage() {
   const uniqueStockCount = groupedFiltered.length;
   const totalUniqueStockCount = useMemo(() => new Set(holdings.map(h => h.symbol)).size, [holdings]);
 
-  // ── Summary totals ─────────────────────────────────────────────────────────
+  // ── Summary totals ────────────────────────────────────────────────────────
 
-  const totalInvested     = filtered.reduce((s, h) => s + h.investedValue, 0);
-  const totalCurrentValue = filtered.reduce((s, h) => s + (h.currentValue ?? h.investedValue), 0);
-  const totalGainLoss     = totalCurrentValue - totalInvested;
-  const totalGainLossPct  = totalInvested > 0 ? (totalGainLoss / totalInvested) * 100 : 0;
+  const totalInvestedINR     = filtered.reduce((s, h) => s + h.investedINR, 0);
+  const totalCurrentValueINR = filtered.reduce((s, h) => s + (h.currentValueINR ?? h.investedINR), 0);
+  const totalGainLoss        = totalCurrentValueINR - totalInvestedINR;
+  const totalGainLossPct     = totalInvestedINR > 0 ? (totalGainLoss / totalInvestedINR) * 100 : 0;
+
+  const totalDayPnl = filtered.reduce((s, h) => {
+    if (h.dayChange == null || h.fxRate == null) return s;
+    return s + Number(h.quantity) * h.dayChange * h.fxRate;
+  }, 0);
+  const totalDayPnlPct = totalCurrentValueINR > 0 && totalDayPnl !== 0
+    ? (totalDayPnl / (totalCurrentValueINR - totalDayPnl)) * 100 : 0;
 
   let overallXirr: number | null = null;
   {
     const allCfs: { amount: number; date: Date }[] = [];
     holdings.forEach(h => {
+      const rate = h.fxRate ?? 1;
       (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip').forEach(t => {
-        allCfs.push({ amount: -(Number(t.quantity) * Number(t.price) + Number(t.fees ?? 0)), date: new Date(t.date) });
+        const costLocal = Number(t.quantity) * Number(t.price) + Number(t.fees ?? 0);
+        allCfs.push({ amount: -(costLocal * rate), date: new Date(t.date) });
       });
     });
-    if (allCfs.length && totalCurrentValue > 0) {
-      const sorted = [...allCfs, { amount: totalCurrentValue, date: new Date() }]
+    if (allCfs.length && totalCurrentValueINR > 0) {
+      const sorted = [...allCfs, { amount: totalCurrentValueINR, date: new Date() }]
         .sort((a, b) => a.date.getTime() - b.date.getTime());
       try {
         const r = calculateXIRR(sorted.map(c => c.amount), sorted.map(c => c.date));
@@ -505,38 +592,39 @@ export default function IndianStocksPortfolioPage() {
     }
   }
 
-  // ── Pie data ───────────────────────────────────────────────────────────────
-
-  const BROKER_PALETTE = ['#1B2A4A', '#2E8B8B', '#C9A84C', '#059669', '#7C3AED', '#EA580C', '#2563EB', '#DB2777'];
+  // ── Pie data ──────────────────────────────────────────────────────────────
 
   const brokerPieData = useMemo(() => {
     const map: Record<string, number> = {};
-    filtered.forEach(h => { const k = h.brokers?.name ?? 'Unknown'; map[k] = (map[k] ?? 0) + (h.currentValue ?? h.investedValue); });
+    filtered.forEach(h => { const k = h.brokers?.name ?? 'Unknown'; map[k] = (map[k] ?? 0) + (h.currentValueINR ?? h.investedINR); });
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [filtered]);
 
-  const sectorPieData = useMemo(() => {
+  const countryPieData = useMemo(() => {
     const map: Record<string, number> = {};
-    filtered.forEach(h => { const k = h.sector || 'Other'; map[k] = (map[k] ?? 0) + (h.currentValue ?? h.investedValue); });
+    filtered.forEach(h => { const k = `${countryFlag(h.country)} ${h.country}`; map[k] = (map[k] ?? 0) + (h.currentValueINR ?? h.investedINR); });
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [filtered]);
 
   const portfolioPieData = useMemo(() => {
     const map: Record<string, number> = {};
-    filtered.forEach(h => { const k = h.portfolios?.name ?? 'My Portfolio'; map[k] = (map[k] ?? 0) + (h.currentValue ?? h.investedValue); });
+    filtered.forEach(h => { const k = h.portfolios?.name ?? 'My Portfolio'; map[k] = (map[k] ?? 0) + (h.currentValueINR ?? h.investedINR); });
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [filtered]);
 
   // ── Export CSV ─────────────────────────────────────────────────────────────
 
   function exportCsv() {
-    const headers = ['Stock', 'Symbol', 'Sector', 'Distributor', 'Portfolio', 'Qty', 'Avg Buy Price', 'Invested', 'CMP', 'Current Value', 'P&L', 'P&L %', 'XIRR'];
+    const headers = ['Stock', 'Symbol', 'Country', 'Currency', 'Distributor', 'Portfolio', 'Qty', 'Avg Buy Price', 'Invested (Local)', 'CMP', 'Value (Local)', 'FX Rate', 'Invested (INR)', 'Value (INR)', 'P&L (INR)', 'P&L %', 'XIRR'];
     const rows = filtered.map(h => [
-      `"${h.name}"`, h.symbol, h.sector, h.brokers?.name ?? '', h.portfolios?.name ?? '',
+      `"${h.name}"`, h.symbol, h.country, h.currency, h.brokers?.name ?? '', h.portfolios?.name ?? '',
       Number(h.quantity).toFixed(0), Number(h.avg_buy_price).toFixed(2),
       h.investedValue.toFixed(2),
       h.currentPrice?.toFixed(2) ?? '',
       h.currentValue?.toFixed(2) ?? '',
+      h.fxRate?.toFixed(4) ?? '',
+      h.investedINR.toFixed(2),
+      h.currentValueINR?.toFixed(2) ?? '',
       h.gainLoss?.toFixed(2) ?? '',
       h.gainLossPct?.toFixed(2) ?? '',
       h.xirr != null ? h.xirr.toFixed(2) : '',
@@ -544,13 +632,13 @@ export default function IndianStocksPortfolioPage() {
     const csv  = [headers.join(','), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a'); a.href = url; a.download = 'indian-stocks.csv'; a.click();
+    const a    = document.createElement('a'); a.href = url; a.download = 'global-stocks.csv'; a.click();
     URL.revokeObjectURL(url);
   }
 
-  // ── Detail holding ─────────────────────────────────────────────────────────
+  // ── Detail holding ────────────────────────────────────────────────────────
 
-  const detailHolding: StockHoldingDetail | null = useMemo(() => {
+  const detailHolding: GlobalStockHoldingDetail | null = useMemo(() => {
     if (!detailId) return null;
     const h = holdings.find(x => x.id === detailId);
     if (!h) return null;
@@ -560,6 +648,12 @@ export default function IndianStocksPortfolioPage() {
       currentValue:  h.currentValue,
       gainLoss:      h.gainLoss,
       gainLossPct:   h.gainLossPct,
+      currentPrice:  h.currentPrice,
+      currency:      h.currency,
+      country:       h.country,
+      fxRate:        h.fxRate,
+      investedINR:   h.investedINR,
+      currentValueINR: h.currentValueINR,
     };
   }, [detailId, holdings]);
 
@@ -571,90 +665,98 @@ export default function IndianStocksPortfolioPage() {
       <div key={h.id}
         className="grid items-center px-4 py-3 border-b hover:bg-[#FAFAF8] transition-colors cursor-pointer"
         style={{
-          gridTemplateColumns: '2fr 0.6fr 0.6fr 0.6fr 0.9fr 0.9fr 0.7fr 0.7fr 0.9fr 0.9fr 40px',
+          gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 0.7fr 40px',
           borderColor: '#F0EDE6',
           backgroundColor: h.gainLoss != null ? (isGain ? 'rgba(5,150,105,0.01)' : 'rgba(220,38,38,0.01)') : 'transparent',
           ...extraStyle,
         }}
         onClick={() => setDetailId(h.id)}>
+        {/* Stock */}
         <div className="flex items-center gap-2.5 min-w-0 pr-2">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
-            style={{ backgroundColor: sectorColor(h.sector) }}>
+            style={{ backgroundColor: countryColor(h.country) }}>
             {h.symbol.slice(0, 2)}
           </div>
           <div className="min-w-0">
             <p className="text-xs font-semibold leading-tight" style={{ color: '#1A1A2E', wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: 1.3 }}>
               {h.name}
             </p>
-            <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>{h.symbol}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[10px]" style={{ color: '#9CA3AF' }}>{h.symbol}</span>
+              <span className="text-[9px] px-1 py-0.5 rounded font-medium" style={{ backgroundColor: 'rgba(37,99,235,0.08)', color: '#2563EB' }}>
+                {h.currency}
+              </span>
+            </div>
           </div>
         </div>
+        {/* Country */}
+        <div className="min-w-0">
+          <span className="text-[11px] font-medium" style={{ color: '#4B5563' }}>
+            {countryFlag(h.country)} {h.country}
+          </span>
+        </div>
+        {/* Distributor */}
         <div className="min-w-0">
           <p className="text-[11px] font-medium truncate" style={{ color: '#4B5563' }}>{h.brokers?.name ?? '—'}</p>
         </div>
-        <div>
-          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded"
-            style={{ backgroundColor: sectorColor(h.sector) + '15', color: sectorColor(h.sector) }}>{h.sector}</span>
-        </div>
+        {/* Portfolio */}
         <div className="min-w-0">
           <p className="text-[10px] font-medium truncate" style={{ color: '#9CA3AF' }}>{h.portfolios?.name ?? '—'}</p>
         </div>
+        {/* Qty + Avg */}
         <div className="text-right">
           <p className="text-xs" style={{ color: '#1A1A2E' }}>{Number(h.quantity).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-          <p className="text-[10px]" style={{ color: '#9CA3AF' }}>₹{Number(h.avg_buy_price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+          <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{fmtLocal(Number(h.avg_buy_price), h.currency)}</p>
         </div>
+        {/* Invested (INR) */}
         <div className="text-right">
-          <p className="text-xs" style={{ color: '#1A1A2E' }}>{formatLargeINR(h.investedValue)}</p>
+          <p className="text-xs" style={{ color: '#1A1A2E' }}>{formatLargeINR(h.investedINR)}</p>
         </div>
+        {/* CMP */}
         <div className="text-right" onClick={e => e.stopPropagation()}>
           {h.priceLoading ? (
             <Loader2 className="w-3 h-3 animate-spin ml-auto" style={{ color: '#C9A84C' }} />
           ) : h.currentPrice !== null ? (
-            <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>₹{h.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
-          ) : h.priceUnavailable ? (
-            <div className="flex flex-col items-end gap-1">
-              <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Unavailable</p>
-              <div className="flex items-center gap-1">
-                <input type="number" placeholder="Enter"
-                  value={manualPriceInput[h.symbol] ?? ''}
-                  onChange={e => setManualPriceInput(prev => ({ ...prev, [h.symbol]: e.target.value }))}
-                  onKeyDown={e => { if (e.key === 'Enter') submitManualPrice(h.symbol); }}
-                  className="w-16 h-6 text-[10px] text-right border rounded px-1 outline-none"
-                  style={{ borderColor: '#E8E5DD', color: '#1A1A2E' }} />
-                <button onClick={() => submitManualPrice(h.symbol)}
-                  className="text-[9px] px-1.5 py-0.5 rounded font-medium"
-                  style={{ backgroundColor: '#1B2A4A', color: 'white' }}>✓</button>
-              </div>
+            <div>
+              <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{fmtLocal(h.currentPrice, h.currency)}</p>
+              {h.fxRate != null && (
+                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>₹{(h.currentPrice * h.fxRate).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+              )}
             </div>
+          ) : h.priceUnavailable ? (
+            <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Unavailable</p>
           ) : (
             <p className="text-[10px]" style={{ color: '#DC2626' }}>Error</p>
           )}
         </div>
         {/* Day P&L */}
         <div className="text-right">
-          {h.dayChange != null ? (
+          {h.dayChange != null && h.fxRate != null ? (
             <div>
               <p className="text-[10px] font-semibold" style={{ color: h.dayChange >= 0 ? '#059669' : '#DC2626' }}>
-                {h.dayChange >= 0 ? '+' : ''}{formatLargeINR(Number(h.quantity) * h.dayChange)}
+                {h.dayChange >= 0 ? '+' : ''}{formatLargeINR(Number(h.quantity) * h.dayChange * h.fxRate)}
               </p>
               <p className="text-[9px]" style={{ color: h.dayChange >= 0 ? '#059669' : '#DC2626' }}>
-                {h.dayChangePct != null && h.dayChangePct >= 0 ? '+' : ''}{(h.dayChangePct ?? 0).toFixed(2)}%
+                {(h.dayChangePct ?? 0) >= 0 ? '+' : ''}{(h.dayChangePct ?? 0).toFixed(2)}%
               </p>
             </div>
           ) : (
             <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>
           )}
         </div>
+        {/* Value (INR) */}
         <div className="text-right">
-          {h.currentValue != null ? (
-            <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{formatLargeINR(h.currentValue)}</p>
+          {h.currentValueINR != null ? (
+            <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{formatLargeINR(h.currentValueINR)}</p>
           ) : (
             <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>
           )}
         </div>
+        {/* P&L */}
         <div className="text-right">
           {h.gainLoss != null && <_PnlBadge value={h.gainLoss} pct={h.gainLossPct ?? 0} />}
         </div>
+        {/* Actions */}
         <div onClick={e => e.stopPropagation()}>
           <ActionMenu holdingId={h.id} onDelete={deleteHolding} onViewDetails={id => setDetailId(id)} />
         </div>
@@ -662,14 +764,14 @@ export default function IndianStocksPortfolioPage() {
     );
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: '#C9A84C' }} />
-          <p className="text-sm" style={{ color: '#9CA3AF' }}>Loading your portfolio…</p>
+          <p className="text-sm" style={{ color: '#9CA3AF' }}>Loading your global portfolio…</p>
         </div>
       </div>
     );
@@ -703,10 +805,10 @@ export default function IndianStocksPortfolioPage() {
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center"
             style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-            <TrendingUp className="w-4.5 h-4.5" style={{ color: '#1B2A4A' }} />
+            <Globe className="w-4.5 h-4.5" style={{ color: '#1B2A4A' }} />
           </div>
           <div>
-            <h1 className="font-display text-lg font-semibold" style={{ color: '#1A1A2E' }}>Indian Stocks</h1>
+            <h1 className="font-display text-lg font-semibold" style={{ color: '#1A1A2E' }}>Global Stocks</h1>
             <p className="text-xs" style={{ color: '#9CA3AF' }}>{totalUniqueStockCount} stock{totalUniqueStockCount !== 1 ? 's' : ''}</p>
           </div>
         </div>
@@ -722,7 +824,7 @@ export default function IndianStocksPortfolioPage() {
             style={{ backgroundColor: '#F7F5F0', color: '#6B7280', border: '1px solid #E8E5DD' }}>
             <Download className="w-3.5 h-3.5" />CSV
           </button>
-          <button onClick={() => router.push('/add-assets/indian-stocks')}
+          <button onClick={() => router.push('/add-assets/global-stocks')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
             style={{ backgroundColor: '#C9A84C' }}>
             <PlusCircle className="w-3.5 h-3.5" />Add Stock
@@ -732,10 +834,10 @@ export default function IndianStocksPortfolioPage() {
 
       {holdings.length === 0 ? (
         <div className="wv-card p-16 text-center">
-          <TrendingUp className="w-10 h-10 mx-auto mb-4" style={{ color: '#E8E5DD' }} />
-          <h3 className="font-semibold text-base mb-2" style={{ color: '#1A1A2E' }}>No stock holdings yet</h3>
-          <p className="text-sm mb-6" style={{ color: '#9CA3AF' }}>Add your NSE/BSE equity holdings to get started</p>
-          <button onClick={() => router.push('/add-assets/indian-stocks')}
+          <Globe className="w-10 h-10 mx-auto mb-4" style={{ color: '#E8E5DD' }} />
+          <h3 className="font-semibold text-base mb-2" style={{ color: '#1A1A2E' }}>No global stock holdings yet</h3>
+          <p className="text-sm mb-6" style={{ color: '#9CA3AF' }}>Add your international equity holdings to get started</p>
+          <button onClick={() => router.push('/add-assets/global-stocks')}
             className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
             style={{ backgroundColor: '#1B2A4A' }}>
             Add First Holding
@@ -744,25 +846,20 @@ export default function IndianStocksPortfolioPage() {
       ) : (
         <>
           {/* Summary cards */}
-          {(() => {
-            const totalDayPnl = filtered.reduce((s, h) => s + (h.dayChange != null ? Number(h.quantity) * h.dayChange : 0), 0);
-            const totalDayPnlPct = totalCurrentValue > 0 && totalDayPnl !== 0
-              ? (totalDayPnl / (totalCurrentValue - totalDayPnl)) * 100 : 0;
-            return (
           <div className="grid grid-cols-3 sm:grid-cols-7 gap-3">
             {[
-              { label: 'Total Invested',  value: formatLargeINR(totalInvested),     sub: null },
-              { label: 'Current Value',   value: formatLargeINR(totalCurrentValue),  sub: null },
-              { label: 'P&L',             value: `${totalGainLoss >= 0 ? '+' : ''}${formatLargeINR(totalGainLoss)}`,
-                                          sub: null, color: totalGainLoss >= 0 ? '#059669' : '#DC2626' },
-              { label: 'Returns',         value: `${totalGainLossPct >= 0 ? '+' : ''}${totalGainLossPct.toFixed(2)}%`,
-                                          sub: null, color: totalGainLossPct >= 0 ? '#059669' : '#DC2626' },
-              { label: 'XIRR',            value: overallXirr != null ? `${overallXirr.toFixed(2)}%` : '—',
-                                          sub: null, color: overallXirr != null && overallXirr >= 0 ? '#059669' : '#DC2626' },
-              { label: 'Day P&L',         value: `${totalDayPnl >= 0 ? '+' : ''}${formatLargeINR(totalDayPnl)}`,
-                                          sub: `${totalDayPnlPct >= 0 ? '+' : ''}${totalDayPnlPct.toFixed(2)}%`,
-                                          color: totalDayPnl >= 0 ? '#059669' : '#DC2626' },
-              { label: 'Stocks',          value: totalUniqueStockCount.toString(), sub: `${uniqueStockCount} shown` },
+              { label: 'Total Invested (INR)',  value: formatLargeINR(totalInvestedINR), sub: null },
+              { label: 'Current Value (INR)',   value: formatLargeINR(totalCurrentValueINR), sub: null },
+              { label: 'P&L (INR)',             value: `${totalGainLoss >= 0 ? '+' : ''}${formatLargeINR(totalGainLoss)}`,
+                                                sub: null, color: totalGainLoss >= 0 ? '#059669' : '#DC2626' },
+              { label: 'Day P&L',               value: `${totalDayPnl >= 0 ? '+' : ''}${formatLargeINR(totalDayPnl)}`,
+                                                sub: `${totalDayPnlPct >= 0 ? '+' : ''}${totalDayPnlPct.toFixed(2)}%`,
+                                                color: totalDayPnl >= 0 ? '#059669' : '#DC2626' },
+              { label: 'Returns',               value: `${totalGainLossPct >= 0 ? '+' : ''}${totalGainLossPct.toFixed(2)}%`,
+                                                sub: null, color: totalGainLossPct >= 0 ? '#059669' : '#DC2626' },
+              { label: 'XIRR',                  value: overallXirr != null ? `${overallXirr.toFixed(2)}%` : '—',
+                                                sub: null, color: overallXirr != null && overallXirr >= 0 ? '#059669' : '#DC2626' },
+              { label: 'Stocks',                value: totalUniqueStockCount.toString(), sub: `${uniqueStockCount} shown` },
             ].map(({ label, value, sub, color }) => (
               <div key={label} className="wv-card p-3">
                 <p className="text-[10px] font-medium" style={{ color: '#9CA3AF' }}>{label}</p>
@@ -771,8 +868,6 @@ export default function IndianStocksPortfolioPage() {
               </div>
             ))}
           </div>
-            );
-          })()}
 
           {/* Allocation charts */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
@@ -782,9 +877,12 @@ export default function IndianStocksPortfolioPage() {
               getColor={(_, i) => BROKER_PALETTE[i % BROKER_PALETTE.length]}
             />
             <DonutChart
-              title="Allocation by Sector"
-              data={sectorPieData}
-              getColor={(name) => sectorColor(name)}
+              title="Allocation by Country / Region"
+              data={countryPieData}
+              getColor={(name) => {
+                const code = name.split(' ').pop() ?? '';
+                return countryColor(code);
+              }}
             />
             <DonutChart
               title="Allocation by Portfolio"
@@ -821,11 +919,11 @@ export default function IndianStocksPortfolioPage() {
                   ))}
                 </div>
               )}
-              {sectors.length > 1 && (
+              {countries.length > 1 && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: '#9CA3AF' }}>Sector:</span>
-                  {sectors.map(s => (
-                    <Pill key={s} label={s} active={filterSectors.has(s)} onClick={() => toggleSet(filterSectors, setFilterSectors, s)} />
+                  <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: '#9CA3AF' }}>Country:</span>
+                  {countries.map(c => (
+                    <Pill key={c} label={`${countryFlag(c)} ${c}`} active={filterCountries.has(c)} onClick={() => toggleSet(filterCountries, setFilterCountries, c)} />
                   ))}
                 </div>
               )}
@@ -844,7 +942,7 @@ export default function IndianStocksPortfolioPage() {
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Sort:</span>
                 {(['value','pnlPct','xirr','name'] as SortKey[]).map(k => {
-                  const labels: Record<SortKey, string> = { value: 'Value', pnlPct: 'P&L %', xirr: 'XIRR', name: 'Name', recent: 'Recent' };
+                  const labels: Record<SortKey, string> = { value: 'Value', pnlPct: 'P&L %', xirr: 'XIRR', name: 'Name' };
                   return (
                     <button key={k} onClick={() => setSortKey(k)}
                       className="px-2.5 py-0.5 rounded-full text-[10px] font-medium transition-colors"
@@ -872,25 +970,39 @@ export default function IndianStocksPortfolioPage() {
             </div>
           </div>
 
-          {/* Top Gainer / Loser */}
-          {filtered.length > 0 && (() => {
-            const withDayChange = filtered.filter(h => h.dayChangePct != null);
-            if (withDayChange.length === 0) return null;
-            const topGainer = withDayChange.reduce((best, h) => (h.dayChangePct ?? 0) > (best.dayChangePct ?? 0) ? h : best);
-            const topLoser = withDayChange.reduce((worst, h) => (h.dayChangePct ?? 0) < (worst.dayChangePct ?? 0) ? h : worst);
+          {/* Top Gainer / Top Loser strip */}
+          {(() => {
+            const withDay = filtered.filter(h => h.dayChangePct != null);
+            if (withDay.length === 0) return null;
+            const topGainer = withDay.reduce((best, h) => (h.dayChangePct! > (best.dayChangePct ?? -Infinity) ? h : best), withDay[0]);
+            const topLoser  = withDay.reduce((best, h) => (h.dayChangePct! < (best.dayChangePct ?? Infinity) ? h : best), withDay[0]);
             return (
-              <div className="flex items-center gap-4 text-xs px-1">
-                {(topGainer.dayChangePct ?? 0) > 0 && (
-                  <span style={{ color: '#059669' }}>
-                    <TrendingUp className="w-3 h-3 inline mr-1" />
-                    Top Gainer: <strong>{topGainer.name}</strong> +{(topGainer.dayChangePct ?? 0).toFixed(2)}%
-                  </span>
+              <div className="flex gap-3">
+                {topGainer.dayChangePct != null && topGainer.dayChangePct > 0 && (
+                  <div className="flex-1 wv-card px-4 py-2.5 flex items-center justify-between" style={{ borderLeft: '3px solid #059669' }}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <TrendingUp className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#059669' }} />
+                      <p className="text-[11px] font-medium truncate" style={{ color: '#1A1A2E' }}>
+                        <span style={{ color: '#9CA3AF' }}>Top Gainer:</span> {topGainer.name}
+                      </p>
+                    </div>
+                    <p className="text-[11px] font-bold flex-shrink-0 ml-2" style={{ color: '#059669' }}>
+                      +{(topGainer.dayChangePct ?? 0).toFixed(2)}%
+                    </p>
+                  </div>
                 )}
-                {(topLoser.dayChangePct ?? 0) < 0 && (
-                  <span style={{ color: '#DC2626' }}>
-                    <TrendingDown className="w-3 h-3 inline mr-1" />
-                    Top Loser: <strong>{topLoser.name}</strong> {(topLoser.dayChangePct ?? 0).toFixed(2)}%
-                  </span>
+                {topLoser.dayChangePct != null && topLoser.dayChangePct < 0 && (
+                  <div className="flex-1 wv-card px-4 py-2.5 flex items-center justify-between" style={{ borderLeft: '3px solid #DC2626' }}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <TrendingDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#DC2626' }} />
+                      <p className="text-[11px] font-medium truncate" style={{ color: '#1A1A2E' }}>
+                        <span style={{ color: '#9CA3AF' }}>Top Loser:</span> {topLoser.name}
+                      </p>
+                    </div>
+                    <p className="text-[11px] font-bold flex-shrink-0 ml-2" style={{ color: '#DC2626' }}>
+                      {(topLoser.dayChangePct ?? 0).toFixed(2)}%
+                    </p>
+                  </div>
                 )}
               </div>
             );
@@ -900,17 +1012,17 @@ export default function IndianStocksPortfolioPage() {
           <div className="wv-card overflow-hidden">
             {/* Table header */}
             <div className="grid text-[10px] font-semibold uppercase tracking-wide px-4 py-2 border-b"
-              style={{ gridTemplateColumns: '2fr 0.6fr 0.6fr 0.6fr 0.9fr 0.9fr 0.7fr 0.7fr 0.9fr 0.9fr 40px', borderColor: '#F0EDE6', color: '#9CA3AF', backgroundColor: '#F7F5F0' }}>
+              style={{ gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 0.7fr 40px', borderColor: '#F0EDE6', color: '#9CA3AF', backgroundColor: '#F7F5F0' }}>
               <span>Stock</span>
+              <span>Country</span>
               <span>Distributor</span>
-              <span>Sector</span>
               <span>Portfolio</span>
-              <span className="text-right">Qty · Avg</span>
-              <span className="text-right">Invested</span>
+              <span className="text-right">Qty &middot; Avg</span>
+              <span className="text-right">Invested (INR)</span>
               <span className="text-right">CMP</span>
               <span className="text-right">Day</span>
-              <span className="text-right">Value</span>
-              <span className="text-right">P&L</span>
+              <span className="text-right">Value (INR)</span>
+              <span className="text-right">P&amp;L</span>
               <span />
             </div>
 
@@ -922,9 +1034,9 @@ export default function IndianStocksPortfolioPage() {
               groupedFiltered.map(group => {
                 if (!group.isMultiBroker) return renderStockRow(group.holdings[0]);
                 const isExpanded = expandedGroups.has(group.symbol);
-                const tGain = group.totalCurrentValue != null ? group.totalCurrentValue - group.totalInvested : null;
-                const tGainPct = tGain != null && group.totalInvested > 0 ? (tGain / group.totalInvested) * 100 : null;
-                const wtdAvg = group.totalQty > 0 ? group.totalInvested / group.totalQty : 0;
+                const tGain = group.totalCurrentValueINR != null ? group.totalCurrentValueINR - group.totalInvestedINR : null;
+                const tGainPct = tGain != null && group.totalInvestedINR > 0 ? (tGain / group.totalInvestedINR) * 100 : null;
+                const wtdAvgLocal = group.totalQty > 0 ? (group.totalInvestedINR / group.totalQty) / (group.fxRate ?? 1) : 0;
                 return (
                   <div key={group.symbol}>
                     {isExpanded && group.holdings.map(h => renderStockRow(h, { borderLeft: '3px solid #C9A84C' }))}
@@ -932,7 +1044,7 @@ export default function IndianStocksPortfolioPage() {
                     <div
                       className="grid items-center px-4 py-3 border-b cursor-pointer"
                       style={{
-                        gridTemplateColumns: '2fr 0.6fr 0.6fr 0.6fr 0.9fr 0.9fr 0.7fr 0.7fr 0.9fr 0.9fr 40px',
+                        gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 0.7fr 40px',
                         borderColor: '#F0EDE6',
                         backgroundColor: 'rgba(201,168,76,0.08)',
                         borderLeft: '3px solid #C9A84C',
@@ -941,7 +1053,7 @@ export default function IndianStocksPortfolioPage() {
                       <div className="flex items-center gap-2 min-w-0 pr-2">
                         {isExpanded ? <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} /> : <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} />}
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
-                          style={{ backgroundColor: sectorColor(group.sector) }}>
+                          style={{ backgroundColor: countryColor(group.country) }}>
                           {group.symbol.slice(0, 2)}
                         </div>
                         <div className="min-w-0">
@@ -949,31 +1061,36 @@ export default function IndianStocksPortfolioPage() {
                           <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>{group.holdings.length} brokers</p>
                         </div>
                       </div>
+                      <div><span className="text-[11px] font-medium" style={{ color: '#4B5563' }}>{countryFlag(group.country)} {group.country}</span></div>
                       <div><p className="text-[11px] font-semibold" style={{ color: '#C9A84C' }}>Consolidated</p></div>
-                      <div><span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ backgroundColor: sectorColor(group.sector) + '15', color: sectorColor(group.sector) }}>{group.sector}</span></div>
                       <div><p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p></div>
                       <div className="text-right">
                         <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{group.totalQty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-                        <p className="text-[10px]" style={{ color: '#9CA3AF' }}>₹{wtdAvg.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+                        <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{fmtLocal(wtdAvgLocal, group.currency)}</p>
                       </div>
-                      <div className="text-right"><p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(group.totalInvested)}</p></div>
+                      <div className="text-right"><p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(group.totalInvestedINR)}</p></div>
                       <div className="text-right">
-                        {group.currentPrice != null ? <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>₹{group.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
-                          : group.priceLoading ? <Loader2 className="w-3 h-3 animate-spin ml-auto" style={{ color: '#C9A84C' }} /> : <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>}
+                        {group.currentPrice != null ? (
+                          <div>
+                            <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{fmtLocal(group.currentPrice, group.currency)}</p>
+                            {group.fxRate != null && (
+                              <p className="text-[9px]" style={{ color: '#9CA3AF' }}>₹{(group.currentPrice * group.fxRate).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+                            )}
+                          </div>
+                        ) : group.priceLoading ? <Loader2 className="w-3 h-3 animate-spin ml-auto" style={{ color: '#C9A84C' }} /> : <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>}
                       </div>
-                      {/* Day P&L */}
                       <div className="text-right">
                         {(() => {
-                          const groupDayPnl = group.holdings.reduce((s, h) => s + (h.dayChange != null ? Number(h.quantity) * h.dayChange : 0), 0);
-                          return groupDayPnl !== 0 ? (
-                            <p className="text-[10px] font-semibold" style={{ color: groupDayPnl >= 0 ? '#059669' : '#DC2626' }}>
-                              {groupDayPnl >= 0 ? '+' : ''}{formatLargeINR(groupDayPnl)}
+                          const gDayPnl = group.holdings.reduce((s, h) => s + (h.dayChange != null && h.fxRate != null ? Number(h.quantity) * h.dayChange * h.fxRate : 0), 0);
+                          return gDayPnl !== 0 ? (
+                            <p className="text-[10px] font-semibold" style={{ color: gDayPnl >= 0 ? '#059669' : '#DC2626' }}>
+                              {gDayPnl >= 0 ? '+' : ''}{formatLargeINR(gDayPnl)}
                             </p>
                           ) : <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>;
                         })()}
                       </div>
                       <div className="text-right">
-                        {group.totalCurrentValue != null ? <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(group.totalCurrentValue)}</p> : <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>}
+                        {group.totalCurrentValueINR != null ? <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(group.totalCurrentValueINR)}</p> : <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>}
                       </div>
                       <div className="text-right">{tGain != null && tGainPct != null && <_PnlBadge value={tGain} pct={tGainPct} />}</div>
                       <div />
@@ -983,19 +1100,17 @@ export default function IndianStocksPortfolioPage() {
               })
             )}
           </div>
-
-          {/* Past Holdings (qty=0) section — would need separate query */}
         </>
       )}
 
       {/* Detail sheet */}
-      <StockDetailSheet
+      <GlobalStockDetailSheet
         holding={detailHolding}
         open={!!detailId}
         onClose={() => setDetailId(null)}
         onDelete={deleteHolding}
         onRefreshPrice={sym => fetchPrice(sym)}
-        onHoldingChanged={() => { holdingsCacheClear('stock_holdings'); loadHoldings(); }}
+        onHoldingChanged={() => { holdingsCacheClear('global_stock_holdings'); loadHoldings(); }}
       />
     </div>
   );

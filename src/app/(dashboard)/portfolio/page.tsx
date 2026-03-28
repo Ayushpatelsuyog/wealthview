@@ -37,6 +37,7 @@ interface AssetClassConfig {
 
 const ASSET_CLASSES: AssetClassConfig[] = [
   { key: 'mutual_fund',    label: 'Mutual Funds',      detailPath: '/portfolio/mutual-funds',    addPath: '/add-assets/mutual-funds' },
+  { key: 'sif',            label: 'SIF',               detailPath: '/portfolio/sif',             addPath: '/add-assets/sif' },
   { key: 'indian_stock',   label: 'Indian Stocks',     detailPath: '/portfolio/indian-stocks',   addPath: '/add-assets/indian-stocks' },
   { key: 'global_stock',   label: 'Global Stocks',     detailPath: '/portfolio/global-stocks',   addPath: '/add-assets/global-stocks' },
   { key: 'pms',            label: 'PMS',               detailPath: '/portfolio/pms',             addPath: '/add-assets/pms' },
@@ -67,7 +68,7 @@ interface AssetRow {
   hasData: boolean;
 }
 
-function buildRows(holdings: RawHolding[], filterUserId: string | null, navMap: Map<string, number>, stockPriceMap: Map<string, number>): AssetRow[] {
+function buildRows(holdings: RawHolding[], filterUserId: string | null, navMap: Map<string, number>, stockPriceMap: Map<string, number>, globalStockINRMap: Map<string, number>): AssetRow[] {
   const filtered = filterUserId
     ? holdings.filter(h => h.portfolios?.user_id === filterUserId)
     : holdings;
@@ -84,6 +85,8 @@ function buildRows(holdings: RawHolding[], filterUserId: string | null, navMap: 
       currentValue = qty * navMap.get(h.symbol)!;
     } else if (h.asset_type === 'indian_stock' && stockPriceMap.has(h.symbol)) {
       currentValue = qty * stockPriceMap.get(h.symbol)!;
+    } else if (h.asset_type === 'global_stock' && globalStockINRMap.has(h.symbol)) {
+      currentValue = globalStockINRMap.get(h.symbol)! * qty;
     }
     existing.count += 1;
     existing.invested += invested;
@@ -134,6 +137,8 @@ export default function PortfolioPage() {
   const [navMap, setNavMap] = useState<Map<string, number>>(new Map());
   const [stockPriceLoading, setStockPriceLoading] = useState(false);
   const [stockPriceMap, setStockPriceMap] = useState<Map<string, number>>(new Map());
+  const [globalStockLoading, setGlobalStockLoading] = useState(false);
+  const [globalStockINRMap, setGlobalStockINRMap] = useState<Map<string, number>>(new Map());
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async (forceRefresh = false) => {
@@ -200,6 +205,8 @@ export default function PortfolioPage() {
     const stockSymbols = Array.from(new Set(
       loadedHoldings.filter(h => h.asset_type === 'indian_stock' && h.symbol).map(h => h.symbol)
     ));
+    const globalStockHoldings = loadedHoldings.filter(h => h.asset_type === 'global_stock' && h.symbol);
+    const globalStockSymbols = Array.from(new Set(globalStockHoldings.map(h => h.symbol)));
 
     // Check client-side caches first (skip if force refresh)
     const navMapFromCache = new Map<string, number>();
@@ -282,6 +289,54 @@ export default function PortfolioPage() {
       })());
     }
 
+    // Fetch global stock prices + FX rates for INR conversion
+    if (globalStockSymbols.length > 0) {
+      setGlobalStockLoading(true);
+      promises.push((async () => {
+        try {
+          // Fetch prices
+          const priceRes = await fetch('/api/stocks/global/price/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symbols: globalStockSymbols, nocache: forceRefresh }),
+          });
+          if (!priceRes.ok) { setGlobalStockLoading(false); return; }
+          const { results: priceResults } = await priceRes.json();
+
+          // Collect unique currencies needing FX rates
+          const currenciesNeeded = new Set<string>();
+          for (const h of globalStockHoldings) {
+            const cur = String(h.metadata?.currency ?? 'USD');
+            if (cur !== 'INR') currenciesNeeded.add(cur);
+          }
+
+          // Fetch FX rates
+          const fxMap: Record<string, number> = {};
+          await Promise.allSettled(Array.from(currenciesNeeded).map(async (cur) => {
+            try {
+              const fxRes = await fetch(`/api/fx/rate?from=${cur}&to=INR`);
+              if (fxRes.ok) {
+                const fxData = await fxRes.json();
+                if (fxData.rate) fxMap[cur] = fxData.rate;
+              }
+            } catch { /* skip */ }
+          }));
+
+          // Build INR value map: symbol → priceInINR (local price × FX rate)
+          const inrMap = new Map<string, number>();
+          for (const h of globalStockHoldings) {
+            const priceData = priceResults[h.symbol];
+            if (!priceData?.price) continue;
+            const cur = String(h.metadata?.currency ?? 'USD');
+            const fxRate = fxMap[cur] ?? 1;
+            inrMap.set(h.symbol, priceData.price * fxRate);
+          }
+          setGlobalStockINRMap(inrMap);
+        } catch { /* batch failed */ }
+        setGlobalStockLoading(false);
+      })());
+    }
+
     await Promise.all(promises);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -300,7 +355,7 @@ export default function PortfolioPage() {
   }, [loadData]);
 
   const filterUserId = viewMode === 'individual' ? (selectedMemberId || null) : null;
-  const rows = buildRows(holdings, filterUserId, navMap, stockPriceMap);
+  const rows = buildRows(holdings, filterUserId, navMap, stockPriceMap, globalStockINRMap);
   const stats = computeStats(rows);
 
   const totalHoldings = rows.reduce((s, r) => s + r.holdings, 0);
@@ -332,12 +387,12 @@ export default function PortfolioPage() {
         {/* Refresh button */}
         <button
           onClick={handleRefresh}
-          disabled={navLoading || stockPriceLoading}
+          disabled={navLoading || stockPriceLoading || globalStockLoading}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
           style={{ backgroundColor: '#F7F5F0', color: '#6B7280', border: '1px solid #E8E5DD' }}
         >
           <RefreshCw className={`w-3.5 h-3.5 ${navLoading || stockPriceLoading ? 'animate-spin' : ''}`} />
-          {navLoading || stockPriceLoading ? 'Refreshing…' : 'Refresh'}
+          {navLoading || stockPriceLoading || globalStockLoading ? 'Refreshing…' : 'Refresh'}
         </button>
 
         {/* View Toggle */}
@@ -478,14 +533,14 @@ export default function PortfolioPage() {
                   </td>
                   <td className="px-3 py-3 text-right" style={{ color: zero ? '#D1D5DB' : '#374151' }}>
                     {zero ? '—'
-                      : (navLoading && row.config.key === 'mutual_fund') || (stockPriceLoading && row.config.key === 'indian_stock')
+                      : (navLoading && row.config.key === 'mutual_fund') || (stockPriceLoading && row.config.key === 'indian_stock') || (globalStockLoading && row.config.key === 'global_stock')
                         ? <span className="inline-block w-16 h-4 rounded animate-pulse bg-gray-100" />
                         : formatLargeINR(row.currentValue)}
                   </td>
                   <td className="px-3 py-3 text-right">
                     {zero ? (
                       <span style={{ color: '#D1D5DB' }}>—</span>
-                    ) : (navLoading && row.config.key === 'mutual_fund') || (stockPriceLoading && row.config.key === 'indian_stock') ? (
+                    ) : (navLoading && row.config.key === 'mutual_fund') || (stockPriceLoading && row.config.key === 'indian_stock') || (globalStockLoading && row.config.key === 'global_stock') ? (
                       <span className="inline-block w-12 h-4 rounded animate-pulse bg-gray-100" />
                     ) : (
                       <span style={{ color: rowPnlPos ? '#059669' : '#DC2626' }}>
@@ -496,7 +551,7 @@ export default function PortfolioPage() {
                   <td className="px-3 py-3 text-right">
                     {zero ? (
                       <span style={{ color: '#D1D5DB' }}>—</span>
-                    ) : (navLoading && row.config.key === 'mutual_fund') || (stockPriceLoading && row.config.key === 'indian_stock') ? (
+                    ) : (navLoading && row.config.key === 'mutual_fund') || (stockPriceLoading && row.config.key === 'indian_stock') || (globalStockLoading && row.config.key === 'global_stock') ? (
                       <span className="inline-block w-10 h-4 rounded animate-pulse bg-gray-100" />
                     ) : (
                       <span style={{ color: rowPnlPos ? '#059669' : '#DC2626' }}>

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
+import { holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
 import { BrokerSelector } from '@/components/forms/BrokerSelector';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -149,6 +150,12 @@ function IndianStocksFormContent() {
   const router   = useRouter();
   const supabase = createClient();
   const _searchParams = useSearchParams();
+  const editTxnId = _searchParams.get('edit_txn');
+  const editHoldingId = _searchParams.get('holding_id');
+  const isEditMode = !!editTxnId && !!editHoldingId;
+
+  const addToHoldingId = _searchParams.get('add_to');
+  const isAddMoreMode = !!addToHoldingId && !isEditMode;
 
   // Auth / family
   const [familyId, setFamilyId] = useState<string | null>(null);
@@ -172,6 +179,7 @@ function IndianStocksFormContent() {
   const [selectedStock, setSelectedStock] = useState<StockResult | null>(null);
   const [stockPrice,  setStockPrice]  = useState<StockPrice | null>(null);
   const [priceLoading,setPriceLoading]= useState(false);
+  const [sectorOverride, setSectorOverride] = useState<string | null>(null);
 
   // Transaction type
   const [txnType, setTxnType] = useState<string>('buy');
@@ -181,6 +189,7 @@ function IndianStocksFormContent() {
   const [price,       setPrice]       = useState('');
   const [date,        setDate]        = useState('');
   const [priceLoaded, setPriceLoaded] = useState(false); // for auto-fill indicator
+  const [priceManuallyEdited, setPriceManuallyEdited] = useState(false); // blocks auto-fetch overwrite
 
   // Charges
   const [brokerage,       setBrokerage]       = useState('0');
@@ -222,7 +231,8 @@ function IndianStocksFormContent() {
       if (fid) {
         setFamilyId(fid);
         const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', fid);
-        setMembers(fUsers ?? [{ id: profile.id, name: profile.name }]);
+        const { data: extraMembers } = await supabase.from('family_members').select('id, name').eq('family_id', fid);
+        setMembers([...(fUsers ?? [{ id: profile.id, name: profile.name }]), ...(extraMembers ?? [])]);
         const { data: ports } = await supabase.from('portfolios').select('id, name, type').eq('family_id', fid).order('created_at');
         setPortfolios(ports ?? []);
       } else {
@@ -233,8 +243,95 @@ function IndianStocksFormContent() {
 
   // ── Auto-set today for date ─────────────────────────────────────────────────
   useEffect(() => {
-    setDate(new Date().toISOString().split('T')[0]);
-  }, []);
+    if (!editTxnId) setDate(new Date().toISOString().split('T')[0]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Load transaction for edit mode ────────────────────────────────────────
+  useEffect(() => {
+    if (!isEditMode) return;
+    (async () => {
+      const { data: txn } = await supabase
+        .from('transactions')
+        .select('id, type, quantity, price, date, fees, notes')
+        .eq('id', editTxnId)
+        .single();
+      if (!txn) return;
+
+      const { data: holdingData } = await supabase
+        .from('holdings')
+        .select('symbol, name, metadata, brokers(id, name), portfolios(name)')
+        .eq('id', editHoldingId)
+        .single();
+      if (!holdingData) return;
+
+      const meta = (holdingData.metadata ?? {}) as Record<string, unknown>;
+
+      setSelectedStock({
+        symbol: holdingData.symbol,
+        companyName: holdingData.name,
+        exchange: String(meta.exchange ?? 'NSE'),
+        sector: String(meta.sector ?? ''),
+        industry: String(meta.industry ?? ''),
+        isin: String(meta.isin ?? ''),
+        bseCode: String(meta.bse_code ?? ''),
+      });
+      setQuery(`${holdingData.symbol} — ${holdingData.name}`);
+
+      const notes = txn.notes ?? '';
+      if (notes.toLowerCase().includes('bonus')) setTxnType('bonus');
+      else if (notes.toLowerCase().includes('split')) setTxnType('split');
+      else if (notes.toLowerCase().includes('rights')) setTxnType('rights');
+      else if (txn.type === 'dividend') setTxnType('dividend');
+      else if (txn.type === 'sell') setTxnType('sell');
+      else setTxnType('buy');
+
+      setQuantity(String(txn.quantity || ''));
+      setPrice(String(txn.price || ''));
+      setDate(txn.date || '');
+
+      if (holdingData.portfolios) {
+        const p = holdingData.portfolios as unknown as { name: string };
+        setPortfolioName(p.name);
+      }
+      if (holdingData.brokers) {
+        const b = holdingData.brokers as unknown as { id: string };
+        setBrokerId(b.id);
+      }
+    })();
+  }, [editTxnId, editHoldingId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Load holding data for add-more mode ──────────────────────────────────
+  useEffect(() => {
+    if (!isAddMoreMode) return;
+    (async () => {
+      const { data: holdingData } = await supabase
+        .from('holdings')
+        .select('symbol, name, quantity, avg_buy_price, metadata, brokers(id, name), portfolios(name)')
+        .eq('id', addToHoldingId)
+        .single();
+      if (!holdingData) return;
+
+      const meta = (holdingData.metadata ?? {}) as Record<string, unknown>;
+      setSelectedStock({
+        symbol: holdingData.symbol,
+        companyName: holdingData.name,
+        exchange: String(meta.exchange ?? 'NSE'),
+        sector: String(meta.sector ?? ''),
+        industry: String(meta.industry ?? ''),
+        isin: String(meta.isin ?? ''),
+        bseCode: String(meta.bse_code ?? ''),
+      });
+      setQuery(`${holdingData.symbol} — ${holdingData.name}`);
+      setTxnType('buy');
+
+      if (holdingData.portfolios) {
+        setPortfolioName((holdingData.portfolios as unknown as { name: string }).name);
+      }
+      if (holdingData.brokers) {
+        setBrokerId((holdingData.brokers as unknown as { id: string }).id);
+      }
+    })();
+  }, [addToHoldingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Search with debounce ────────────────────────────────────────────────────
   useEffect(() => {
@@ -255,8 +352,11 @@ function IndianStocksFormContent() {
   }, [query]);
 
   // ── Auto-fetch price on date change ────────────────────────────────────────
+  // Only auto-fill if user hasn't manually edited the price field
   useEffect(() => {
     if (!selectedStock || !date) return;
+    if (priceManuallyEdited) return; // user already typed a price — don't overwrite
+    if (isEditMode) return; // in edit mode, price comes from the saved transaction
     setPriceLoaded(false);
     fetch(`/api/stocks/price-history?symbol=${selectedStock.symbol}&date=${date}`)
       .then(r => r.json())
@@ -267,7 +367,7 @@ function IndianStocksFormContent() {
         }
       })
       .catch(() => {/* silent */});
-  }, [selectedStock, date]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedStock, date, priceManuallyEdited, isEditMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Auto-calculate charges ──────────────────────────────────────────────────
   const qty   = parseFloat(quantity) || 0;
@@ -333,6 +433,33 @@ function IndianStocksFormContent() {
     setSaving(true);
 
     try {
+      // Edit mode: update existing transaction
+      if (isEditMode) {
+        const totalFees = (parseFloat(brokerage || '0') + parseFloat(stt || '0') +
+          parseFloat(gst || '0') + parseFloat(stampDuty || '0') +
+          parseFloat(exchangeCharges || '0') + parseFloat(dpCharges || '0'));
+        const res = await fetch('/api/stocks/update-transaction', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            txn_id: editTxnId,
+            holding_id: editHoldingId,
+            quantity: qty,
+            price: px,
+            date,
+            fees: totalFees,
+            notes: txnType === 'dividend' ? `${divType} — ₹${divPerShare}/share${exDate ? ` | Ex-date: ${exDate}` : ''}` : undefined,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? 'Update failed');
+        setToast({ type: 'success', message: 'Transaction updated successfully!' });
+        holdingsCacheClearAll();
+        setTimeout(() => router.push('/portfolio/indian-stocks'), 1200);
+        setSaving(false);
+        return;
+      }
+
       const finalPortfolio = showNewPort && newPortName ? newPortName : portfolioName;
 
       // For split: compute new total quantity
@@ -353,7 +480,7 @@ function IndianStocksFormContent() {
         symbol:          selectedStock!.symbol,
         companyName:     selectedStock!.companyName,
         exchange:        selectedStock!.exchange,
-        sector:          selectedStock!.sector,
+        sector:          sectorOverride || selectedStock!.sector,
         industry:        selectedStock!.industry,
         isin:            selectedStock!.isin,
         bseCode:         selectedStock!.bseCode,
@@ -382,6 +509,7 @@ function IndianStocksFormContent() {
       if (!res.ok) throw new Error(data.error ?? 'Save failed');
 
       setToast({ type: 'success', message: `${txnType === 'buy' ? 'Holding saved' : txnType.charAt(0).toUpperCase() + txnType.slice(1)} recorded successfully!${data.consolidated ? ' (Consolidated with existing holding)' : ''}` });
+      holdingsCacheClearAll();
 
       if (andAnother) {
         resetForm();
@@ -396,10 +524,11 @@ function IndianStocksFormContent() {
 
   function resetForm() {
     setSelectedStock(null); setQuery(''); setStockPrice(null);
-    setQuantity(''); setPrice(''); setPriceLoaded(false);
+    setQuantity(''); setPrice(''); setPriceLoaded(false); setPriceManuallyEdited(false);
     setBrokerage('0'); setStt(''); setGst(''); setStampDuty(''); setExchangeCharges('0'); setDpCharges('0');
     setBonusRatio(''); setSplitRatio(''); setRightsRatio(''); setRightsPrice('');
     setDivPerShare(''); setExDate(''); setPayDate('');
+    setSectorOverride(null);
     setErrors({});
     setDate(new Date().toISOString().split('T')[0]);
   }
@@ -422,8 +551,8 @@ function IndianStocksFormContent() {
           <TrendingUp className="w-5 h-5" style={{ color: '#1B2A4A' }} />
         </div>
         <div>
-          <h1 className="font-display text-xl font-semibold" style={{ color: '#1A1A2E' }}>Indian Stocks</h1>
-          <p className="text-xs" style={{ color: '#9CA3AF' }}>Track NSE/BSE equity holdings across all transaction types</p>
+          <h1 className="font-display text-xl font-semibold" style={{ color: '#1A1A2E' }}>{isEditMode ? 'Edit Transaction' : 'Indian Stocks'}</h1>
+          <p className="text-xs" style={{ color: '#9CA3AF' }}>{isEditMode ? 'Update the details of this transaction' : 'Track NSE/BSE equity holdings across all transaction types'}</p>
         </div>
       </div>
 
@@ -524,10 +653,11 @@ function IndianStocksFormContent() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#9CA3AF' }} />
                 <Input
                   value={query}
-                  onChange={e => { setQuery(e.target.value); setSelectedStock(null); setStockPrice(null); }}
-                  onFocus={() => { if (results.length > 0) setShowDrop(true); }}
+                  onChange={e => { if (!isEditMode && !isAddMoreMode) { setQuery(e.target.value); setSelectedStock(null); setStockPrice(null); } }}
+                  onFocus={() => { if (!isEditMode && !isAddMoreMode && results.length > 0) setShowDrop(true); }}
+                  readOnly={isEditMode || isAddMoreMode}
                   placeholder="Search by symbol or company name (min 2 chars)…"
-                  className="h-9 text-xs pl-9 pr-8"
+                  className={`h-9 text-xs pl-9 pr-8 ${isEditMode || isAddMoreMode ? 'bg-[#F7F5F0] cursor-not-allowed' : ''}`}
                 />
                 {searching
                   ? <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin" style={{ color: '#9CA3AF' }} />
@@ -621,6 +751,36 @@ function IndianStocksFormContent() {
                 </button>
               </div>
             )}
+
+            {/* Editable sector */}
+            {selectedStock && (
+              <div className="mt-3 space-y-1.5">
+                <Label className="text-xs" style={{ color: '#6B7280' }}>
+                  Sector {selectedStock.sector && <AutoTag label="from search" />}
+                </Label>
+                <div className="flex gap-2">
+                  <select
+                    value={sectorOverride ?? selectedStock.sector ?? ''}
+                    onChange={e => setSectorOverride(e.target.value)}
+                    className="h-9 text-xs rounded-lg border px-2 flex-1"
+                    style={{ borderColor: '#E8E5DD', color: '#1A1A2E', backgroundColor: 'white' }}>
+                    <option value="">Select sector...</option>
+                    {['IT', 'Banking', 'Pharma', 'Auto', 'FMCG', 'Energy', 'Metals', 'Chemicals',
+                      'Industrials', 'Infrastructure', 'Real Estate', 'Media', 'Telecom', 'Textiles',
+                      'Healthcare', 'Consumer Durables', 'Financial Services', 'Insurance', 'Cement',
+                      'Capital Goods', 'Defense', 'Retail', 'Logistics', 'Other'].map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                  <Input
+                    value={sectorOverride ?? selectedStock.sector ?? ''}
+                    onChange={e => setSectorOverride(e.target.value)}
+                    placeholder="Or type custom sector"
+                    className="h-9 text-xs flex-1"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Step 3 — Transaction Details */}
@@ -629,6 +789,11 @@ function IndianStocksFormContent() {
               <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
                 Step 3 — Transaction Details
               </p>
+            {isAddMoreMode && selectedStock && (
+              <div className="mb-4 p-3 rounded-xl text-xs" style={{ backgroundColor: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)', color: '#92620A' }}>
+                Adding shares to: <strong>{selectedStock.companyName}</strong>
+              </div>
+            )}
 
               {/* Transaction type pills */}
               <div className="flex flex-wrap gap-2 mb-5">
@@ -650,6 +815,14 @@ function IndianStocksFormContent() {
               {(txnType === 'buy' || txnType === 'sell' || txnType === 'rights') && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: '#6B7280' }}>Date</Label>
+                      <Input
+                        type="date" value={date} onChange={e => setDate(e.target.value)}
+                        className="h-9 text-xs"
+                      />
+                      <FieldError msg={errors.date} />
+                    </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs" style={{ color: '#6B7280' }}>
                         Quantity (shares)
@@ -673,18 +846,10 @@ function IndianStocksFormContent() {
                       </Label>
                       <Input
                         type="number" step="0.01" min="0.01"
-                        value={price} onChange={e => { setPrice(e.target.value); setPriceLoaded(false); }}
+                        value={price} onChange={e => { setPrice(e.target.value); setPriceLoaded(false); setPriceManuallyEdited(true); }}
                         placeholder="e.g. 2850.00" className="h-9 text-xs"
                       />
                       <FieldError msg={errors.price} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Date</Label>
-                      <Input
-                        type="date" value={date} onChange={e => setDate(e.target.value)}
-                        className="h-9 text-xs"
-                      />
-                      <FieldError msg={errors.date} />
                     </div>
                   </div>
 

@@ -8,6 +8,7 @@ export interface MFNavData {
   category: string;
   nav: number;
   navDate: string;   // raw "DD-MM-YYYY" from mfapi.in
+  previousNav: number | null;  // previous day's NAV for day P&L
 }
 
 export async function GET(req: NextRequest) {
@@ -40,6 +41,7 @@ export async function GET(req: NextRequest) {
       category: json.meta?.scheme_category ?? '',
       nav: parseFloat(json.data[0].nav),
       navDate: json.data[0].date,
+      previousNav: null,
     };
 
     cacheSet(cacheKey, result, 15 * 60 * 1000); // 15 minutes

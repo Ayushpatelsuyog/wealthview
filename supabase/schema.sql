@@ -41,6 +41,16 @@ CREATE TABLE users (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE family_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  family_id UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT,
+  role user_role NOT NULL DEFAULT 'member',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE portfolios (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -208,6 +218,7 @@ CREATE TABLE audit_log (
 -- ============================================================
 ALTER TABLE families ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE family_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE portfolios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE brokers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE import_batches ENABLE ROW LEVEL SECURITY;
@@ -275,6 +286,19 @@ CREATE POLICY "users_insert" ON users
 
 CREATE POLICY "users_update" ON users
   FOR UPDATE USING (id = auth.uid());
+
+-- family_members
+CREATE POLICY "family_members_select" ON family_members
+  FOR SELECT USING (family_id = get_my_family_id());
+
+CREATE POLICY "family_members_insert" ON family_members
+  FOR INSERT WITH CHECK (family_id = get_my_family_id());
+
+CREATE POLICY "family_members_update" ON family_members
+  FOR UPDATE USING (family_id = get_my_family_id());
+
+CREATE POLICY "family_members_delete" ON family_members
+  FOR DELETE USING (family_id = get_my_family_id());
 
 -- import_batches
 CREATE POLICY "import_batches_family_access" ON import_batches
@@ -373,6 +397,7 @@ CREATE POLICY "audit_log_insert" ON audit_log
 -- ============================================================
 -- INDEXES
 -- ============================================================
+CREATE INDEX idx_family_members_family_id ON family_members(family_id);
 CREATE INDEX idx_import_batches_family_id ON import_batches(family_id);
 CREATE INDEX idx_holdings_import_batch_id ON holdings(import_batch_id) WHERE import_batch_id IS NOT NULL;
 CREATE INDEX idx_portfolios_family_id ON portfolios(family_id);
@@ -397,6 +422,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER families_updated_at BEFORE UPDATE ON families FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER family_members_updated_at BEFORE UPDATE ON family_members FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER portfolios_updated_at BEFORE UPDATE ON portfolios FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER holdings_updated_at BEFORE UPDATE ON holdings FOR EACH ROW EXECUTE FUNCTION update_updated_at();
