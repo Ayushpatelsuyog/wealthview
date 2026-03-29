@@ -1,8 +1,12 @@
 'use client';
 
-import { TrendingUp, UserPlus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { TrendingUp, UserPlus, Settings } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
-import type { DashboardSnapshot } from '@/lib/types/dashboard';
+import { useFamilyStore } from '@/lib/stores/familyStore';
+import type { DashboardSnapshot, DashboardMember } from '@/lib/types/dashboard';
 
 const roleColors: Record<string, { bg: string; text: string }> = {
   admin:   { bg: 'rgba(27,42,74,0.08)',   text: '#1B2A4A' },
@@ -15,30 +19,97 @@ const roleLabel: Record<string, string> = {
   admin: 'Admin', member: 'Member', advisor: 'Advisor', guest: 'Guest',
 };
 
+const MEMBER_COLORS = ['#1B2A4A', '#2E8B8B', '#C9A84C', '#059669', '#7C3AED', '#DC2626'];
+
+function getInitials(name: string): string {
+  return name.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase();
+}
+
 interface Props { snapshot: DashboardSnapshot }
 
 export function FamilyMembers({ snapshot }: Props) {
-  const { members, hasRealData } = snapshot;
+  const router = useRouter();
+  const supabase = createClient();
+  const { selectedFamilyId, families } = useFamilyStore();
+  const [displayMembers, setDisplayMembers] = useState<DashboardMember[]>(snapshot.members ?? []);
+
+  // When family selection changes, fetch members for that family
+  useEffect(() => {
+    if (!selectedFamilyId) {
+      // "All Families" — use snapshot members (primary family) + fetch others
+      if (families.length <= 1) {
+        setDisplayMembers(snapshot.members ?? []);
+        return;
+      }
+      // Fetch members from all families
+      (async () => {
+        const famIds = families.map(f => f.id);
+        const { data } = await supabase.from('users').select('id, name, role, family_id').in('family_id', famIds);
+        if (data) {
+          setDisplayMembers(data.map((m, i) => ({
+            id: m.id,
+            name: m.name || 'Unknown',
+            role: m.role || 'member',
+            netWorth: snapshot.members?.find(sm => sm.id === m.id)?.netWorth ?? 0,
+            todayChange: 0,
+            initials: getInitials(m.name || '?'),
+            color: MEMBER_COLORS[i % MEMBER_COLORS.length],
+          })));
+        }
+      })();
+    } else {
+      // Specific family selected — fetch its members
+      (async () => {
+        const { data } = await supabase.from('users').select('id, name, role').eq('family_id', selectedFamilyId);
+        if (data) {
+          setDisplayMembers(data.map((m, i) => ({
+            id: m.id,
+            name: m.name || 'Unknown',
+            role: m.role || 'member',
+            netWorth: snapshot.members?.find(sm => sm.id === m.id)?.netWorth ?? 0,
+            todayChange: 0,
+            initials: getInitials(m.name || '?'),
+            color: MEMBER_COLORS[i % MEMBER_COLORS.length],
+          })));
+        }
+      })();
+    }
+  }, [selectedFamilyId, families, snapshot.members]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectedFamilyName = selectedFamilyId
+    ? families.find(f => f.id === selectedFamilyId)?.name ?? 'Family'
+    : 'All Families';
+
+  const manageUrl = selectedFamilyId
+    ? `/settings?tab=family&family_id=${selectedFamilyId}`
+    : '/settings?tab=family';
 
   return (
     <div className="wv-card p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="section-heading text-sm flex-1">Family Members</h3>
+        <div>
+          <h3 className="section-heading text-sm">Family Members</h3>
+          {families.length > 1 && (
+            <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>{selectedFamilyName}</p>
+          )}
+        </div>
         <button
-          className="text-xs font-semibold px-3 py-1.5 rounded-lg ml-4"
+          onClick={() => router.push(manageUrl)}
+          className="text-xs font-semibold px-3 py-1.5 rounded-lg ml-4 flex items-center gap-1.5"
           style={{ backgroundColor: '#1B2A4A', color: 'white' }}
         >
+          <Settings className="w-3 h-3" />
           Manage
         </button>
       </div>
 
-      {members.length === 0 ? (
+      {displayMembers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 gap-3">
           <p className="text-xs text-center" style={{ color: '#9CA3AF' }}>No family members yet</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          {members.map((m) => (
+          {displayMembers.map((m) => (
             <div
               key={m.id}
               className="p-3 rounded-xl border transition-all cursor-pointer"
@@ -63,7 +134,7 @@ export function FamilyMembers({ snapshot }: Props) {
               <p className="text-xs font-semibold mb-0.5" style={{ color: '#1A1A2E' }}>{m.name}</p>
               {m.role === 'advisor' ? (
                 <p className="font-display text-sm" style={{ color: '#9CA3AF' }}>View only</p>
-              ) : hasRealData && m.netWorth > 0 ? (
+              ) : snapshot.hasRealData && m.netWorth > 0 ? (
                 <>
                   <p className="font-display text-base font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(m.netWorth)}</p>
                   {m.todayChange !== 0 && (
@@ -82,8 +153,9 @@ export function FamilyMembers({ snapshot }: Props) {
           ))}
 
           {/* Invite CTA if only one member */}
-          {members.filter(m => m.role !== 'advisor').length === 1 && (
+          {displayMembers.filter(m => m.role !== 'advisor').length === 1 && (
             <div
+              onClick={() => router.push(manageUrl)}
               className="p-3 rounded-xl border border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors"
               style={{ borderColor: '#E8E5DD' }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#C9A84C'; }}
@@ -92,7 +164,7 @@ export function FamilyMembers({ snapshot }: Props) {
               <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#F7F5F0' }}>
                 <UserPlus className="w-4 h-4" style={{ color: '#9CA3AF' }} />
               </div>
-              <p className="text-[11px] text-center" style={{ color: '#9CA3AF' }}>Invite family member</p>
+              <p className="text-[11px] text-center" style={{ color: '#9CA3AF' }}>Add family member</p>
             </div>
           )}
         </div>

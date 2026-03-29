@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -181,8 +182,11 @@ function MemberCard({
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
-export default function SettingsPage() {
+function SettingsContent() {
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const urlTab = searchParams.get('tab');
+  const urlFamilyId = searchParams.get('family_id');
 
   // Auth
   const [userId, setUserId] = useState<string | null>(null);
@@ -226,7 +230,7 @@ export default function SettingsPage() {
   // UI
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<Toast | null>(null);
-  const [defaultTab, setDefaultTab] = useState('profile');
+  const [defaultTab, setDefaultTab] = useState(urlTab === 'family' ? 'family' : urlTab === 'distributors' ? 'distributors' : 'profile');
 
   function showToast(type: 'success' | 'error', message: string) {
     setToast({ type, message });
@@ -362,7 +366,9 @@ export default function SettingsPage() {
 
         setAllFamilies(famList);
         if (famList.length > 0 && !selectedFamilyTab) {
-          setSelectedFamilyTab(famList[0].id);
+          // Use URL param family_id if provided, otherwise first family
+          const targetFam = urlFamilyId && famList.find(f => f.id === urlFamilyId) ? urlFamilyId : famList[0].id;
+          setSelectedFamilyTab(targetFam);
         }
       }
       setLoading(false);
@@ -1008,5 +1014,13 @@ export default function SettingsPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="p-6"><div className="animate-pulse h-96 rounded-xl bg-gray-100" /></div>}>
+      <SettingsContent />
+    </Suspense>
   );
 }

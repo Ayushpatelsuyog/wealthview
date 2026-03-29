@@ -17,6 +17,7 @@ import { formatLargeINR } from '@/lib/utils/formatters';
 import { holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
 import { calculateXIRR }  from '@/lib/utils/calculations';
 import { BrokerSelector } from '@/components/forms/BrokerSelector';
+import { VerifyResults } from '@/components/forms/VerifyResults';
 import { CASImporter }    from '@/components/forms/CASImporter';
 import { ECASImporter }   from '@/components/forms/ECASImporter';
 import { ImportHistory }  from '@/components/portfolio/ImportHistory';
@@ -840,6 +841,16 @@ export default function MutualFundsPage() {
     fundName: string; txnType: string; folio: string;
   } | null>(null);
 
+  // ── Verification ──────────────────────────────────────────────────────────
+  const [showVerify, setShowVerify] = useState(false);
+  const [verifyFile, setVerifyFile] = useState<File | null>(null);
+  const [verifyPassword, setVerifyPassword] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<Record<string, unknown> | null>(null);
+  const [verifyError, setVerifyError] = useState('');
+  const [_selectedImports, _setSelectedImports] = useState<Set<number>>(new Set());
+  const [_useStatementValues, setUseStatementValues] = useState<Record<string, boolean>>({});
+
   // ── Load user + family ─────────────────────────────────────────────────────
   useEffect(() => {
     async function loadUser() {
@@ -1142,6 +1153,42 @@ export default function MutualFundsPage() {
     return Object.keys(errs).length === 0;
   }
 
+  // ── Verify against statement ───────────────────────────────────────────────
+  async function handleVerify() {
+    if (!verifyFile) return;
+    setVerifying(true);
+    setVerifyError('');
+    setVerifyResult(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', verifyFile);
+      fd.append('password', verifyPassword);
+      fd.append('date', purchaseDate);
+      fd.append('amount', amount);
+      fd.append('nav', nav);
+      fd.append('units', String(parseFloat(amount || '0') / parseFloat(nav || '1')));
+      fd.append('stampDuty', '0');
+      fd.append('folio', folio);
+      const res = await fetch('/api/mf/verify-statement', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.parsed) {
+        setVerifyResult(data);
+        // Auto-select "use statement values" for mismatched fields
+        const comp = data.matchedTransaction?.comparison ?? {};
+        const defaults: Record<string, boolean> = {};
+        for (const [key, val] of Object.entries(comp)) {
+          if (!(val as Record<string, unknown>).match) defaults[key] = true;
+        }
+        setUseStatementValues(defaults);
+      } else {
+        setVerifyError(data.error || 'Verification failed');
+      }
+    } catch {
+      setVerifyError('Failed to verify. Please try again.');
+    }
+    setVerifying(false);
+  }
+
   // ── Save ───────────────────────────────────────────────────────────────────
   async function handleSave(andAnother = false) {
     if (!validate()) return;
@@ -1304,7 +1351,10 @@ export default function MutualFundsPage() {
     setSipBlocks((prev) => prev.map((b) => b.id === id ? updated : b));
   }
 
-  const allPortfolios = dbPortfolios.length > 0 ? dbPortfolios.map((p) => p.name) : DEFAULT_PORTFOLIOS;
+  const allPortfolios = Array.from(new Set([
+    ...DEFAULT_PORTFOLIOS,
+    ...dbPortfolios.map((p) => p.name),
+  ]));
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
@@ -1847,6 +1897,75 @@ export default function MutualFundsPage() {
 
             {/* Holder & Contact Details (both modes) */}
             <HolderSection holder={holder} onChange={setHolder} memberName={memberName} familyId={familyId} />
+
+            {/* ── Verify Against Statement (Optional) ─────────────── */}
+            {selectedFund && (
+              <div className="wv-card p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>
+                      Verify Against AMC Statement (Optional)
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>
+                      Upload your AMC account statement PDF to verify accuracy
+                    </p>
+                  </div>
+                  <button onClick={() => setShowVerify(!showVerify)}
+                    className="text-xs font-medium px-3 py-1.5 rounded-lg"
+                    style={{ backgroundColor: showVerify ? '#1B2A4A' : 'rgba(201,168,76,0.1)', color: showVerify ? 'white' : '#C9A84C' }}>
+                    {showVerify ? 'Hide' : 'Verify'}
+                  </button>
+                </div>
+
+                {showVerify && (
+                  <div className="space-y-3">
+                    {/* Upload zone */}
+                    <div className="border-2 border-dashed rounded-xl p-4 text-center transition-colors"
+                      style={{ borderColor: verifyFile ? '#C9A84C' : '#E8E5DD', backgroundColor: verifyFile ? 'rgba(201,168,76,0.04)' : 'transparent' }}>
+                      {verifyFile ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{verifyFile.name}</span>
+                          <button onClick={() => { setVerifyFile(null); setVerifyResult(null); }}
+                            className="text-xs" style={{ color: '#DC2626' }}>Remove</button>
+                        </div>
+                      ) : (
+                        <label className="cursor-pointer">
+                          <input type="file" accept=".pdf" className="hidden"
+                            onChange={e => { if (e.target.files?.[0]) setVerifyFile(e.target.files[0]); }} />
+                          <p className="text-xs" style={{ color: '#6B7280' }}>
+                            Drop AMC statement PDF here or <span style={{ color: '#C9A84C' }}>click to browse</span>
+                          </p>
+                        </label>
+                      )}
+                    </div>
+
+                    {/* Password */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <Label className="text-xs" style={{ color: '#6B7280' }}>Statement password (usually your PAN)</Label>
+                        <Input type="password" value={verifyPassword} onChange={e => setVerifyPassword(e.target.value)}
+                          placeholder="e.g. ABCDE1234F" className="h-8 text-xs mt-1" />
+                      </div>
+                      <Button onClick={handleVerify} disabled={!verifyFile || verifying}
+                        className="h-8 text-xs mt-5 gap-1.5"
+                        style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>
+                        {verifying ? 'Verifying...' : 'Verify'}
+                      </Button>
+                    </div>
+
+                    {/* Error */}
+                    {verifyError && (
+                      <div className="p-3 rounded-lg text-xs" style={{ backgroundColor: 'rgba(220,38,38,0.06)', color: '#DC2626', border: '1px solid rgba(220,38,38,0.15)' }}>
+                        {verifyError}
+                      </div>
+                    )}
+
+                    {/* Results — rendered via VerifyResults component */}
+                    {verifyResult !== null && <VerifyResults result={verifyResult} />}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Action buttons */}
             <div className="flex items-center gap-3 mt-5">
