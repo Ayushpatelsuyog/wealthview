@@ -21,6 +21,7 @@ import { VerifyResults } from '@/components/forms/VerifyResults';
 import { CASImporter }    from '@/components/forms/CASImporter';
 import { ECASImporter }   from '@/components/forms/ECASImporter';
 import { ImportHistory }  from '@/components/portfolio/ImportHistory';
+import { MfStatementImport } from '@/components/forms/MfStatementImport';
 import { useHoldingPrefill } from '@/hooks/use-holding-prefill';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -2045,18 +2046,33 @@ export default function MutualFundsPage() {
 
         {/* ─── Tab 2: CSV / Statement Import ─── */}
         <TabsContent value="import">
-          {/* ── eCAS Statement Import (primary) ── */}
+          {/* ── AMC Statement Import (primary) ── */}
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#9CA3AF' }}>eCAS Statement Import</p>
-            <p className="text-xs mb-5" style={{ color: '#6B7280' }}>Full transaction history — PDF, CSV, or Excel from CAMS or MFCentral</p>
-            <ECASImporter
-              familyId={familyId}
-              members={members}
-              portfolios={dbPortfolios}
-              memberId={member}
-              onImported={() => setImportHistoryKey(k => k + 1)}
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#9CA3AF' }}>AMC Statement Import</p>
+            <p className="text-xs mb-5" style={{ color: '#6B7280' }}>Import directly from AMC statements — HDFC, SBI, ICICI, Axis, Mirae, etc.</p>
+            <MfStatementImport
+              members={members.map(m => ({ id: m.id, name: m.name }))}
+              defaultMemberId={member}
+              portfolios={allPortfolios}
             />
           </div>
+
+          {/* ── eCAS Statement Import ── */}
+          <details className="wv-card p-5 mt-4 group">
+            <summary className="flex items-center gap-2 cursor-pointer list-none select-none">
+              <span className="text-xs font-semibold" style={{ color: '#6B7280' }}>eCAS Statement Import</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: '#F7F5F0', color: '#9CA3AF' }}>PDF, CSV, or Excel from CAMS or MFCentral</span>
+            </summary>
+            <div className="mt-4">
+              <ECASImporter
+                familyId={familyId}
+                members={members}
+                portfolios={dbPortfolios}
+                memberId={member}
+                onImported={() => setImportHistoryKey(k => k + 1)}
+              />
+            </div>
+          </details>
 
           {/* ── Legacy CAS / Holdings-only Import (collapsed) ── */}
           <details className="wv-card p-5 mt-4 group">
