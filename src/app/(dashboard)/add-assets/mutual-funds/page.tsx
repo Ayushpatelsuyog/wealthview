@@ -1160,11 +1160,15 @@ export default function MutualFundsPage() {
     setVerifying(true);
     setVerifyError('');
     setVerifyResult(null);
-    // Capture entered data at click time so it's available when results render
+    // Capture entered data at click time
+    // Also try reading from DOM as fallback in case React state is stale
+    const domDate = (document.querySelector('input[type="date"]') as HTMLInputElement)?.value || '';
+    const domAmount = (document.querySelector('input[type="number"][placeholder="50000"]') as HTMLInputElement)?.value || '';
+
     const selMem = members.find(m => m.id === member);
     const capturedData: Record<string, string> = {
-      date: purchaseDate || '',
-      amount: amount || '',
+      date: purchaseDate || domDate || '',
+      amount: amount || domAmount || '',
       nav: nav || '',
       folio: folio || '',
       memberName: selMem?.name || '',
@@ -1173,7 +1177,9 @@ export default function MutualFundsPage() {
       memberEmail: selMem?.primary_email || '',
     };
     setVerifyEnteredData(capturedData);
-    console.log('[Verify] Captured enteredData:', capturedData);
+    console.log('[Verify] State values: purchaseDate=', purchaseDate, 'amount=', amount, 'nav=', nav, 'folio=', folio);
+    console.log('[Verify] DOM fallback: domDate=', domDate, 'domAmount=', domAmount);
+    console.log('[Verify] Final captured:', capturedData);
     try {
       console.log('[Verify] Sending:', { purchaseDate, amount, nav, folio, fundName: selectedFund?.schemeName });
       const fd = new FormData();
