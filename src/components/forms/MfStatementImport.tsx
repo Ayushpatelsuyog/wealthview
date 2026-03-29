@@ -1,17 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+interface Distributor {
+  id: string;
+  name: string;
+}
+
 interface MfStatementImportProps {
   members: Array<{ id: string; name: string }>;
   defaultMemberId: string;
   portfolios: string[];
+  distributors?: Distributor[];
+  familyId?: string;
 }
 
 interface ParsedFund {
@@ -25,6 +33,7 @@ interface ParsedFund {
   sipCancelled: boolean;
   // Assignment fields
   memberId: string;
+  brokerId: string;        // distributor ID
   distributorName: string;
   portfolioName: string;
   schemeCode: string;      // AMFI scheme code (matched or manual)
@@ -33,6 +42,7 @@ interface ParsedFund {
   selected: boolean;       // whether to import this fund
   expanded: boolean;       // UI expand state
   autoCalc: any[];         // auto-calculated SIP installments
+  editingScheme: boolean;  // whether scheme search is open
 }
 
 interface ParseResult {
@@ -43,8 +53,25 @@ interface ParseResult {
   totalTransactionsInStatement: number;
 }
 
-export function MfStatementImport({ members, defaultMemberId, portfolios }: MfStatementImportProps) {
+export function MfStatementImport({ members, defaultMemberId, portfolios, distributors: propDistributors, familyId: _familyId }: MfStatementImportProps) {
   const [step, setStep] = useState(1);
+  const [distributors, setDistributors] = useState<Distributor[]>(propDistributors ?? []);
+  const [schemeSearchResults, setSchemeSearchResults] = useState<Record<number, any[]>>({});
+  const [schemeSearchQuery, setSchemeSearchQuery] = useState<Record<number, string>>({});
+
+  // Load distributors from database
+  useEffect(() => {
+    if (propDistributors?.length) return;
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase.from('users').select('family_id').eq('id', user.id).single();
+      if (!profile?.family_id) return;
+      const { data: brokers } = await supabase.from('brokers').select('id, name').eq('family_id', profile.family_id);
+      if (brokers) setDistributors(brokers.map(b => ({ id: b.id, name: b.name })));
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Step 1: Upload
   const [files, setFiles] = useState<File[]>([]);
@@ -119,6 +146,10 @@ export function MfStatementImport({ members, defaultMemberId, portfolios }: MfSt
             }
           } catch { /* search failed */ }
 
+          // Try to match distributor from statement to existing distributors
+          const stmtDist = (acctDetails?.distributorName || '').toLowerCase();
+          const matchedDist = distributors.find(d => stmtDist && d.name.toLowerCase().includes(stmtDist.substring(0, 8)));
+
           allFunds.push({
             fundName: fg.fundName,
             fundCode: fg.fundCode || '',
@@ -129,6 +160,7 @@ export function MfStatementImport({ members, defaultMemberId, portfolios }: MfSt
             closingValue: fg.closingValue || 0,
             sipCancelled: fg.sipCancelled || false,
             memberId: defaultMemberId,
+            brokerId: matchedDist?.id || '',
             distributorName: acctDetails?.distributorName || '',
             portfolioName: portfolios[0] || 'Long-term Growth',
             schemeCode,
@@ -137,6 +169,7 @@ export function MfStatementImport({ members, defaultMemberId, portfolios }: MfSt
             selected: true,
             expanded: false,
             autoCalc: [],
+            editingScheme: false,
           });
         }
       } catch (err) {
@@ -154,50 +187,73 @@ export function MfStatementImport({ members, defaultMemberId, portfolios }: MfSt
 
   // ── Step 3: Import all selected funds ──
   async function handleImport() {
-    const selected = parsedFunds.filter(f => f.selected && f.schemeCode);
+    const selected = parsedFunds.filter(f => f.selected && f.schemeCode && (f.brokerId || distributors.length === 0));
     if (selected.length === 0) return;
 
+    setStep(3); // Show importing step
     setImporting(true);
     setImportError('');
     let importedFunds = 0;
     let importedTxns = 0;
 
+    console.log(`[Import] Starting batch import for ${selected.length} funds`);
+
     for (let i = 0; i < selected.length; i++) {
       const fund = selected[i];
       setImportProgress(`Importing ${fund.schemeName || fund.fundName} (${i + 1}/${selected.length})...`);
 
-      try {
-        // Save each transaction via the MF save API
-        for (const txn of fund.transactions) {
-          const txnType = (txn.type || '').toLowerCase().includes('sip') ? 'sip' : 'buy';
-          const body = {
-            schemeCode: fund.schemeCode,
-            schemeName: fund.schemeName || fund.fundName,
-            amount: txn.grossAmount || txn.netAmount || txn.amount || 0,
-            nav: txn.nav || 0,
-            purchaseDate: txn.date || '',
-            folio: accountDetails?.folioNumber || '',
-            portfolioName: fund.portfolioName,
-            memberId: fund.memberId,
-            transactionType: txnType,
-            stampDuty: txn.stampDuty || 0,
-            isImport: true,
+      // Build transactions array for batch import
+      const txnList = fund.transactions
+        .filter((txn: any) => txn.date && (Number(txn.grossAmount || txn.netAmount || 0) > 0))
+        .map((txn: any) => {
+          const t = (txn.type || '').toLowerCase();
+          return {
+            date: txn.date,
+            type: t.includes('sip') ? 'sip' : t.includes('redeem') ? 'sell' : 'buy',
+            amount: Number(txn.grossAmount || txn.netAmount || 0),
+            nav: Number(txn.nav || 0),
+            units: Number(txn.units || 0),
+            stampDuty: Number(txn.stampDuty || 0),
           };
+        });
 
-          const saveRes = await fetch('/api/mf/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          });
+      console.log(`[Import] Fund ${i + 1}/${selected.length}: "${fund.schemeName}" scheme=${fund.schemeCode} broker=${fund.brokerId} txns=${txnList.length}`);
 
-          if (saveRes.ok) importedTxns++;
+      try {
+        const payload = {
+          memberId: fund.memberId,
+          schemeCode: fund.schemeCode,
+          schemeName: fund.schemeName || fund.fundName,
+          portfolioName: fund.portfolioName,
+          brokerId: fund.brokerId || undefined,
+          folioNumber: accountDetails?.folioNumber || '',
+          transactions: txnList,
+        };
+
+        console.log(`[Import] Batch payload:`, JSON.stringify(payload).substring(0, 300));
+
+        const res = await fetch('/api/mf/import-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          importedFunds++;
+          importedTxns += data.savedTransactions || 0;
+          console.log(`[Import] ✓ Fund saved: holdingId=${data.holdingId} txns=${data.savedTransactions}/${data.totalTransactions} qty=${data.quantity}`);
+          if (data.errors) console.warn(`[Import] Warnings:`, data.errors);
+        } else {
+          console.error(`[Import] ✗ Failed:`, data.error || data);
+          setImportError(`Failed to import ${fund.schemeName}: ${data.error || 'Unknown error'}`);
         }
-        importedFunds++;
       } catch (err) {
-        console.error(`[Import] Failed to import ${fund.fundName}:`, err);
+        console.error(`[Import] ✗ Error:`, err);
       }
     }
 
+    console.log(`[Import] Complete: ${importedFunds} funds, ${importedTxns} transactions`);
     setImporting(false);
     setImportProgress('');
     setImportResult({ funds: importedFunds, txns: importedTxns });
@@ -312,7 +368,7 @@ export function MfStatementImport({ members, defaultMemberId, portfolios }: MfSt
 
           {/* Fund cards */}
           {parsedFunds.map((fund, fi) => (
-            <div key={fi} className="border rounded-lg overflow-hidden" style={{ borderColor: fund.selected ? '#C9A84C' : '#E8E5DD', opacity: fund.selected ? 1 : 0.6 }}>
+            <div key={fi} className="border rounded-lg" style={{ borderColor: fund.selected ? '#C9A84C' : '#E8E5DD', opacity: fund.selected ? 1 : 0.6, position: 'relative' }}>
               {/* Fund header */}
               <div className="px-3 py-2" style={{ backgroundColor: fund.selected ? 'rgba(201,168,76,0.06)' : '#F7F5F0' }}>
                 <div className="flex items-center gap-2">
@@ -333,44 +389,97 @@ export function MfStatementImport({ members, defaultMemberId, portfolios }: MfSt
 
                 {/* Assignment fields */}
                 {fund.selected && (
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    <div>
-                      <Label className="text-[9px]" style={{ color: '#9CA3AF' }}>Member</Label>
-                      <Select value={fund.memberId} onValueChange={v => updateFund(fi, { memberId: v })}>
-                        <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {members.map(m => <SelectItem key={m.id} value={m.id} className="text-[10px]">{m.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                  <div className="space-y-2 mt-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <Label className="text-[9px]" style={{ color: '#9CA3AF' }}>Member</Label>
+                        <Select value={fund.memberId} onValueChange={v => updateFund(fi, { memberId: v })}>
+                          <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {members.map(m => <SelectItem key={m.id} value={m.id} className="text-[10px]">{m.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-[9px]" style={{ color: '#9CA3AF' }}>Portfolio</Label>
+                        <Select value={fund.portfolioName} onValueChange={v => updateFund(fi, { portfolioName: v })}>
+                          <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {portfolios.map(p => <SelectItem key={p} value={p} className="text-[10px]">{p}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-[9px]" style={{ color: '#9CA3AF' }}>Distributor {!fund.brokerId && <span style={{ color: '#DC2626' }}>*</span>}</Label>
+                        {distributors.length > 0 ? (
+                          <Select value={fund.brokerId} onValueChange={v => updateFund(fi, { brokerId: v })}>
+                            <SelectTrigger className="h-7 text-[10px]"><SelectValue placeholder="Select..." /></SelectTrigger>
+                            <SelectContent>
+                              {distributors.map(d => <SelectItem key={d.id} value={d.id} className="text-[10px]">{d.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <p className="text-[10px] mt-1" style={{ color: '#9CA3AF' }}>
+                            {fund.distributorName || 'No distributors found'}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <Label className="text-[9px]" style={{ color: '#9CA3AF' }}>Portfolio</Label>
-                      <Select value={fund.portfolioName} onValueChange={v => updateFund(fi, { portfolioName: v })}>
-                        <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {portfolios.map(p => <SelectItem key={p} value={p} className="text-[10px]">{p}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {/* AMFI Scheme — editable */}
                     <div>
                       <Label className="text-[9px]" style={{ color: '#9CA3AF' }}>AMFI Scheme</Label>
-                      {fund.matched ? (
-                        <p className="text-[10px] font-medium truncate mt-1" title={fund.schemeName}>{fund.schemeName}</p>
+                      {fund.matched && !fund.editingScheme ? (
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-[10px] font-medium truncate flex-1" title={fund.schemeName}>
+                            ✅ {fund.schemeName}
+                          </p>
+                          <button onClick={() => updateFund(fi, { editingScheme: true })}
+                            className="text-[9px] px-2 py-0.5 rounded" style={{ color: '#C9A84C', backgroundColor: 'rgba(201,168,76,0.1)' }}>
+                            Change
+                          </button>
+                        </div>
                       ) : (
-                        <Input className="h-7 text-[10px]" placeholder="Search fund..."
-                          onBlur={async (e) => {
-                            const q = e.target.value;
-                            if (q.length < 3) return;
-                            try {
-                              const res = await fetch(`/api/mf/search?q=${encodeURIComponent(q)}`);
-                              const data = await res.json();
-                              if (data.results?.[0]) {
-                                updateFund(fi, { schemeCode: String(data.results[0].schemeCode), schemeName: data.results[0].schemeName, matched: true });
-                              }
-                            } catch { /* ignore */ }
-                          }} />
+                        <div className="relative">
+                          <Input className="h-7 text-[10px] mt-0.5"
+                            placeholder="Type to search AMFI schemes..."
+                            value={schemeSearchQuery[fi] ?? fund.fundName.substring(0, 20)}
+                            onChange={async (e) => {
+                              const q = e.target.value;
+                              setSchemeSearchQuery(prev => ({ ...prev, [fi]: q }));
+                              if (q.length < 3) { setSchemeSearchResults(prev => ({ ...prev, [fi]: [] })); return; }
+                              try {
+                                const res = await fetch(`/api/mf/search?q=${encodeURIComponent(q)}`);
+                                const data = await res.json();
+                                setSchemeSearchResults(prev => ({ ...prev, [fi]: data.results || [] }));
+                              } catch { /* ignore */ }
+                            }}
+                            onFocus={() => {
+                              if (!schemeSearchQuery[fi]) setSchemeSearchQuery(prev => ({ ...prev, [fi]: fund.fundName.substring(0, 20) }));
+                            }}
+                          />
+                          {(schemeSearchResults[fi] || []).length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-1 border rounded-lg bg-white shadow-lg max-h-40 overflow-y-auto" style={{ borderColor: '#E8E5DD', zIndex: 9999 }}>
+                              {(schemeSearchResults[fi] || []).map((r: any, ri: number) => (
+                                <button key={ri}
+                                  className="w-full text-left px-3 py-1.5 text-[10px] hover:bg-[#F7F5F0] border-b last:border-0"
+                                  style={{ borderColor: '#F0EDE6' }}
+                                  onClick={() => {
+                                    updateFund(fi, { schemeCode: String(r.schemeCode), schemeName: r.schemeName, matched: true, editingScheme: false });
+                                    setSchemeSearchResults(prev => ({ ...prev, [fi]: [] }));
+                                    setSchemeSearchQuery(prev => ({ ...prev, [fi]: '' }));
+                                  }}>
+                                  <p className="font-medium" style={{ color: '#1A1A2E' }}>{r.schemeName}</p>
+                                  <p style={{ color: '#9CA3AF' }}>Code: {r.schemeCode}</p>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
+                    {/* Validation warning */}
+                    {!fund.schemeCode && <p className="text-[9px]" style={{ color: '#DC2626' }}>Select an AMFI scheme to enable import</p>}
+                    {!fund.brokerId && distributors.length > 0 && <p className="text-[9px]" style={{ color: '#DC2626' }}>Select a distributor</p>}
                   </div>
                 )}
               </div>
@@ -418,7 +527,7 @@ export function MfStatementImport({ members, defaultMemberId, portfolios }: MfSt
           <div className="flex items-center gap-3">
             <Button onClick={() => setStep(1)} variant="outline" className="h-9 text-xs">Back</Button>
             <Button onClick={handleImport}
-              disabled={parsedFunds.filter(f => f.selected && f.schemeCode).length === 0}
+              disabled={parsedFunds.filter(f => f.selected && f.schemeCode && (f.brokerId || distributors.length === 0)).length === 0}
               className="flex-1 h-9 text-xs font-semibold"
               style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>
               Import {parsedFunds.filter(f => f.selected).length} Fund(s) ({totalTxns} transactions)
