@@ -4,6 +4,15 @@ import React from 'react';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+interface AutoCalcEntry {
+  date: string;
+  nav: number;
+  units_purchased: number;
+  amount: number;
+  stamp_duty: number;
+  effective_amount: number;
+}
+
 interface VerifyResultsProps {
   result: any;
   enteredData?: {
@@ -17,6 +26,7 @@ interface VerifyResultsProps {
     memberEmail?: string;
     distributorName?: string;
   };
+  autoCalculated?: AutoCalcEntry[];
 }
 
 const FIELD_LABELS: Record<string, string> = {
@@ -66,7 +76,7 @@ function matchStr(a: string, b: string, partial = false): string {
   return '⚠️';
 }
 
-export function VerifyResults({ result, enteredData }: VerifyResultsProps) {
+export function VerifyResults({ result, enteredData, autoCalculated }: VerifyResultsProps) {
   if (!result) return null;
 
   // Debug
@@ -88,6 +98,28 @@ export function VerifyResults({ result, enteredData }: VerifyResultsProps) {
 
   const matchedFundGroup = fundGroups.find((g: any) => g.isMatchedFund);
   const otherFunds = fundGroups.filter((g: any) => !g.isMatchedFund && g.transactions?.length > 0);
+  const ac = autoCalculated ?? [];
+
+  // Helper: find the auto-calculated installment for a given statement date
+  function findAutoCalc(stmtDate: string): AutoCalcEntry | null {
+    if (ac.length === 0) return null;
+    const nd = normalizeDate(stmtDate);
+    // Exact match first
+    const exact = ac.find(a => normalizeDate(a.date) === nd);
+    if (exact) return exact;
+    // ±3 days
+    const stmtMs = new Date(nd).getTime();
+    if (!isFinite(stmtMs)) return null;
+    return ac.find(a => {
+      const aMs = new Date(normalizeDate(a.date)).getTime();
+      return isFinite(aMs) && Math.abs(stmtMs - aMs) <= 3 * 86400000;
+    }) ?? null;
+  }
+
+  // Cumulative units from auto-calc for balance comparison
+  const acCumUnits: number[] = [];
+  let cumSum = 0;
+  for (const a of ac) { cumSum += a.units_purchased; acCumUnits.push(cumSum); }
 
   // ── Client-side transaction matching ──
   const entAmt = parseFloat(ed.amount ?? '0');
@@ -239,35 +271,52 @@ export function VerifyResults({ result, enteredData }: VerifyResultsProps) {
               </thead>
               <tbody>
                 {allTxns.map((txn: any, ti: number) => {
-                  const isMatch = ti === clientMatchIdx;
+                  const isExactMatch = ti === clientMatchIdx;
                   const txnGross = Number(txn.grossAmount ?? 0);
                   const txnNav = Number(txn.nav ?? 0);
                   const txnUnits = Number(txn.units ?? 0);
+                  const txnBal = Number(txn.balanceUnits ?? 0);
+                  const amtMatches = entAmt > 0 && txnGross > 0 && Math.abs(txnGross - entAmt) <= 2;
+
+                  // Find auto-calculated match for this row
+                  const acMatch = findAutoCalc(txn.date ?? '');
+                  const acIdx = acMatch ? ac.indexOf(acMatch) : -1;
+                  const acCum = acIdx >= 0 ? acCumUnits[acIdx] : -1;
+
+                  // Per-column comparison against auto-calc (if available)
+                  const dateOk = acMatch ? Math.abs(new Date(normalizeDate(txn.date)).getTime() - new Date(normalizeDate(acMatch.date)).getTime()) <= 86400000 : null;
+                  const navOk = acMatch ? Math.abs(txnNav - acMatch.nav) <= 0.05 : null;
+                  const unitsOk = acMatch ? Math.abs(txnUnits - acMatch.units_purchased) <= 0.05 : null;
+                  const balOk = acCum >= 0 ? Math.abs(txnBal - acCum) <= 0.5 : null;
+                  // Slightly dimmer gold for non-exact rows that still match amount
+                  const rowBg = isExactMatch ? 'rgba(201,168,76,0.12)' : amtMatches ? 'rgba(201,168,76,0.04)' : undefined;
                   return (
                     <tr key={ti} style={{
                       borderTop: '1px solid #F0EDE6',
-                      backgroundColor: isMatch ? 'rgba(201,168,76,0.12)' : undefined,
-                      fontWeight: isMatch ? 600 : undefined,
+                      backgroundColor: rowBg,
+                      fontWeight: isExactMatch ? 600 : undefined,
                     }}>
                       <td className="px-2 py-1.5" style={{ color: '#1A1A2E' }}>
                         {txn.date ?? '—'}
-                        {isMatch && entDate && (normalizeDate(txn.date) === entDate ? ' ✅' : ' ⚠️')}
-                        {isMatch && <span className="ml-1 text-[9px]" style={{ color: '#C9A84C' }}>← yours</span>}
+                        {dateOk !== null ? (dateOk ? ' ✅' : ' ⚠️') : ''}
+                        {isExactMatch && <span className="ml-1 text-[9px]" style={{ color: '#C9A84C' }}>← yours</span>}
                       </td>
                       <td className="px-2 py-1.5" style={{ color: '#6B7280' }}>{txn.type ?? '—'}</td>
                       <td className="px-2 py-1.5 text-right" style={{ color: '#1A1A2E' }}>
                         {fmtAmt(txn)}
-                        {isMatch && entAmt > 0 && (Math.abs(txnGross - entAmt) <= 1 ? ' ✅' : ' ⚠️')}
+                        {amtMatches ? ' ✅' : (entAmt > 0 && txnGross > 0 ? ' ⚠️' : '')}
                       </td>
                       <td className="px-2 py-1.5 text-right" style={{ color: '#6B7280' }}>
                         {txnNav > 0 ? txnNav.toFixed(4) : '—'}
-                        {isMatch && entNav > 0 && txnNav > 0 && (Math.abs(txnNav - entNav) <= 0.05 ? ' ✅' : ' ⚠️')}
+                        {navOk !== null ? (navOk ? ' ✅' : ' ⚠️') : ''}
                       </td>
                       <td className="px-2 py-1.5 text-right" style={{ color: '#6B7280' }}>
                         {txnUnits > 0 ? txnUnits.toFixed(4) : '—'}
+                        {unitsOk !== null ? (unitsOk ? ' ✅' : ' ⚠️') : ''}
                       </td>
                       <td className="px-2 py-1.5 text-right" style={{ color: '#9CA3AF', fontSize: 10 }}>
-                        {Number(txn.balanceUnits) > 0 ? Number(txn.balanceUnits).toFixed(1) : '—'}
+                        {txnBal > 0 ? txnBal.toFixed(1) : '—'}
+                        {balOk !== null ? (balOk ? ' ✅' : ' ⚠️') : ''}
                       </td>
                     </tr>
                   );

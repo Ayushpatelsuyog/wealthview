@@ -309,6 +309,22 @@ function extractFundSections(text: string): FundSection[] {
       if (grossAmount <= 0 && netAmount > 0) grossAmount = netAmount + stampDuty;
       if (grossAmount <= 0 && units > 0 && nav > 0) grossAmount = Math.round(units * nav * 100) / 100;
 
+      // Round gross to nearest common SIP amount (500, 1000, 2000, 2500, 3000, 5000, 10000, etc.)
+      // SIP amounts are always round numbers. If gross is within ₹1 of a round number, use the round number.
+      if (grossAmount > 0) {
+        // Try rounding to nearest 500
+        const r500 = Math.round(grossAmount / 500) * 500;
+        if (r500 > 0 && Math.abs(grossAmount - r500) <= 1.5) {
+          grossAmount = r500;
+        } else {
+          // Try rounding to nearest 100
+          const r100 = Math.round(grossAmount / 100) * 100;
+          if (r100 > 0 && Math.abs(grossAmount - r100) <= 0.5) {
+            grossAmount = r100;
+          }
+        }
+      }
+
       section.transactions.push({
         date, type, grossAmount, stampDuty, netAmount, nav,
         pricePerUnit: price, units, balanceUnits: balance,

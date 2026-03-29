@@ -848,6 +848,7 @@ export default function MutualFundsPage() {
   const [verifying, setVerifying] = useState(false);
   const [verifyResult, setVerifyResult] = useState<Record<string, unknown> | null>(null);
   const [verifyEnteredData, setVerifyEnteredData] = useState<Record<string, string>>({});
+  const [verifyAutoCalc, setVerifyAutoCalc] = useState<Array<{ date: string; nav: number; units_purchased: number; amount: number; stamp_duty: number; effective_amount: number }>>([]);
   const [verifyError, setVerifyError] = useState('');
   const [_selectedImports, _setSelectedImports] = useState<Set<number>>(new Set());
   const [_useStatementValues, setUseStatementValues] = useState<Record<string, boolean>>({});
@@ -1160,15 +1161,20 @@ export default function MutualFundsPage() {
     setVerifying(true);
     setVerifyError('');
     setVerifyResult(null);
-    // Capture entered data at click time
-    // Also try reading from DOM as fallback in case React state is stale
-    const domDate = (document.querySelector('input[type="date"]') as HTMLInputElement)?.value || '';
-    const domAmount = (document.querySelector('input[type="number"][placeholder="50000"]') as HTMLInputElement)?.value || '';
+    // Capture entered data — handle both SIP and Lumpsum modes
+    // For SIP: amount is in sipBlocks[0].sipAmount, date in sipBlocks[0].sipStart
+    // For Lumpsum: amount is in `amount` state, date in `purchaseDate` state
+    const sipBlock = sipBlocks[0];
+    const sipAmt = sipBlock?.sipAmount || '';
+    const sipStart = sipBlock?.sipStart || '';
+
+    const effectiveDate = purchaseDate || sipStart || '';
+    const effectiveAmount = amount || sipAmt || '';
 
     const selMem = members.find(m => m.id === member);
     const capturedData: Record<string, string> = {
-      date: purchaseDate || domDate || '',
-      amount: amount || domAmount || '',
+      date: effectiveDate,
+      amount: effectiveAmount,
       nav: nav || '',
       folio: folio || '',
       memberName: selMem?.name || '',
@@ -1177,9 +1183,27 @@ export default function MutualFundsPage() {
       memberEmail: selMem?.primary_email || '',
     };
     setVerifyEnteredData(capturedData);
-    console.log('[Verify] State values: purchaseDate=', purchaseDate, 'amount=', amount, 'nav=', nav, 'folio=', folio);
-    console.log('[Verify] DOM fallback: domDate=', domDate, 'domAmount=', domAmount);
-    console.log('[Verify] Final captured:', capturedData);
+    console.log('[Verify] SIP: sipAmt=', sipAmt, 'sipStart=', sipStart, '| Lump: amount=', amount, 'date=', purchaseDate);
+    console.log('[Verify] Effective: date=', effectiveDate, 'amount=', effectiveAmount);
+    console.log('[Verify] Captured:', capturedData);
+
+    // Also fetch auto-calculated SIP installments for comparison
+    setVerifyAutoCalc([]);
+    if (selectedFund && sipAmt && sipStart) {
+      try {
+        const sipDay = sipBlock?.sipDate || '28th';
+        const calcUrl = `/api/mf/sip-calculate?scheme_code=${selectedFund.schemeCode}&sip_amount=${sipAmt}&sip_date=${encodeURIComponent(sipDay)}&start_date=${sipStart}&end_date=${new Date().toISOString().split('T')[0]}`;
+        const calcRes = await fetch(calcUrl);
+        if (calcRes.ok) {
+          const calcData = await calcRes.json();
+          if (calcData.monthly_breakdown) {
+            setVerifyAutoCalc(calcData.monthly_breakdown);
+            console.log('[Verify] Auto-calc:', calcData.monthly_breakdown.length, 'installments');
+          }
+        }
+      } catch { /* auto-calc failed, continue without */ }
+    }
+
     try {
       console.log('[Verify] Sending:', { purchaseDate, amount, nav, folio, fundName: selectedFund?.schemeName });
       const fd = new FormData();
@@ -1985,7 +2009,7 @@ export default function MutualFundsPage() {
 
                     {/* Results — rendered via VerifyResults component */}
                     {verifyResult !== null && (
-                      <VerifyResults result={verifyResult} enteredData={verifyEnteredData} />
+                      <VerifyResults result={verifyResult} enteredData={verifyEnteredData} autoCalculated={verifyAutoCalc} />
                     )}
                   </div>
                 )}
