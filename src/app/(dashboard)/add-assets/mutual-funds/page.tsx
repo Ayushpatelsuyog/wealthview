@@ -27,7 +27,7 @@ import { useHoldingPrefill } from '@/hooks/use-holding-prefill';
 
 interface SearchResult { schemeCode: number; schemeName: string; category: string }
 interface NavData      { nav: number; navDate: string; fundName: string; fundHouse: string; category: string }
-interface FamilyMember { id: string; name: string }
+interface FamilyMember { id: string; name: string; pan?: string; primary_mobile?: string; primary_email?: string }
 interface Portfolio    { id: string; name: string; type: string }
 interface Toast        { type: 'success' | 'error'; message: string }
 
@@ -868,7 +868,7 @@ export default function MutualFundsPage() {
         setFamilyId(fid);
         setSelectedFamily(fid);
         const { data: familyUsers } = await supabase
-          .from('users').select('id, name').eq('family_id', fid);
+          .from('users').select('id, name, pan, primary_mobile, primary_email').eq('family_id', fid);
         setMembers(familyUsers ?? [{ id: profile.id, name: profile.name }]);
 
         // Load families the user has access to
@@ -912,7 +912,7 @@ export default function MutualFundsPage() {
     if (!selectedFamily) return;
     setFamilyId(selectedFamily);
     (async () => {
-      const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
+      const { data: fUsers } = await supabase.from('users').select('id, name, pan, primary_mobile, primary_email').eq('family_id', selectedFamily);
       setMembers(fUsers ?? []);
       if (fUsers?.length) setMember(fUsers[0].id);
       const { data: ports } = await supabase.from('portfolios').select('id, name, type').eq('family_id', selectedFamily).order('created_at');
@@ -1160,15 +1160,17 @@ export default function MutualFundsPage() {
     setVerifyError('');
     setVerifyResult(null);
     try {
+      console.log('[Verify] Sending:', { purchaseDate, amount, nav, folio, fundName: selectedFund?.schemeName });
       const fd = new FormData();
       fd.append('file', verifyFile);
       fd.append('password', verifyPassword);
-      fd.append('date', purchaseDate);
-      fd.append('amount', amount);
-      fd.append('nav', nav);
+      fd.append('date', purchaseDate || '');
+      fd.append('amount', amount || '0');
+      fd.append('nav', nav || '0');
       fd.append('units', String(parseFloat(amount || '0') / parseFloat(nav || '1')));
       fd.append('stampDuty', '0');
       fd.append('folio', folio);
+      fd.append('fundName', selectedFund?.schemeName ?? '');
       const res = await fetch('/api/mf/verify-statement', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.parsed) {
@@ -1961,7 +1963,19 @@ export default function MutualFundsPage() {
                     )}
 
                     {/* Results — rendered via VerifyResults component */}
-                    {verifyResult !== null && <VerifyResults result={verifyResult} />}
+                    {verifyResult !== null && (() => {
+                      const selMember = members.find(m => m.id === member);
+                      return <VerifyResults result={verifyResult} enteredData={{
+                        date: purchaseDate,
+                        amount: amount,
+                        nav: nav,
+                        folio: folio,
+                        memberName: selMember?.name,
+                        memberPan: selMember?.pan,
+                        memberMobile: selMember?.primary_mobile,
+                        memberEmail: selMember?.primary_email,
+                      }} />;
+                    })()}
                   </div>
                 )}
               </div>

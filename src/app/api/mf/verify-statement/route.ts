@@ -78,7 +78,7 @@ function parseDate(s: string): string {
   return s;
 }
 
-function datesClose(a: string, b: string, toleranceDays = 2): boolean {
+function datesClose(a: string, b: string, toleranceDays = 3): boolean {
   const da = new Date(a).getTime();
   const db = new Date(b).getTime();
   if (isNaN(da) || isNaN(db)) return false;
@@ -367,14 +367,46 @@ function extractFundSections(text: string): FundSection[] {
 
   // ── Post-process: filter out false positives and merge duplicates ──
 
-  // 1. Filter out sections with garbage names (contain bank/address text, no "Fund" keyword)
-  const validSections = sections.filter(s => {
+  console.log(`[Verify Statement] Pre-merge: ${sections.length} sections: ${sections.map(s => `"${s.fundName.substring(0, 50)}" (${s.transactions.length} txns)`).join(', ')}`);
+
+  // 1. Filter: keep valid fund sections, rescue transactions from garbage sections
+  const validSections: FundSection[] = [];
+  const rescuedTxns: ParsedTransaction[] = [];
+
+  for (const s of sections) {
     const name = s.fundName.toLowerCase();
-    if (name.includes('bank ltd') || name.includes('baroda') || name.includes('intermediary')) return false;
-    if (name.includes('load structure') || name.includes('exit load')) return false;
-    if (!name.includes('fund') && !name.includes('growth') && !name.includes('dividend')) return false;
-    return true;
-  });
+    const isGarbage = name.includes('bank ltd') || name.includes('baroda') || name.includes('intermediary')
+      || name.includes('load structure') || name.includes('exit load')
+      || (!name.includes('fund') && !name.includes('growth') && !name.includes('dividend'));
+
+    if (!isGarbage) {
+      validSections.push(s);
+    } else if (s.transactions.length > 0) {
+      // Rescue transactions from garbage sections — they belong to a real fund nearby
+      console.log(`[Verify Statement] Rescuing ${s.transactions.length} txns from garbage section "${s.fundName.substring(0, 50)}"`);
+      rescuedTxns.push(...s.transactions);
+    }
+  }
+
+  // Try to assign rescued transactions to a valid section or create a new one
+  if (rescuedTxns.length > 0) {
+    // Check if the garbage section's text contained a real fund header
+    for (const s of sections) {
+      if (validSections.includes(s)) continue;
+      // Look for a real fund name in the section's fundName string
+      const realFundMatch = s.fundName.match(/((?:HDFC|SBI|ICICI|Axis|Mirae|Kotak|Nippon|DSP|UTI|Tata)\s+[\w\s]+?(?:Fund)[\w\s-]*?(?:Growth|Dividend|Direct|Regular))/i);
+      if (realFundMatch) {
+        const rescuedSection: FundSection = {
+          fundCode: '', fundName: realFundMatch[1].replace(/\s+/g, ' ').trim(),
+          isin: '', transactions: rescuedTxns,
+          closingUnits: 0, closingNav: 0, closingValue: 0, sipCancelled: false,
+        };
+        validSections.push(rescuedSection);
+        console.log(`[Verify Statement] Rescued ${rescuedTxns.length} txns into "${rescuedSection.fundName}"`);
+        break;
+      }
+    }
+  }
 
   // 2. Merge sections with same/similar fund names
   function normalizeFundName(name: string): string {
@@ -561,19 +593,40 @@ export async function POST(req: NextRequest) {
     }
 
     // Match the user's entered transaction
+    console.log(`[Verify Statement] Matching: enteredDate="${enteredDate}", enteredAmount=${enteredAmount}, enteredNav=${enteredNav}, enteredUnits=${enteredUnits}`);
+    console.log(`[Verify Statement] Matched section has ${matchedSection?.transactions.length ?? 0} txns. First 3 dates: ${matchedSection?.transactions.slice(0, 3).map(t => t.date).join(', ')}`);
+
     let matchedTxn: ParsedTransaction | null = null;
     if (matchedSection) {
       for (const txn of matchedSection.transactions) {
-        if (enteredDate && datesClose(txn.date, enteredDate)) {
-          if (enteredAmount > 0 && (numbersClose(txn.grossAmount, enteredAmount, 50) || numbersClose(txn.netAmount, enteredAmount, 50))) {
-            matchedTxn = txn;
-            break;
-          }
-          if (enteredUnits > 0 && numbersClose(txn.units, enteredUnits, 1)) {
-            matchedTxn = txn;
-            break;
-          }
+        // Try matching by date (±3 days for SIP holiday shifts)
+        const dateMatch = enteredDate ? datesClose(txn.date, enteredDate) : false;
+        // Try matching by amount (±100 for stamp duty)
+        const amtMatch = enteredAmount > 0 && (numbersClose(txn.grossAmount, enteredAmount, 100) || numbersClose(txn.netAmount, enteredAmount, 100));
+        // Try matching by NAV
+        const navMatch = enteredNav > 0 && numbersClose(txn.nav, enteredNav, 0.1);
+        // Try matching by units
+        const unitsMatch = enteredUnits > 0 && numbersClose(txn.units, enteredUnits, 1);
+
+        if (dateMatch || amtMatch || navMatch || unitsMatch) {
+          console.log(`[Verify Statement] Candidate: date=${txn.date} dateMatch=${dateMatch} amtMatch=${amtMatch} navMatch=${navMatch} unitsMatch=${unitsMatch} gross=${txn.grossAmount}`);
         }
+
+        // Match by date + amount
+        if (dateMatch && amtMatch) { matchedTxn = txn; break; }
+        // Match by date + units
+        if (dateMatch && unitsMatch) { matchedTxn = txn; break; }
+        // Match by date alone
+        if (dateMatch) { matchedTxn = txn; break; }
+        // Match by amount + NAV (no date entered)
+        if (!enteredDate && amtMatch && navMatch) { matchedTxn = txn; break; }
+        // Match by amount alone (no date entered, for lump sums)
+        if (!enteredDate && amtMatch) { matchedTxn = txn; break; }
+      }
+      if (matchedTxn) {
+        console.log(`[Verify Statement] Matched txn: date=${matchedTxn.date} gross=${matchedTxn.grossAmount} nav=${matchedTxn.nav}`);
+      } else {
+        console.log(`[Verify Statement] No match found for date="${enteredDate}" amount=${enteredAmount} nav=${enteredNav}`);
       }
     }
 
@@ -626,7 +679,8 @@ export async function POST(req: NextRequest) {
       }
 
       matchedTransaction = { found: true, comparison };
-    } else if (enteredDate || enteredAmount > 0) {
+    } else {
+      // Always return a match result — even if not found
       matchedTransaction = { found: false, comparison: {} };
     }
 
@@ -663,6 +717,7 @@ export async function POST(req: NextRequest) {
 
     const totalTxns = fundSections.reduce((s, f) => s + f.transactions.length, 0);
     console.log(`[Verify Statement] Parsed ${totalTxns} transactions across ${fundSections.length} funds`);
+    console.log(`[Verify Statement] matchedTransaction: found=${matchedTransaction?.found}, compFields=${Object.keys(matchedTransaction?.comparison ?? {}).join(',')}`);
 
     return NextResponse.json({
       parsed: true,
