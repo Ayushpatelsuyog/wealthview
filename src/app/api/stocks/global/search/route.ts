@@ -28,11 +28,13 @@ const EXCHANGE_MAP: Record<string, { country: string; currency: string; name: st
   // Australia
   ASX:     { country: 'Australia', currency: 'AUD', name: 'ASX' },
   AX:      { country: 'Australia', currency: 'AUD', name: 'ASX' },
+  CXA:     { country: 'Australia', currency: 'AUD', name: 'ASX' },  // Chi-X Australia
   // Germany
   GER:     { country: 'Germany', currency: 'EUR', name: 'Xetra' },
   FRA:     { country: 'Germany', currency: 'EUR', name: 'Frankfurt' },
   ETR:     { country: 'Germany', currency: 'EUR', name: 'Xetra' },
   BER:     { country: 'Germany', currency: 'EUR', name: 'Berlin' },
+  DUS:     { country: 'Germany', currency: 'EUR', name: 'Dusseldorf' },
   MUN:     { country: 'Germany', currency: 'EUR', name: 'Munich' },
   STU:     { country: 'Germany', currency: 'EUR', name: 'Stuttgart' },
   // France
@@ -144,8 +146,19 @@ async function yahooSearch(query: string): Promise<SearchResult[]> {
         if (EXCLUDED_EXCHANGES.has(exchCode)) continue;
 
         const exchInfo = EXCHANGE_MAP[exchCode];
+        // Infer currency from symbol suffix if exchange unknown
+        let inferredCurrency = 'USD';
+        const symSuffix = q.symbol.split('.').pop()?.toUpperCase() ?? '';
+        const suffixCurrencyMap: Record<string, string> = {
+          AX: 'AUD', TO: 'CAD', L: 'GBP', T: 'JPY', HK: 'HKD', DE: 'EUR', PA: 'EUR',
+          AS: 'EUR', SW: 'CHF', ST: 'SEK', OL: 'NOK', CO: 'DKK', HE: 'EUR',
+          KS: 'KRW', KQ: 'KRW', SI: 'SGD', SS: 'CNY', SZ: 'CNY', TW: 'TWD',
+          SA: 'BRL', MX: 'MXN', JO: 'ZAR', NZ: 'NZD', XA: 'AUD',
+        };
+        if (suffixCurrencyMap[symSuffix]) inferredCurrency = suffixCurrencyMap[symSuffix];
+
         const country = exchInfo?.country ?? q.exchDisp ?? '';
-        const currency = exchInfo?.currency ?? 'USD';
+        const currency = exchInfo?.currency ?? inferredCurrency;
         const exchangeName = exchInfo?.name ?? q.exchDisp ?? exchCode;
 
         results.push({
