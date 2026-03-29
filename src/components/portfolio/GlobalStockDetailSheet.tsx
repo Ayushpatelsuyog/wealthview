@@ -484,13 +484,23 @@ export function GlobalStockDetailSheet({
             <Button
               className="h-9 text-xs gap-1.5"
               style={{ backgroundColor: '#1B2A4A', color: 'white' }}
-              onClick={() => { onClose(); router.push(`/add-assets/global-stocks`); }}>
+              onClick={() => { onClose(); router.push(`/add-assets/global-stocks?add_to=${holding.id}`); }}>
               <Plus className="w-3.5 h-3.5" />Add More Shares
             </Button>
-            <Button variant="outline" className="h-9 text-xs gap-1.5 col-span-1"
+            <Button variant="outline" className="h-9 text-xs gap-1.5"
+              style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
+              onClick={() => { onClose(); router.push(`/add-assets/global-stocks?sell=${holding.id}`); }}>
+              Sell / Exit
+            </Button>
+            <Button variant="outline" className="h-9 text-xs gap-1.5"
+              style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
+              onClick={() => { onClose(); router.push(`/add-assets/global-stocks?dividend=${holding.id}`); }}>
+              Record Dividend
+            </Button>
+            <Button variant="outline" className="h-9 text-xs gap-1.5"
               style={{ borderColor: 'rgba(220,38,38,0.2)', color: '#DC2626' }}
               onClick={() => { if (confirm('Delete this holding and all its transactions?')) { onDelete(holding.id); onClose(); } }}>
-              <Trash2 className="w-3.5 h-3.5" />Delete Holding
+              <Trash2 className="w-3.5 h-3.5" />Delete
             </Button>
           </div>
         </div>

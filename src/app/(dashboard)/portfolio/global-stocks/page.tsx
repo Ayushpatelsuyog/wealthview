@@ -140,10 +140,9 @@ function ActionMenu({
   const router = useRouter();
   const actions = [
     { label: 'View details',    action: () => { onViewDetails(holdingId); setOpen(false); } },
-    { label: 'Edit',            action: () => { router.push(`/add-assets/global-stocks`); setOpen(false); } },
-    { label: 'Add More Shares', action: () => { router.push(`/add-assets/global-stocks`); setOpen(false); } },
-    { label: 'Sell',            action: () => { router.push(`/add-assets/global-stocks`); setOpen(false); } },
-    { label: 'Record Dividend', action: () => { router.push(`/add-assets/global-stocks`); setOpen(false); } },
+    { label: 'Add More Shares', action: () => { router.push(`/add-assets/global-stocks?add_to=${holdingId}`); setOpen(false); } },
+    { label: 'Sell / Exit',     action: () => { router.push(`/add-assets/global-stocks?sell=${holdingId}`); setOpen(false); } },
+    { label: 'Record Dividend', action: () => { router.push(`/add-assets/global-stocks?dividend=${holdingId}`); setOpen(false); } },
     { label: 'Delete',          action: () => { onDelete(holdingId); setOpen(false); }, danger: true },
   ];
   return (
@@ -712,9 +711,10 @@ export default function GlobalStocksPortfolioPage() {
           <p className="text-xs" style={{ color: '#1A1A2E' }}>{Number(h.quantity).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
           <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{fmtLocal(Number(h.avg_buy_price), h.currency)}</p>
         </div>
-        {/* Invested (INR) */}
+        {/* Invested */}
         <div className="text-right">
-          <p className="text-xs" style={{ color: '#1A1A2E' }}>{formatLargeINR(h.investedINR)}</p>
+          <p className="text-xs" style={{ color: '#1A1A2E' }}>{fmtLocal(h.investedValue, h.currency)}</p>
+          <p className="text-[9px]" style={{ color: '#9CA3AF' }}>≈ {formatLargeINR(h.investedINR)}</p>
         </div>
         {/* CMP */}
         <div className="text-right" onClick={e => e.stopPropagation()}>
@@ -723,9 +723,7 @@ export default function GlobalStocksPortfolioPage() {
           ) : h.currentPrice !== null ? (
             <div>
               <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{fmtLocal(h.currentPrice, h.currency)}</p>
-              {h.fxRate != null && (
-                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>₹{(h.currentPrice * h.fxRate).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
-              )}
+              {h.fxRate != null && <p className="text-[9px]" style={{ color: '#9CA3AF' }}>≈ ₹{(h.currentPrice * h.fxRate).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>}
             </div>
           ) : h.priceUnavailable ? (
             <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Unavailable</p>
@@ -735,12 +733,12 @@ export default function GlobalStocksPortfolioPage() {
         </div>
         {/* Day P&L */}
         <div className="text-right">
-          {h.dayChange != null && h.fxRate != null ? (
+          {h.dayChange != null ? (
             <div>
-              <p className="text-[10px] font-semibold" style={{ color: h.dayChange >= 0 ? '#059669' : '#DC2626' }}>
-                {h.dayChange >= 0 ? '+' : ''}{formatLargeINR(Number(h.quantity) * h.dayChange * h.fxRate)}
+              <p className="text-[10px] font-semibold" style={{ color: (h.dayChange ?? 0) >= 0 ? '#059669' : '#DC2626' }}>
+                {(h.dayChange ?? 0) >= 0 ? '+' : ''}{fmtLocal(Number(h.quantity) * (h.dayChange ?? 0), h.currency)}
               </p>
-              <p className="text-[9px]" style={{ color: h.dayChange >= 0 ? '#059669' : '#DC2626' }}>
+              <p className="text-[9px]" style={{ color: (h.dayChangePct ?? 0) >= 0 ? '#059669' : '#DC2626' }}>
                 {(h.dayChangePct ?? 0) >= 0 ? '+' : ''}{(h.dayChangePct ?? 0).toFixed(2)}%
               </p>
             </div>
@@ -748,10 +746,13 @@ export default function GlobalStocksPortfolioPage() {
             <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>
           )}
         </div>
-        {/* Value (INR) */}
+        {/* Value */}
         <div className="text-right">
-          {h.currentValueINR != null ? (
-            <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{formatLargeINR(h.currentValueINR)}</p>
+          {h.currentValue != null ? (
+            <div>
+              <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{fmtLocal(h.currentValue, h.currency)}</p>
+              {h.currentValueINR != null && <p className="text-[9px]" style={{ color: '#9CA3AF' }}>≈ {formatLargeINR(h.currentValueINR)}</p>}
+            </div>
           ) : (
             <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>
           )}
@@ -1018,7 +1019,7 @@ export default function GlobalStocksPortfolioPage() {
           })()}
 
           {/* Holdings table */}
-          <div className="wv-card overflow-hidden">
+          <div className="wv-card">
             {/* Table header */}
             <div className="grid text-[10px] font-semibold uppercase tracking-wide px-4 py-2 border-b"
               style={{ gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 0.7fr 40px', borderColor: '#F0EDE6', color: '#9CA3AF', backgroundColor: '#F7F5F0' }}>

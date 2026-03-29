@@ -125,11 +125,12 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
     setDeleting(true);
     setDeleteError(null);
 
-    // Check for linked holdings
+    // Check for linked holdings (only active ones with qty > 0)
     const { count } = await supabase
       .from('holdings')
       .select('*', { count: 'exact', head: true })
-      .eq('portfolio_id', deleteTarget.id);
+      .eq('portfolio_id', deleteTarget.id)
+      .gt('quantity', 0);
 
     if (count && count > 0) {
       setDeleteError(`Portfolio has ${count} active holding${count > 1 ? 's' : ''}. Remove or reassign holdings first.`);

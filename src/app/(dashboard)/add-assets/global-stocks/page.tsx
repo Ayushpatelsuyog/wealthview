@@ -120,10 +120,17 @@ function GlobalStocksFormContent() {
   const supabase = createClient();
   const _searchParams = useSearchParams();
 
-  // Edit mode detection
+  // Mode detection from URL params
   const editTxnId = _searchParams.get('edit_txn');
   const editHoldingId = _searchParams.get('holding_id');
   const isEditMode = !!editTxnId && !!editHoldingId;
+  const addToHoldingId = _searchParams.get('add_to');
+  const sellHoldingId = _searchParams.get('sell');
+  const dividendHoldingId = _searchParams.get('dividend');
+  const _isAddMoreMode = !!addToHoldingId && !isEditMode;
+  const isSellMode = !!sellHoldingId;
+  const isDividendMode = !!dividendHoldingId;
+  const preloadHoldingId = addToHoldingId || sellHoldingId || dividendHoldingId;
 
   // Auth / family
   const [familyId, setFamilyId] = useState<string | null>(null);
@@ -240,6 +247,46 @@ function GlobalStocksFormContent() {
       setDate(new Date().toISOString().split('T')[0]);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Load holding for add-more / sell / dividend modes ──
+  useEffect(() => {
+    if (!preloadHoldingId) return;
+    (async () => {
+      const { data: holdingData } = await supabase
+        .from('holdings')
+        .select('symbol, name, quantity, avg_buy_price, metadata, brokers(id, name), portfolios(name, family_id, user_id)')
+        .eq('id', preloadHoldingId)
+        .single();
+      if (!holdingData) return;
+
+      const meta = (holdingData.metadata ?? {}) as Record<string, unknown>;
+      setSelectedStock({
+        symbol: holdingData.symbol,
+        companyName: holdingData.name,
+        exchange: String(meta.exchange ?? ''),
+        currency: String(meta.currency ?? 'USD'),
+        sector: String(meta.sector ?? ''),
+        country: String(meta.country ?? ''),
+      });
+      setQuery(`${holdingData.symbol} — ${holdingData.name}`);
+
+      // Set transaction type based on mode
+      if (isSellMode) setTxnType('sell');
+      else if (isDividendMode) setTxnType('dividend');
+      else setTxnType('buy');
+
+      // Pre-select the correct family and member from the holding's portfolio
+      if (holdingData.portfolios) {
+        const p = holdingData.portfolios as unknown as { name: string; family_id: string; user_id: string };
+        setPortfolioName(p.name);
+        if (p.family_id) { setSelectedFamily(p.family_id); setFamilyId(p.family_id); }
+        if (p.user_id) setMember(p.user_id);
+      }
+      if (holdingData.brokers) {
+        setBrokerId((holdingData.brokers as unknown as { id: string }).id);
+      }
+    })();
+  }, [preloadHoldingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load existing transaction for edit mode ───────────────────────────────
   useEffect(() => {
