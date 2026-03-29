@@ -52,16 +52,24 @@ export function VerifyResults({ result }: VerifyResultsProps) {
       {/* 1. Account Details */}
       <div className="p-3 rounded-lg text-xs" style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.08)' }}>
         <p className="font-semibold mb-2" style={{ color: '#1B2A4A' }}>Statement Details</p>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-          {mf?.fundName && <div><span style={{ color: '#9CA3AF' }}>Fund:</span> <strong>{mf.fundName}</strong></div>}
-          {acct.folioNumber && <div><span style={{ color: '#9CA3AF' }}>Folio:</span> <strong>{acct.folioNumber}</strong></div>}
-          {acct.pan && <div><span style={{ color: '#9CA3AF' }}>PAN:</span> <strong>{acct.pan}</strong></div>}
-          {acct.nominee && <div><span style={{ color: '#9CA3AF' }}>Nominee:</span> <strong>{acct.nominee}</strong></div>}
-          {acct.email && <div><span style={{ color: '#9CA3AF' }}>Email:</span> <strong>{acct.email}</strong></div>}
-          {acct.mobile && <div><span style={{ color: '#9CA3AF' }}>Mobile:</span> <strong>{acct.mobile}</strong></div>}
-          {acct.bankAccount && <div><span style={{ color: '#9CA3AF' }}>Bank:</span> <strong>{acct.bankAccount}</strong></div>}
-          {acct.distributorName && <div><span style={{ color: '#9CA3AF' }}>Distributor:</span> <strong>{acct.distributorName}</strong></div>}
-          <div><span style={{ color: '#9CA3AF' }}>Total:</span> <strong>{totalTxns} transactions across {fundGroups.length} fund(s)</strong></div>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+          {[
+            { label: 'Fund', value: mf?.fundName },
+            { label: 'Folio', value: acct.folioNumber },
+            { label: 'Holder', value: acct.holderName },
+            { label: 'PAN', value: acct.pan },
+            { label: 'Nominee', value: acct.nominee ? `${acct.nominee}${acct.nomineeDOB ? ` (DOB: ${acct.nomineeDOB})` : ''}${acct.nomineeShare ? ` — ${acct.nomineeShare}` : ''}` : '' },
+            { label: 'Email', value: acct.email },
+            { label: 'Mobile', value: acct.mobile },
+            { label: 'Bank', value: acct.bankAccount },
+            { label: 'Distributor', value: acct.distributorName ? `${acct.distributorName}${acct.arn ? ` (${acct.arn})` : ''}` : '' },
+            { label: 'Transactions', value: `${totalTxns} across ${fundGroups.length} fund(s)` },
+          ].filter(f => f.value).map(f => (
+            <div key={f.label} className="min-w-0">
+              <p className="text-[9px] uppercase tracking-wider" style={{ color: '#9CA3AF' }}>{f.label}</p>
+              <p className="font-medium truncate" title={f.value} style={{ color: '#1A1A2E' }}>{f.value}</p>
+            </div>
+          ))}
         </div>
       </div>
 

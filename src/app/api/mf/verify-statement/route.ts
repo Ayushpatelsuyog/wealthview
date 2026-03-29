@@ -124,24 +124,65 @@ function extractAccountDetails(text: string): AccountDetails {
   const nomineeShareMatch = text.match(/(\d+)\s*%/);
   if (nomineeShareMatch && details.nominee) details.nomineeShare = nomineeShareMatch[1] + '%';
 
-  // Bank account: "Primary Bank Account : SB XXXX / Bank Name"
-  const bankMatch = text.match(/Primary\s*Bank\s*Account\s*:\s*(.+?)(?:\n|$)/i);
-  if (bankMatch) details.bankAccount = bankMatch[1].trim();
-
-  // Distributor: "MFD*/Intermediary : ARN-XXXX / Distributor Name"
-  const distMatch = text.match(/MFD\*?\/?\s*Intermediary\s*:\s*(ARN-\d+)\s*\/\s*(.+?)(?:;|\n|$)/i);
-  if (distMatch) {
-    details.arn = distMatch[1].trim();
-    details.distributorName = distMatch[2].trim();
+  // Bank account: "Primary Bank Account : SB XXXX7268 / Axis Bank Ltd / BRD / BARODA / UTIB0005154"
+  // Stop at IFSC code or "Available" or "MFD" or digits followed by "Units"
+  const bankMatch = text.match(/Primary\s*Bank\s*Account\s*:\s*(.+?)(?=\s+\d[\d,.]+\s+(?:Available|Units)|MFD|Market\s*Value|\n|$)/i);
+  if (bankMatch) {
+    let bank = bankMatch[1].trim();
+    // Try to extract clean format: "Bank Name - AcctNum (IFSC)"
+    const ifscMatch = bank.match(/([A-Z]{4}\d{7})/);
+    const acctMatch = bank.match(/SB\s*(\S+)/i);
+    const nameMatch = bank.match(/\/\s*([A-Za-z\s]+(?:Bank|Ltd)[A-Za-z\s]*)/i);
+    if (nameMatch && acctMatch) {
+      bank = `${nameMatch[1].trim()} - ${acctMatch[1]}${ifscMatch ? ` (${ifscMatch[1]})` : ''}`;
+    } else if (bank.length > 80) {
+      bank = bank.substring(0, 80) + '...';
+    }
+    details.bankAccount = bank;
   }
 
-  // Email
-  const emailMatch = text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-  if (emailMatch) details.email = emailMatch[1];
+  // Distributor: "MFD*/Intermediary : ARN-XXXX / Distributor Name; Sub Broker..."
+  // Also handle pdfjs spacing: "MFD /Intermediary : AXISBANK / Axis Bank Limited"
+  const distMatch = text.match(/MFD\s*\*?\s*\/?\s*Intermediary\s*:\s*(?:ARN[- ]\d+\s*\/\s*)?(.+?)(?:;|\s+Sub\s+Broker|\s+Market|\n|$)/i);
+  if (distMatch) {
+    const distText = distMatch[0];
+    const arnMatch = distText.match(/(ARN[- ]\d+)/i);
+    if (arnMatch) details.arn = arnMatch[1].replace(' ', '-');
+    // Get distributor name after the last "/"
+    const nameParts = distMatch[1].split('/');
+    details.distributorName = nameParts[nameParts.length - 1].trim();
+    if (!details.distributorName || details.distributorName.length < 3) {
+      details.distributorName = distMatch[1].trim();
+    }
+  }
 
-  // Mobile
-  const mobileMatch = text.match(/\+?\d{10,12}/);
-  if (mobileMatch) details.mobile = mobileMatch[0];
+  // Email — look specifically near "Email" label, or extract standard email
+  const emailNearLabel = text.match(/Email\s*:?\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
+  if (emailNearLabel) {
+    details.email = emailNearLabel[1];
+  } else {
+    const emailAny = text.match(/([a-zA-Z0-9._%+-]+@(?!hdfcfund)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+    if (emailAny) details.email = emailAny[1];
+  }
+
+  // Mobile — look for Indian mobile: +91XXXXXXXXXX or near "Mobile" label
+  const mobileNearLabel = text.match(/(?:Mobile\s*(?:No)?\.?\s*:?\s*)(\+91\d{10})/i);
+  if (mobileNearLabel) {
+    details.mobile = mobileNearLabel[1];
+  } else {
+    // Look for +91 followed by 10 digits anywhere
+    const mobileAlt = text.match(/(\+91\d{10})/);
+    if (mobileAlt) details.mobile = mobileAlt[1];
+    else {
+      // Look for 10-digit number starting with 6-9
+      const mobile10 = text.match(/\b([6-9]\d{9})\b/);
+      if (mobile10) details.mobile = mobile10[1];
+    }
+  }
+
+  // Holder name — look for text after folio before address
+  const holderMatch = text.match(/Folio\s*No[\s.:]*[\d\s\/]+\s+([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/);
+  if (holderMatch) details.holderName = holderMatch[1].trim();
 
   return details;
 }
@@ -157,8 +198,8 @@ function extractFundSections(text: string): FundSection[] {
   const fundStarts: { index: number; code: string; name: string; isin: string }[] = [];
 
   // Primary pattern: "NNNN / Fund Name ... Growth|Dividend ... UCC"
-  // Require the number to be followed by " / " and a fund house name to avoid false positives
-  const fundHeaderPattern = /(\d{4,5})\s*\/\s*((?:HDFC|SBI|ICICI|Axis|Mirae|Kotak|Nippon|DSP|UTI|Tata|Aditya|Franklin|Motilal|Bandhan|Quant|PPFAS|Invesco|HSBC|Baroda|Canara|IDFC)\s.+?(?:Growth|Dividend|Direct|Regular)[^U]*?)UCC/gi;
+  // Use a lookahead for UCC instead of consuming up to it — handles varied ISIN formats
+  const fundHeaderPattern = /(\d{4,5})\s*\/\s*((?:HDFC|SBI|ICICI|Axis|Mirae|Kotak|Nippon|DSP|UTI|Tata|Aditya|Franklin|Motilal|Bandhan|Quant|PPFAS|Invesco|HSBC|Baroda|Canara|IDFC)\s.+?(?:Growth|Dividend|Direct|Regular))\s*\*?\s*[-–]?\s*(?:INF|INE)[\s\dA-Z]+?UCC/gi;
   let hMatch;
   while ((hMatch = fundHeaderPattern.exec(fullText)) !== null) {
     const code = hMatch[1].trim();
