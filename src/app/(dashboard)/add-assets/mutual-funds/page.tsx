@@ -22,6 +22,7 @@ import { CASImporter }    from '@/components/forms/CASImporter';
 import { ECASImporter }   from '@/components/forms/ECASImporter';
 import { ImportHistory }  from '@/components/portfolio/ImportHistory';
 import { MfStatementImport } from '@/components/forms/MfStatementImport';
+import { PortfolioSelector } from '@/components/forms/PortfolioSelector';
 import { useHoldingPrefill } from '@/hooks/use-holding-prefill';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -29,7 +30,6 @@ import { useHoldingPrefill } from '@/hooks/use-holding-prefill';
 interface SearchResult { schemeCode: number; schemeName: string; category: string }
 interface NavData      { nav: number; navDate: string; fundName: string; fundHouse: string; category: string }
 interface FamilyMember { id: string; name: string; pan?: string; primary_mobile?: string; primary_email?: string }
-interface Portfolio    { id: string; name: string; type: string }
 interface Toast        { type: 'success' | 'error'; message: string }
 
 interface SipBlock {
@@ -85,7 +85,6 @@ interface SipCalcResult {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const DEFAULT_PORTFOLIOS = ['Long-term Growth', 'Retirement', 'Tax Saving'];
 const SIP_DATES = ['1st','5th','10th','15th','20th','25th','28th'];
 
 const CAT_COLORS: Record<string, { bg: string; text: string }> = {
@@ -790,12 +789,11 @@ export default function MutualFundsPage() {
   const [families,    setFamilies]    = useState<{id: string; name: string}[]>([]);
   const [selectedFamily, setSelectedFamily] = useState('');
   const [members,     setMembers]     = useState<FamilyMember[]>([]);
-  const [dbPortfolios, setDbPortfolios] = useState<Portfolio[]>([]);
   const [member,      setMember]      = useState('');
   const [memberName,  setMemberName]  = useState('');
 
   // ── Step 1 ─────────────────────────────────────────────────────────────────
-  const [portfolio,   setPortfolio]   = useState('Long-term Growth');
+  const [portfolio,   setPortfolio]   = useState('');
   const [broker,      setBroker]      = useState('');
 
   // ── Step 2 — fund search ───────────────────────────────────────────────────
@@ -898,19 +896,11 @@ export default function MutualFundsPage() {
         setMembers([{ id: profile.id, name: profile.name }]);
       }
 
-      const { data: portfolios } = await supabase
-        .from('portfolios').select('id, name, type')
-        .eq('family_id', fid ?? user.id)
-        .order('created_at');
-      if (portfolios?.length) {
-        setDbPortfolios(portfolios);
-        setPortfolio(portfolios[0].name);
-      }
     }
     loadUser();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Reload members/portfolios when family changes ─────────────────────────
+  // ── Reload members when family changes ──────────────────────────────────
   useEffect(() => {
     if (!selectedFamily) return;
     setFamilyId(selectedFamily);
@@ -918,8 +908,6 @@ export default function MutualFundsPage() {
       const { data: fUsers } = await supabase.from('users').select('id, name, pan, primary_mobile, primary_email').eq('family_id', selectedFamily);
       setMembers(fUsers ?? []);
       if (fUsers?.length) setMember(fUsers[0].id);
-      const { data: ports } = await supabase.from('portfolios').select('id, name, type').eq('family_id', selectedFamily).order('created_at');
-      setDbPortfolios(ports ?? []);
     })();
   }, [selectedFamily]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1399,10 +1387,6 @@ export default function MutualFundsPage() {
     setSipBlocks((prev) => prev.map((b) => b.id === id ? updated : b));
   }
 
-  const allPortfolios = Array.from(new Set([
-    ...DEFAULT_PORTFOLIOS,
-    ...dbPortfolios.map((p) => p.name),
-  ]));
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
@@ -1648,21 +1632,12 @@ export default function MutualFundsPage() {
 
               <div className="space-y-1.5">
                 <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio</Label>
-                <div className="flex flex-wrap gap-2">
-                  {allPortfolios.map((p) => (
-                    <button key={p} onClick={() => setPortfolio(p)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all"
-                      style={{ backgroundColor: portfolio === p ? '#1B2A4A' : 'transparent',
-                               color: portfolio === p ? 'white' : '#6B7280',
-                               borderColor: portfolio === p ? '#1B2A4A' : '#E8E5DD' }}>
-                      {p}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => { const n = prompt('Portfolio name:'); if (n?.trim()) setPortfolio(n.trim()); }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium border-dashed border transition-colors"
-                    style={{ color: '#C9A84C', borderColor: '#C9A84C' }}>+ New</button>
-                </div>
+                <PortfolioSelector
+                  familyId={familyId}
+                  memberId={member}
+                  selectedPortfolioName={portfolio}
+                  onChange={setPortfolio}
+                />
               </div>
 
               <div className="space-y-1.5">
@@ -2053,7 +2028,8 @@ export default function MutualFundsPage() {
             <MfStatementImport
               members={members.map(m => ({ id: m.id, name: m.name }))}
               defaultMemberId={member}
-              portfolios={allPortfolios}
+              portfolios={[]}
+              familyId={familyId ?? undefined}
             />
           </div>
 
@@ -2067,7 +2043,7 @@ export default function MutualFundsPage() {
               <ECASImporter
                 familyId={familyId}
                 members={members}
-                portfolios={dbPortfolios}
+                portfolios={[]}
                 memberId={member}
                 onImported={() => setImportHistoryKey(k => k + 1)}
               />
@@ -2084,7 +2060,7 @@ export default function MutualFundsPage() {
               <CASImporter
                 familyId={familyId}
                 members={members}
-                portfolios={dbPortfolios}
+                portfolios={[]}
                 memberId={member}
                 onImported={() => setImportHistoryKey(k => k + 1)}
               />

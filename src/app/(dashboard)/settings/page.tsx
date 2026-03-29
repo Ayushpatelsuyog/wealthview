@@ -444,11 +444,12 @@ function SettingsContent() {
       } catch { /* table may not exist yet */ }
 
       const fam = newFamily as {id: string; name: string; created_by: string};
+
       setAllFamilies(prev => [...prev, fam]);
       setSelectedFamilyTab(fam.id);
       setNewFamilyName('');
       setShowCreateFamily(false);
-      showToast('success', `Family "${fam.name}" created`);
+      showToast('success', `Family "${fam.name}" created successfully`);
     }
     setCreatingFamily(false);
   }

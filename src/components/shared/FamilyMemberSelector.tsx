@@ -165,9 +165,8 @@ export function FamilyMemberSelector({ onSelectionChange, compact }: FamilyMembe
               <button key={m.id}
                 onClick={() => {
                   if (allSelected) {
-                    // Switch from "all" to just this one member
-                    const otherIds = visibleMembers.filter(v => v.id !== m.id).map(v => v.id);
-                    useFamilyStore.getState().setSelectedMemberIds(otherIds);
+                    // Switch from "all" to selecting ONLY this member
+                    useFamilyStore.getState().setSelectedMemberIds([m.id]);
                   } else {
                     toggleMember(m.id);
                   }

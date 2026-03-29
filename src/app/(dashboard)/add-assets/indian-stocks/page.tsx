@@ -9,12 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   TrendingUp, TrendingDown, Upload, Link as LinkIcon, Check, ChevronDown,
-  Loader2, AlertCircle, X, Plus, User, Building2, Search,
+  Loader2, AlertCircle, X, User, Building2, Search,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
 import { holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
 import { BrokerSelector } from '@/components/forms/BrokerSelector';
+import { PortfolioSelector } from '@/components/forms/PortfolioSelector';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,12 +40,9 @@ interface StockPrice {
 }
 
 interface FamilyMember { id: string; name: string }
-interface Portfolio    { id: string; name: string; type: string }
 interface Toast        { type: 'success' | 'error'; message: string }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const DEFAULT_PORTFOLIOS = ['Long-term Growth', 'Trading', 'Retirement', 'Tax Saving'];
 
 const TXN_TYPES = [
   { key: 'buy',      label: 'Buy' },
@@ -165,10 +163,7 @@ function IndianStocksFormContent() {
   const [member,   setMember]   = useState('');
 
   // Portfolio
-  const [portfolios,    setPortfolios]    = useState<Portfolio[]>([]);
-  const [portfolioName, setPortfolioName] = useState('Long-term Growth');
-  const [newPortName,   setNewPortName]   = useState('');
-  const [showNewPort,   setShowNewPort]   = useState(false);
+  const [portfolioName, setPortfolioName] = useState('');
 
   // Broker
   const [brokerId, setBrokerId] = useState<string | null>(null);
@@ -235,8 +230,6 @@ function IndianStocksFormContent() {
         setSelectedFamily(fid);
         const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', fid);
         setMembers(fUsers ?? [{ id: profile.id, name: profile.name }]);
-        const { data: ports } = await supabase.from('portfolios').select('id, name, type').eq('family_id', fid).order('created_at');
-        setPortfolios(ports ?? []);
 
         // Load families the user has access to
         try {
@@ -264,7 +257,7 @@ function IndianStocksFormContent() {
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Reload members/portfolios when family changes ─────────────────────────
+  // ── Reload members when family changes ──────────────────────────────────
   useEffect(() => {
     if (!selectedFamily) return;
     setFamilyId(selectedFamily);
@@ -272,8 +265,6 @@ function IndianStocksFormContent() {
       const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
       setMembers(fUsers ?? []);
       if (fUsers?.length) setMember(fUsers[0].id);
-      const { data: ports } = await supabase.from('portfolios').select('id, name, type').eq('family_id', selectedFamily).order('created_at');
-      setPortfolios(ports ?? []);
     })();
   }, [selectedFamily]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -448,7 +439,7 @@ function IndianStocksFormContent() {
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!selectedStock) errs.stock    = 'Select a stock';
-    if (!portfolioName && !newPortName) errs.portfolio = 'Select or create a portfolio';
+    if (!portfolioName) errs.portfolio = 'Select or create a portfolio';
 
     if (txnType === 'buy' || txnType === 'sell' || txnType === 'rights') {
       if (!quantity || qty <= 0)    errs.quantity = 'Enter a valid quantity';
@@ -496,8 +487,6 @@ function IndianStocksFormContent() {
         return;
       }
 
-      const finalPortfolio = showNewPort && newPortName ? newPortName : portfolioName;
-
       // For split: compute new total quantity
       let splitFactor = 1;
       if (txnType === 'split' && splitRatio) {
@@ -525,7 +514,7 @@ function IndianStocksFormContent() {
         price:           px,
         date,
         brokerage, stt, gst, stampDuty, exchangeCharges, dpCharges,
-        portfolioName:   finalPortfolio,
+        portfolioName:   portfolioName,
         brokerId,
         memberId:        member,
         currentPrice: stockPrice?.price ?? null,
@@ -570,11 +559,6 @@ function IndianStocksFormContent() {
     setDate(new Date().toISOString().split('T')[0]);
   }
 
-  // ── Portfolio pills ─────────────────────────────────────────────────────────
-  const allPortfolios = Array.from(new Set([
-    ...DEFAULT_PORTFOLIOS,
-    ...portfolios.map(p => p.name),
-  ]));
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -651,41 +635,16 @@ function IndianStocksFormContent() {
               </div>
             )}
 
-            {/* Portfolio pills */}
-            <div className="space-y-2 mb-4">
+            {/* Portfolio */}
+            <div className="space-y-1.5 mb-4">
               <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio</Label>
-              <div className="flex flex-wrap gap-2">
-                {allPortfolios.map(name => (
-                  <button key={name}
-                    onClick={() => { setPortfolioName(name); setShowNewPort(false); }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border"
-                    style={{
-                      backgroundColor: portfolioName === name && !showNewPort ? '#1B2A4A' : 'transparent',
-                      color:           portfolioName === name && !showNewPort ? 'white' : '#6B7280',
-                      borderColor:     portfolioName === name && !showNewPort ? '#1B2A4A' : '#E8E5DD',
-                    }}>
-                    {name}
-                  </button>
-                ))}
-                <button
-                  onClick={() => { setShowNewPort(!showNewPort); setPortfolioName(''); }}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex items-center gap-1"
-                  style={{
-                    backgroundColor: showNewPort ? 'rgba(201,168,76,0.1)' : 'transparent',
-                    color:           showNewPort ? '#C9A84C' : '#6B7280',
-                    borderColor:     showNewPort ? '#C9A84C' : '#E8E5DD',
-                  }}>
-                  <Plus className="w-3 h-3" />New
-                </button>
-              </div>
-              {showNewPort && (
-                <Input
-                  value={newPortName} onChange={e => setNewPortName(e.target.value)}
-                  placeholder="Portfolio name e.g. Children's Education"
-                  className="h-9 text-xs mt-2"
-                />
-              )}
-              <FieldError msg={errors.portfolio} />
+              <PortfolioSelector
+                familyId={familyId}
+                memberId={member}
+                selectedPortfolioName={portfolioName}
+                onChange={setPortfolioName}
+                error={errors.portfolio}
+              />
             </div>
 
             {/* Broker */}

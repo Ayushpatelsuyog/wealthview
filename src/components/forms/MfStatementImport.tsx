@@ -53,23 +53,29 @@ interface ParseResult {
   totalTransactionsInStatement: number;
 }
 
-export function MfStatementImport({ members, defaultMemberId, portfolios, distributors: propDistributors, familyId: _familyId }: MfStatementImportProps) {
+export function MfStatementImport({ members, defaultMemberId, portfolios: propPortfolios, distributors: propDistributors, familyId: _familyId }: MfStatementImportProps) {
   const [step, setStep] = useState(1);
   const [distributors, setDistributors] = useState<Distributor[]>(propDistributors ?? []);
+  const [dbPortfolioNames, setDbPortfolioNames] = useState<string[]>(propPortfolios ?? []);
   const [schemeSearchResults, setSchemeSearchResults] = useState<Record<number, any[]>>({});
   const [schemeSearchQuery, setSchemeSearchQuery] = useState<Record<number, string>>({});
 
-  // Load distributors from database
+  // Load distributors and portfolios from database
   useEffect(() => {
-    if (propDistributors?.length) return;
     (async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const { data: profile } = await supabase.from('users').select('family_id').eq('id', user.id).single();
       if (!profile?.family_id) return;
-      const { data: brokers } = await supabase.from('brokers').select('id, name').eq('family_id', profile.family_id);
-      if (brokers) setDistributors(brokers.map(b => ({ id: b.id, name: b.name })));
+      if (!propDistributors?.length) {
+        const { data: brokers } = await supabase.from('brokers').select('id, name').eq('family_id', profile.family_id);
+        if (brokers) setDistributors(brokers.map(b => ({ id: b.id, name: b.name })));
+      }
+      if (!propPortfolios?.length) {
+        const { data: ports } = await supabase.from('portfolios').select('id, name, type').eq('family_id', profile.family_id).order('created_at');
+        if (ports) setDbPortfolioNames(ports.map(p => p.name));
+      }
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -162,7 +168,7 @@ export function MfStatementImport({ members, defaultMemberId, portfolios, distri
             memberId: defaultMemberId,
             brokerId: matchedDist?.id || '',
             distributorName: acctDetails?.distributorName || '',
-            portfolioName: portfolios[0] || 'Long-term Growth',
+            portfolioName: dbPortfolioNames[0] || '',
             schemeCode,
             schemeName,
             matched,
@@ -402,12 +408,18 @@ export function MfStatementImport({ members, defaultMemberId, portfolios, distri
                       </div>
                       <div>
                         <Label className="text-[9px]" style={{ color: '#9CA3AF' }}>Portfolio</Label>
-                        <Select value={fund.portfolioName} onValueChange={v => updateFund(fi, { portfolioName: v })}>
-                          <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {portfolios.map(p => <SelectItem key={p} value={p} className="text-[10px]">{p}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                        {dbPortfolioNames.length > 0 ? (
+                          <Select value={fund.portfolioName} onValueChange={v => updateFund(fi, { portfolioName: v })}>
+                            <SelectTrigger className="h-7 text-[10px]"><SelectValue placeholder="Select..." /></SelectTrigger>
+                            <SelectContent>
+                              {dbPortfolioNames.map(p => <SelectItem key={p} value={p} className="text-[10px]">{p}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input className="h-7 text-[10px] mt-0.5" placeholder="Portfolio name"
+                            value={fund.portfolioName}
+                            onChange={e => updateFund(fi, { portfolioName: e.target.value })} />
+                        )}
                       </div>
                       <div>
                         <Label className="text-[9px]" style={{ color: '#9CA3AF' }}>Distributor {!fund.brokerId && <span style={{ color: '#DC2626' }}>*</span>}</Label>

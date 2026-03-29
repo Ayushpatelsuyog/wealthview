@@ -116,6 +116,13 @@ export function FamilyMembers({ snapshot }: Props) {
               style={{ borderColor: '#E8E5DD' }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#C9A84C'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#E8E5DD'; }}
+              onClick={() => {
+                // Navigate to portfolio filtered to this member
+                const memberFamilyId = selectedFamilyId || (families.length > 0 ? families[0].id : '');
+                if (memberFamilyId) useFamilyStore.getState().setSelectedFamilyId(memberFamilyId);
+                useFamilyStore.getState().setSelectedMemberIds([m.id]);
+                router.push('/portfolio');
+              }}
             >
               <div className="flex items-start justify-between mb-2">
                 <div
@@ -149,6 +156,7 @@ export function FamilyMembers({ snapshot }: Props) {
               ) : (
                 <p className="text-xs" style={{ color: '#9CA3AF' }}>No assets yet</p>
               )}
+              <p className="text-[9px] mt-1" style={{ color: '#C9A84C' }}>View Portfolio →</p>
             </div>
           ))}
 

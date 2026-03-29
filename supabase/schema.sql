@@ -291,12 +291,16 @@ CREATE POLICY "import_batches_family_access" ON import_batches
 CREATE POLICY "portfolios_family_access" ON portfolios
   FOR ALL USING (
     family_id = get_my_family_id()
+    OR family_id IN (SELECT fm.family_id FROM family_memberships fm WHERE fm.auth_user_id = auth.uid())
+    OR family_id IN (SELECT f.id FROM families f WHERE f.created_by = auth.uid())
   );
 
 -- brokers
 CREATE POLICY "brokers_family_access" ON brokers
   FOR ALL USING (
     family_id = get_my_family_id()
+    OR family_id IN (SELECT fm.family_id FROM family_memberships fm WHERE fm.auth_user_id = auth.uid())
+    OR family_id IN (SELECT f.id FROM families f WHERE f.created_by = auth.uid())
   );
 
 -- holdings
@@ -305,6 +309,8 @@ CREATE POLICY "holdings_portfolio_access" ON holdings
     portfolio_id IN (
       SELECT id FROM portfolios
       WHERE family_id = get_my_family_id()
+        OR family_id IN (SELECT fm.family_id FROM family_memberships fm WHERE fm.auth_user_id = auth.uid())
+        OR family_id IN (SELECT f.id FROM families f WHERE f.created_by = auth.uid())
     )
   );
 
@@ -316,6 +322,8 @@ CREATE POLICY "transactions_holding_access" ON transactions
       FROM holdings h
       JOIN portfolios p ON h.portfolio_id = p.id
       WHERE p.family_id = get_my_family_id()
+        OR p.family_id IN (SELECT fm.family_id FROM family_memberships fm WHERE fm.auth_user_id = auth.uid())
+        OR p.family_id IN (SELECT f.id FROM families f WHERE f.created_by = auth.uid())
     )
   );
 

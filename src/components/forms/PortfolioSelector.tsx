@@ -10,17 +10,18 @@ import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface DbBroker {
+export interface DbPortfolio {
   id: string;
   name: string;
-  platform_type: string;
-  logo_color: string;
+  type: string;
+  logo_color?: string;
 }
 
-interface BrokerSelectorProps {
+interface PortfolioSelectorProps {
   familyId: string | null;
-  selectedBrokerId: string | null;
-  onChange: (id: string) => void;
+  memberId: string;
+  selectedPortfolioName: string;
+  onChange: (name: string) => void;
   error?: string;
 }
 
@@ -37,89 +38,88 @@ const PRESET_COLORS = [
   { label: 'Gold',   hex: '#C9A84C' },
 ];
 
-const PLATFORM_OPTIONS = [
-  { label: 'MF Platform',      value: 'mf_platform' },
-  { label: 'Stock Broker',     value: 'stock_broker' },
-  { label: 'Crypto Exchange',  value: 'crypto_exchange' },
-  { label: 'Bank',             value: 'bank' },
-  { label: 'Insurance',        value: 'insurance' },
-  { label: 'Other',            value: 'other' },
+const TYPE_OPTIONS = [
+  { label: 'Personal',   value: 'personal' },
+  { label: 'Retirement', value: 'retirement' },
+  { label: 'Tax Saving', value: 'tax_saving' },
+  { label: 'Joint',      value: 'joint' },
+  { label: 'Trading',    value: 'trading' },
+  { label: 'Other',      value: 'other' },
 ];
 
-function brokerLetter(name: string): string {
+function portfolioLetter(name: string): string {
   return name.trim().charAt(0).toUpperCase();
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: BrokerSelectorProps) {
+export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, onChange, error }: PortfolioSelectorProps) {
   const supabase = createClient();
 
-  const [brokers,    setBrokers]    = useState<DbBroker[]>([]);
+  const [portfolios, setPortfolios] = useState<DbPortfolio[]>([]);
   const [loading,    setLoading]    = useState(false);
   const [hoveredId,  setHoveredId]  = useState<string | null>(null);
 
   // Add modal
-  const [showAdd,    setShowAdd]    = useState(false);
-  const [addName,    setAddName]    = useState('');
-  const [addPlatform,setAddPlatform]= useState('other');
-  const [addColor,   setAddColor]   = useState('#1B2A4A');
-  const [addSaving,  setAddSaving]  = useState(false);
-  const [addError,   setAddError]   = useState<string | null>(null);
+  const [showAdd,  setShowAdd]  = useState(false);
+  const [addName,  setAddName]  = useState('');
+  const [addType,  setAddType]  = useState('personal');
+  const [addColor, setAddColor] = useState('#1B2A4A');
+  const [addSaving, setAddSaving] = useState(false);
+  const [addError,  setAddError]  = useState<string | null>(null);
 
   // Delete confirm
-  const [deleteTarget, setDeleteTarget] = useState<DbBroker | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DbPortfolio | null>(null);
   const [deleteError,  setDeleteError]  = useState<string | null>(null);
   const [deleting,     setDeleting]     = useState(false);
 
-  // ── Load brokers ───────────────────────────────────────────────────────────
+  // ── Load portfolios ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!familyId) return;
     setLoading(true);
     supabase
-      .from('brokers')
-      .select('id, name, platform_type, logo_color')
+      .from('portfolios')
+      .select('id, name, type')
       .eq('family_id', familyId)
-      .eq('is_active', true)
       .order('created_at')
       .then(({ data }) => {
-        setBrokers(data ?? []);
+        setPortfolios(data ?? []);
         setLoading(false);
       });
   }, [familyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Add broker ─────────────────────────────────────────────────────────────
+  // ── Add portfolio ─────────────────────────────────────────────────────────
   async function handleAdd() {
-    if (!addName.trim()) { setAddError('Distributor name is required'); return; }
+    if (!addName.trim()) { setAddError('Portfolio name is required'); return; }
     if (!familyId) { setAddError('Set up your family first'); return; }
     setAddSaving(true);
     setAddError(null);
 
     const { data, error: err } = await supabase
-      .from('brokers')
+      .from('portfolios')
       .insert({
-        family_id:     familyId,
-        name:          addName.trim(),
-        platform_type: (['zerodha','groww','upstox','angel','icicidirect','hdfc_securities','motilal','kotak','paytm_money','coin'].includes(addPlatform) ? addPlatform : 'other') as string,
-        logo_color:    addColor,
+        user_id:   memberId,
+        family_id: familyId,
+        name:      addName.trim(),
+        type:      addType,
       })
-      .select('id, name, platform_type, logo_color')
+      .select('id, name, type')
       .single();
 
     setAddSaving(false);
     if (err || !data) {
-      setAddError(err?.message ?? 'Failed to save distributor');
+      setAddError(err?.message ?? 'Failed to save portfolio');
       return;
     }
-    setBrokers(prev => [...prev, data]);
-    onChange(data.id);
+    setPortfolios(prev => [...prev, data]);
+    onChange(data.name);
     setShowAdd(false);
     setAddName('');
     setAddColor('#1B2A4A');
-    setAddPlatform('other');
+    setAddType('personal');
   }
 
-  // ── Delete broker ──────────────────────────────────────────────────────────
+  // ── Delete portfolio ──────────────────────────────────────────────────────
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -129,24 +129,24 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
     const { count } = await supabase
       .from('holdings')
       .select('*', { count: 'exact', head: true })
-      .eq('broker_id', deleteTarget.id);
+      .eq('portfolio_id', deleteTarget.id);
 
     if (count && count > 0) {
-      setDeleteError(`This distributor has ${count} active holding${count > 1 ? 's' : ''}. Remove or reassign holdings first.`);
+      setDeleteError(`Portfolio has ${count} active holding${count > 1 ? 's' : ''}. Remove or reassign holdings first.`);
       setDeleting(false);
       return;
     }
 
     const { error: err } = await supabase
-      .from('brokers')
-      .update({ is_active: false })
+      .from('portfolios')
+      .delete()
       .eq('id', deleteTarget.id);
 
     setDeleting(false);
     if (err) { setDeleteError(err.message); return; }
 
-    setBrokers(prev => prev.filter(b => b.id !== deleteTarget.id));
-    if (selectedBrokerId === deleteTarget.id) onChange('');
+    setPortfolios(prev => prev.filter(p => p.id !== deleteTarget.id));
+    if (selectedPortfolioName === deleteTarget.name) onChange('');
     setDeleteTarget(null);
   }
 
@@ -158,53 +158,54 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
       {loading ? (
         <div className="flex items-center gap-2 py-3">
           <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#9CA3AF' }} />
-          <span className="text-xs" style={{ color: '#9CA3AF' }}>Loading distributors…</span>
+          <span className="text-xs" style={{ color: '#9CA3AF' }}>Loading portfolios…</span>
         </div>
       ) : (
         <div className="grid grid-cols-4 gap-2">
-          {brokers.map((b) => {
-            const isSelected = selectedBrokerId === b.id;
-            const isHovered  = hoveredId === b.id;
+          {portfolios.map((p) => {
+            const isSelected = selectedPortfolioName === p.name;
+            const isHovered  = hoveredId === p.id;
+            const color = p.logo_color || '#1B2A4A';
             return (
               <div
-                key={b.id}
+                key={p.id}
                 className="relative"
-                onMouseEnter={() => setHoveredId(b.id)}
+                onMouseEnter={() => setHoveredId(p.id)}
                 onMouseLeave={() => setHoveredId(null)}
               >
                 <button
                   type="button"
-                  onClick={() => onChange(b.id)}
+                  onClick={() => onChange(p.name)}
                   className="w-full flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all"
                   style={{
-                    borderColor:     isSelected ? b.logo_color : '#E8E5DD',
-                    backgroundColor: isSelected ? `${b.logo_color}12` : 'white',
-                    boxShadow:       isSelected ? `0 0 0 1px ${b.logo_color}` : 'none',
+                    borderColor:     isSelected ? '#C9A84C' : '#E8E5DD',
+                    backgroundColor: isSelected ? 'rgba(201,168,76,0.08)' : 'white',
+                    boxShadow:       isSelected ? '0 0 0 1px #C9A84C' : 'none',
                   }}
                 >
                   <div
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-                    style={{ backgroundColor: b.logo_color }}
+                    style={{ backgroundColor: color }}
                   >
-                    {brokerLetter(b.name)}
+                    {portfolioLetter(p.name)}
                   </div>
                   <span className="text-[10px] font-medium text-center leading-tight" style={{ color: '#6B7280' }}>
-                    {b.name}
+                    {p.name}
                   </span>
                 </button>
 
-                {/* Delete X — only shown on hover, only if NOT the selected broker */}
+                {/* Delete X — only shown on hover */}
                 {isHovered && (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setDeleteTarget(b);
+                      setDeleteTarget(p);
                       setDeleteError(null);
                     }}
                     className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: 'rgba(220,38,38,0.12)', color: '#DC2626' }}
-                    title={`Remove ${b.name}`}
+                    title={`Remove ${p.name}`}
                   >
                     <X className="w-2.5 h-2.5" />
                   </button>
@@ -213,7 +214,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
             );
           })}
 
-          {/* Add Broker card */}
+          {/* Add Portfolio card */}
           <button
             type="button"
             onClick={() => { setShowAdd(true); setAddError(null); }}
@@ -227,13 +228,13 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
               <Plus className="w-4 h-4" style={{ color: '#C9A84C' }} />
             </div>
             <span className="text-[10px] font-medium text-center leading-tight" style={{ color: '#C9A84C' }}>
-              Add Distributor
+              Add Portfolio
             </span>
           </button>
         </div>
       )}
 
-      {/* ── Add Broker Modal ── */}
+      {/* ── Add Portfolio Modal ── */}
       {showAdd && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -245,37 +246,37 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
             style={{ backgroundColor: 'white' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-sm font-semibold mb-4" style={{ color: '#1A1A2E' }}>Add Distributor / Platform</h3>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: '#1A1A2E' }}>Add Portfolio</h3>
 
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Distributor Name *</Label>
+                <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio Name *</Label>
                 <Input
                   value={addName}
                   onChange={e => setAddName(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                  placeholder="e.g. Zerodha, Kuvera, Paytm Money"
+                  placeholder="e.g. Long-term Growth, Retirement"
                   className="h-9 text-xs"
                   style={addError && !addName ? { borderColor: '#DC2626' } : {}}
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Platform Type</Label>
-                <Select value={addPlatform} onValueChange={setAddPlatform}>
+                <Label className="text-xs" style={{ color: '#6B7280' }}>Type</Label>
+                <Select value={addType} onValueChange={setAddType}>
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PLATFORM_OPTIONS.map(opt => (
-                      <SelectItem key={opt.label} value={opt.value} className="text-xs">{opt.label}</SelectItem>
+                    {TYPE_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Brand Color</Label>
+                <Label className="text-xs" style={{ color: '#6B7280' }}>Color</Label>
                 <div className="flex gap-2 flex-wrap">
                   {PRESET_COLORS.map(c => (
                     <button
@@ -301,10 +302,10 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
                   className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold"
                   style={{ backgroundColor: addColor }}
                 >
-                  {brokerLetter(addName || 'B')}
+                  {portfolioLetter(addName || 'P')}
                 </div>
                 <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
-                  {addName || 'Distributor Name'}
+                  {addName || 'Portfolio Name'}
                 </span>
               </div>
 
@@ -325,7 +326,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
                 onClick={handleAdd}
                 disabled={addSaving}
               >
-                {addSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save Distributor'}
+                {addSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save Portfolio'}
               </Button>
             </div>
           </div>
@@ -354,7 +355,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
               Remove {deleteTarget.name}?
             </h3>
             <p className="text-xs mb-4" style={{ color: '#6B7280' }}>
-              This cannot be undone. The distributor will be removed from your list.
+              This cannot be undone. The portfolio will be removed from your list.
             </p>
 
             {deleteError && (
