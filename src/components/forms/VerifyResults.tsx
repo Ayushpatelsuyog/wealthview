@@ -42,6 +42,18 @@ function fmtAmt(txn: any): string {
   return '—';
 }
 
+function normalizeDate(d: string): string {
+  if (!d) return '';
+  const str = String(d).trim();
+  // DD-MM-YYYY or DD/MM/YYYY
+  const dmy = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
+  // YYYY-MM-DD or YYYY/MM/DD
+  const ymd = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (ymd) return `${ymd[1]}-${ymd[2].padStart(2, '0')}-${ymd[3].padStart(2, '0')}`;
+  return str;
+}
+
 function normMobile(m: string): string {
   return (m ?? '').replace(/[+\s\-]/g, '').replace(/^91/, '');
 }
@@ -56,6 +68,12 @@ function matchStr(a: string, b: string, partial = false): string {
 
 export function VerifyResults({ result, enteredData }: VerifyResultsProps) {
   if (!result) return null;
+
+  // Debug
+  if (typeof window !== 'undefined') {
+    console.log('[VerifyResults] enteredData:', JSON.stringify(enteredData));
+    console.log('[VerifyResults] funds:', result?.allFundGroups?.length, 'matched:', result?.matchedTransaction?.found);
+  }
 
   const acct = result.accountDetails ?? {};
   const mt = result.matchedTransaction;
@@ -74,20 +92,31 @@ export function VerifyResults({ result, enteredData }: VerifyResultsProps) {
   // ── Client-side transaction matching ──
   const entAmt = parseFloat(ed.amount ?? '0');
   const entNav = parseFloat(ed.nav ?? '0');
-  const entDate = ed.date ?? '';
+  const entDate = normalizeDate(ed.date ?? '');
 
   const allTxns: any[] = matchedFundGroup?.transactions ?? [];
   let clientMatchIdx = -1;
+
+  // Debug: log what we're matching
+  if (typeof window !== 'undefined' && allTxns.length > 0) {
+    console.log('[VerifyResults] Matching: entDate=', ed.date, '→', entDate, ' entAmt=', entAmt, ' entNav=', entNav);
+    console.log('[VerifyResults] First txn: date=', allTxns[0]?.date, '→', normalizeDate(allTxns[0]?.date), ' gross=', allTxns[0]?.grossAmount);
+  }
+
   if (entDate || entAmt > 0) {
     clientMatchIdx = allTxns.findIndex((txn: any) => {
-      const txnDate = txn.date ?? '';
+      const txnDate = normalizeDate(txn.date ?? '');
       const txnGross = Number(txn.grossAmount ?? 0);
       const txnNet = Number(txn.netAmount ?? 0);
-      // Date comparison (±3 days)
+      // Date comparison: exact match or ±3 days
       let dateOk = false;
       if (entDate && txnDate) {
-        const d1 = new Date(entDate).getTime(), d2 = new Date(txnDate).getTime();
-        dateOk = isFinite(d1) && isFinite(d2) && Math.abs(d1 - d2) <= 3 * 86400000;
+        if (entDate === txnDate) {
+          dateOk = true;
+        } else {
+          const d1 = new Date(entDate).getTime(), d2 = new Date(txnDate).getTime();
+          dateOk = isFinite(d1) && isFinite(d2) && Math.abs(d1 - d2) <= 3 * 86400000;
+        }
       }
       // Amount comparison (±100)
       const amtOk = entAmt > 0 && (Math.abs(txnGross - entAmt) <= 100 || Math.abs(txnNet - entAmt) <= 100);
@@ -222,7 +251,7 @@ export function VerifyResults({ result, enteredData }: VerifyResultsProps) {
                     }}>
                       <td className="px-2 py-1.5" style={{ color: '#1A1A2E' }}>
                         {txn.date ?? '—'}
-                        {isMatch && entDate && (txn.date === entDate ? ' ✅' : ' ⚠️')}
+                        {isMatch && entDate && (normalizeDate(txn.date) === entDate ? ' ✅' : ' ⚠️')}
                         {isMatch && <span className="ml-1 text-[9px]" style={{ color: '#C9A84C' }}>← yours</span>}
                       </td>
                       <td className="px-2 py-1.5" style={{ color: '#6B7280' }}>{txn.type ?? '—'}</td>

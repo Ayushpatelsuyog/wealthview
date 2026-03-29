@@ -847,6 +847,7 @@ export default function MutualFundsPage() {
   const [verifyPassword, setVerifyPassword] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [verifyResult, setVerifyResult] = useState<Record<string, unknown> | null>(null);
+  const [verifyEnteredData, setVerifyEnteredData] = useState<Record<string, string>>({});
   const [verifyError, setVerifyError] = useState('');
   const [_selectedImports, _setSelectedImports] = useState<Set<number>>(new Set());
   const [_useStatementValues, setUseStatementValues] = useState<Record<string, boolean>>({});
@@ -1159,6 +1160,20 @@ export default function MutualFundsPage() {
     setVerifying(true);
     setVerifyError('');
     setVerifyResult(null);
+    // Capture entered data at click time so it's available when results render
+    const selMem = members.find(m => m.id === member);
+    const capturedData: Record<string, string> = {
+      date: purchaseDate || '',
+      amount: amount || '',
+      nav: nav || '',
+      folio: folio || '',
+      memberName: selMem?.name || '',
+      memberPan: selMem?.pan || '',
+      memberMobile: selMem?.primary_mobile || '',
+      memberEmail: selMem?.primary_email || '',
+    };
+    setVerifyEnteredData(capturedData);
+    console.log('[Verify] Captured enteredData:', capturedData);
     try {
       console.log('[Verify] Sending:', { purchaseDate, amount, nav, folio, fundName: selectedFund?.schemeName });
       const fd = new FormData();
@@ -1963,19 +1978,9 @@ export default function MutualFundsPage() {
                     )}
 
                     {/* Results — rendered via VerifyResults component */}
-                    {verifyResult !== null && (() => {
-                      const selMember = members.find(m => m.id === member);
-                      return <VerifyResults result={verifyResult} enteredData={{
-                        date: purchaseDate,
-                        amount: amount,
-                        nav: nav,
-                        folio: folio,
-                        memberName: selMember?.name,
-                        memberPan: selMember?.pan,
-                        memberMobile: selMember?.primary_mobile,
-                        memberEmail: selMember?.primary_email,
-                      }} />;
-                    })()}
+                    {verifyResult !== null && (
+                      <VerifyResults result={verifyResult} enteredData={verifyEnteredData} />
+                    )}
                   </div>
                 )}
               </div>
