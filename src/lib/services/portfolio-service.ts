@@ -104,14 +104,41 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
         .eq('is_active', true),
       supabase
         .from('users')
-        .select('id, name, role')
+        .select('id, name, role, family_id')
         .eq('family_id', familyId),
     ]);
 
     const holdings: Row[] = holdingsRes.data ?? [];
     const manualAssets: Row[] = manualRes.data ?? [];
     const insurance: Row[] = insuranceRes.data ?? [];
-    const familyMembers: Row[] = membersRes.data ?? [];
+
+    // Get members from ALL accessible families (not just primary)
+    let familyMembers: Row[] = membersRes.data ?? [];
+    try {
+      // Get families created by or membershipped to this user
+      const { data: createdFams } = await supabase.from('families').select('id').eq('created_by', user.id);
+      const allFamIds = [familyId];
+      if (createdFams) {
+        for (const f of createdFams) {
+          if (!allFamIds.includes(f.id)) allFamIds.push(f.id);
+        }
+      }
+      try {
+        const { data: memberships } = await supabase.from('family_memberships').select('family_id').eq('auth_user_id', user.id);
+        if (memberships) {
+          for (const m of memberships) {
+            if (!allFamIds.includes(m.family_id)) allFamIds.push(m.family_id);
+          }
+        }
+      } catch { /* table may not exist */ }
+
+      if (allFamIds.length > 1) {
+        const { data: allUsers } = await supabase.from('users').select('id, name, role, family_id').in('family_id', allFamIds);
+        if (allUsers && allUsers.length > familyMembers.length) {
+          familyMembers = allUsers;
+        }
+      }
+    } catch { /* fallback to primary family members */ }
 
     const hasRealData = holdings.length > 0 || manualAssets.length > 0;
 

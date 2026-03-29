@@ -66,9 +66,11 @@ export function DashboardClient() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeMemberIds, setActiveMemberIds] = useState<string[]>([]);
+  const [_activeFamilyIds, setActiveFamilyIds] = useState<string[]>([]);
 
-  const handleSelectionChange = useCallback((memberIds: string[]) => {
+  const handleSelectionChange = useCallback((memberIds: string[], familyIds: string[]) => {
     setActiveMemberIds(memberIds);
+    setActiveFamilyIds(familyIds);
   }, []);
 
   const load = useCallback(async (force = false) => {
