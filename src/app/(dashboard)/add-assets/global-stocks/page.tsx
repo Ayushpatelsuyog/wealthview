@@ -132,12 +132,16 @@ function GlobalStocksFormContent() {
   const isDividendMode = !!dividendHoldingId;
   const preloadHoldingId = addToHoldingId || sellHoldingId || dividendHoldingId;
 
+  // URL-based family/member override (passed from portfolio page)
+  const urlFamilyId = _searchParams.get('family_id');
+  const urlMemberId = _searchParams.get('member_id');
+
   // Auth / family
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const [familyId, setFamilyId] = useState<string | null>(urlFamilyId);
   const [families, setFamilies] = useState<{id: string; name: string}[]>([]);
-  const [selectedFamily, setSelectedFamily] = useState('');
+  const [selectedFamily, setSelectedFamily] = useState(urlFamilyId || '');
   const [members,  setMembers]  = useState<FamilyMember[]>([]);
-  const [member,   setMember]   = useState('');
+  const [member,   setMember]   = useState(urlMemberId || '');
 
   // Portfolio
   const [portfolioName, setPortfolioName] = useState('');
@@ -187,66 +191,8 @@ function GlobalStocksFormContent() {
   const [errors,  setErrors]  = useState<Record<string, string>>({});
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // ── Load user/family ────────────────────────────────────────────────────────
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) { router.push('/login'); return; }
-      const { data: profile } = await supabase
-        .from('users').select('id, name, family_id').eq('id', user.id).single();
-      if (!profile) return;
-      setMember(profile.id);
-
-      const fid = profile.family_id;
-      if (fid) {
-        setFamilyId(fid);
-        setSelectedFamily(fid);
-        const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', fid);
-        setMembers(fUsers ?? [{ id: profile.id, name: profile.name }]);
-
-        // Load families the user has access to
-        try {
-          const { data: primaryFam } = await supabase.from('families').select('id, name').eq('id', fid).single();
-          const famList = primaryFam ? [primaryFam] : [];
-
-          try {
-            const { data: extraFams } = await supabase
-              .from('family_memberships')
-              .select('families(id, name)')
-              .eq('auth_user_id', user.id);
-            if (extraFams) {
-              for (const m of extraFams) {
-                const f = (m as Record<string, unknown>).families as {id: string; name: string} | undefined;
-                if (f && !famList.find(x => x.id === f.id)) famList.push(f);
-              }
-            }
-          } catch { /* table may not exist */ }
-
-          setFamilies(famList);
-        } catch { /* ignore */ }
-      } else {
-        setMembers([{ id: profile.id, name: profile.name }]);
-      }
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Reload members when family changes ──────────────────────────────────
-  useEffect(() => {
-    if (!selectedFamily) return;
-    setFamilyId(selectedFamily);
-    (async () => {
-      const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
-      setMembers(fUsers ?? []);
-      if (fUsers?.length) setMember(fUsers[0].id);
-    })();
-  }, [selectedFamily]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Auto-set today for date ─────────────────────────────────────────────────
-  useEffect(() => {
-    if (!isEditMode) {
-      setDate(new Date().toISOString().split('T')[0]);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Track whether URL params have locked in the member (prevents overwrite by family-change effect)
+  const memberLockedRef = useRef(!!urlMemberId);
 
   // ── Load holding for add-more / sell / dividend modes ──
   useEffect(() => {
@@ -275,18 +221,99 @@ function GlobalStocksFormContent() {
       else if (isDividendMode) setTxnType('dividend');
       else setTxnType('buy');
 
-      // Pre-select the correct family and member from the holding's portfolio
+      // Pre-select family/member from holding's portfolio (fallback if not in URL)
       if (holdingData.portfolios) {
         const p = holdingData.portfolios as unknown as { name: string; family_id: string; user_id: string };
+        console.log("Holding portfolio:", { family_id: p.family_id, user_id: p.user_id, portfolio_name: p.name });
         setPortfolioName(p.name);
-        if (p.family_id) { setSelectedFamily(p.family_id); setFamilyId(p.family_id); }
-        if (p.user_id) setMember(p.user_id);
+        if (p.family_id && !urlFamilyId) { setSelectedFamily(p.family_id); setFamilyId(p.family_id); }
+        if (p.user_id && !urlMemberId) {
+          setMember(p.user_id);
+          memberLockedRef.current = true;
+        }
       }
       if (holdingData.brokers) {
         setBrokerId((holdingData.brokers as unknown as { id: string }).id);
       }
     })();
   }, [preloadHoldingId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Load user/family ────────────────────────────────────────────────────────
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) { router.push('/login'); return; }
+      const { data: profile } = await supabase
+        .from('users').select('id, name, family_id').eq('id', user.id).single();
+      if (!profile) return;
+
+      // Only set defaults if no URL override
+      if (!urlFamilyId && !urlMemberId) setMember(profile.id);
+
+      const fid = profile.family_id;
+      if (fid) {
+        if (!urlFamilyId) {
+          setFamilyId(fid);
+          setSelectedFamily(fid);
+        }
+        // Load members for whichever family is selected
+        const activeFamilyId = urlFamilyId || fid;
+        const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', activeFamilyId);
+        setMembers(fUsers ?? [{ id: profile.id, name: profile.name }]);
+
+        // Load families the user has access to
+        try {
+          const { data: primaryFam } = await supabase.from('families').select('id, name').eq('id', fid).single();
+          const famList = primaryFam ? [primaryFam] : [];
+
+          try {
+            const { data: extraFams } = await supabase
+              .from('family_memberships')
+              .select('families(id, name)')
+              .eq('auth_user_id', user.id);
+            if (extraFams) {
+              for (const m of extraFams) {
+                const f = (m as Record<string, unknown>).families as {id: string; name: string} | undefined;
+                if (f && !famList.find(x => x.id === f.id)) famList.push(f);
+              }
+            }
+          } catch { /* table may not exist */ }
+
+          // If urlFamilyId is set but not in the list, add it
+          if (urlFamilyId && !famList.find(x => x.id === urlFamilyId)) {
+            const { data: urlFam } = await supabase.from('families').select('id, name').eq('id', urlFamilyId).single();
+            if (urlFam) famList.push(urlFam);
+          }
+
+          setFamilies(famList);
+        } catch { /* ignore */ }
+      } else {
+        setMembers([{ id: profile.id, name: profile.name }]);
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Reload members when family changes ──────────────────────────────────
+  useEffect(() => {
+    if (!selectedFamily) return;
+    setFamilyId(selectedFamily);
+    (async () => {
+      const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
+      setMembers(fUsers ?? []);
+      // Don't overwrite member if it was locked by URL params or holding prefill
+      if (memberLockedRef.current) {
+        memberLockedRef.current = false; // consumed — future family changes reset normally
+      } else if (fUsers?.length) {
+        setMember(fUsers[0].id);
+      }
+    })();
+  }, [selectedFamily]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Auto-set today for date ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isEditMode) {
+      setDate(new Date().toISOString().split('T')[0]);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load existing transaction for edit mode ───────────────────────────────
   useEffect(() => {
@@ -757,11 +784,11 @@ function GlobalStocksFormContent() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#9CA3AF' }} />
                 <Input
                   value={query}
-                  onChange={e => { if (!isEditMode) { setQuery(e.target.value); setSelectedStock(null); setStockPrice(null); setFxRate(null); } }}
-                  onFocus={() => { if (!isEditMode && results.length > 0) setShowDrop(true); }}
+                  onChange={e => { if (!isEditMode && !preloadHoldingId) { setQuery(e.target.value); setSelectedStock(null); setStockPrice(null); setFxRate(null); } }}
+                  onFocus={() => { if (!isEditMode && !preloadHoldingId && results.length > 0) setShowDrop(true); }}
                   placeholder="Search by symbol or company name (min 2 chars)..."
-                  className={`h-9 text-xs pl-9 pr-8${isEditMode ? ' bg-[#F7F5F0] cursor-not-allowed' : ''}`}
-                  readOnly={isEditMode}
+                  className={`h-9 text-xs pl-9 pr-8${isEditMode || preloadHoldingId ? ' bg-[#F7F5F0] cursor-not-allowed' : ''}`}
+                  readOnly={!!(isEditMode || preloadHoldingId)}
                 />
                 {searching
                   ? <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin" style={{ color: '#9CA3AF' }} />

@@ -30,7 +30,7 @@ export interface StockHoldingDetail {
   quantity: number;
   avg_buy_price: number;
   metadata: Record<string, unknown>;
-  portfolios: { id: string; name: string; type: string; user_id: string } | null;
+  portfolios: { id: string; name: string; type: string; user_id: string; family_id: string } | null;
   brokers: { id: string; name: string; platform_type: string } | null;
   transactions: Transaction[];
   currentPrice: number | null;
@@ -486,7 +486,7 @@ export function StockDetailSheet({
             <Button
               className="h-9 text-xs gap-1.5"
               style={{ backgroundColor: '#1B2A4A', color: 'white' }}
-              onClick={() => { onClose(); router.push(`/add-assets/indian-stocks?add_to=${holding.id}`); }}>
+              onClick={() => { const ep = `${holding.portfolios?.family_id ? `&family_id=${holding.portfolios.family_id}` : ''}${holding.portfolios?.user_id ? `&member_id=${holding.portfolios.user_id}` : ''}`; onClose(); router.push(`/add-assets/indian-stocks?add_to=${holding.id}${ep}`); }}>
               <Plus className="w-3.5 h-3.5" />Add More Shares
             </Button>
             <Button variant="outline" className="h-9 text-xs gap-1.5"

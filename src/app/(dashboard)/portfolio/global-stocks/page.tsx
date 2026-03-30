@@ -25,7 +25,7 @@ interface RawHolding {
   quantity: number;
   avg_buy_price: number;
   metadata: Record<string, unknown>;
-  portfolios: { id: string; name: string; type: string; user_id: string } | null;
+  portfolios: { id: string; name: string; type: string; user_id: string; family_id: string } | null;
   brokers:    { id: string; name: string; platform_type: string } | null;
   transactions: Transaction[];
 }
@@ -130,19 +130,22 @@ function _PnlBadge({ value, pct }: { value: number; pct: number }) {
 // ─── Action Menu ─────────────────────────────────────────────────────────────
 
 function ActionMenu({
-  holdingId, onDelete, onViewDetails,
+  holdingId, familyId, memberId, onDelete, onViewDetails,
 }: {
   holdingId: string;
+  familyId?: string;
+  memberId?: string;
   onDelete: (id: string) => void;
   onViewDetails: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const extraParams = `${familyId ? `&family_id=${familyId}` : ''}${memberId ? `&member_id=${memberId}` : ''}`;
   const actions = [
     { label: 'View details',    action: () => { onViewDetails(holdingId); setOpen(false); } },
-    { label: 'Add More Shares', action: () => { router.push(`/add-assets/global-stocks?add_to=${holdingId}`); setOpen(false); } },
-    { label: 'Sell / Exit',     action: () => { router.push(`/add-assets/global-stocks?sell=${holdingId}`); setOpen(false); } },
-    { label: 'Record Dividend', action: () => { router.push(`/add-assets/global-stocks?dividend=${holdingId}`); setOpen(false); } },
+    { label: 'Add More Shares', action: () => { router.push(`/add-assets/global-stocks?add_to=${holdingId}${extraParams}`); setOpen(false); } },
+    { label: 'Sell / Exit',     action: () => { router.push(`/add-assets/global-stocks?sell=${holdingId}${extraParams}`); setOpen(false); } },
+    { label: 'Record Dividend', action: () => { router.push(`/add-assets/global-stocks?dividend=${holdingId}${extraParams}`); setOpen(false); } },
     { label: 'Delete',          action: () => { onDelete(holdingId); setOpen(false); }, danger: true },
   ];
   return (
@@ -328,7 +331,7 @@ export default function GlobalStocksPortfolioPage() {
         .from('holdings')
         .select(`
           id, symbol, name, quantity, avg_buy_price, metadata,
-          portfolios(id, name, type, user_id),
+          portfolios(id, name, type, user_id, family_id),
           brokers(id, name, platform_type),
           transactions(id, date, price, quantity, type, fees, notes, metadata)
         `)
@@ -763,7 +766,7 @@ export default function GlobalStocksPortfolioPage() {
         </div>
         {/* Actions */}
         <div onClick={e => e.stopPropagation()}>
-          <ActionMenu holdingId={h.id} onDelete={deleteHolding} onViewDetails={id => setDetailId(id)} />
+          <ActionMenu holdingId={h.id} familyId={h.portfolios?.family_id} memberId={h.portfolios?.user_id} onDelete={deleteHolding} onViewDetails={id => setDetailId(id)} />
         </div>
       </div>
     );

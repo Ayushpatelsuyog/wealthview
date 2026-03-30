@@ -153,14 +153,23 @@ function IndianStocksFormContent() {
   const isEditMode = !!editTxnId && !!editHoldingId;
 
   const addToHoldingId = _searchParams.get('add_to');
-  const isAddMoreMode = !!addToHoldingId && !isEditMode;
+  const sellHoldingId = _searchParams.get('sell');
+  const dividendHoldingId = _searchParams.get('dividend');
+  const _isAddMoreMode = !!addToHoldingId && !isEditMode;
+  const isSellMode = !!sellHoldingId;
+  const isDividendMode = !!dividendHoldingId;
+  const preloadHoldingId = addToHoldingId || sellHoldingId || dividendHoldingId;
+
+  // URL-based family/member override (passed from portfolio page)
+  const urlFamilyId = _searchParams.get('family_id');
+  const urlMemberId = _searchParams.get('member_id');
 
   // Auth / family
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const [familyId, setFamilyId] = useState<string | null>(urlFamilyId);
   const [families, setFamilies] = useState<{id: string; name: string}[]>([]);
-  const [selectedFamily, setSelectedFamily] = useState('');
+  const [selectedFamily, setSelectedFamily] = useState(urlFamilyId || '');
   const [members,  setMembers]  = useState<FamilyMember[]>([]);
-  const [member,   setMember]   = useState('');
+  const [member,   setMember]   = useState(urlMemberId || '');
 
   // Portfolio
   const [portfolioName, setPortfolioName] = useState('');
@@ -214,6 +223,53 @@ function IndianStocksFormContent() {
   const [errors,  setErrors]  = useState<Record<string, string>>({});
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track whether URL params have locked in the member (prevents overwrite by family-change effect)
+  const memberLockedRef = useRef(!!urlMemberId);
+
+  // ── Load holding for add-more / sell / dividend modes ──
+  useEffect(() => {
+    if (!preloadHoldingId) return;
+    (async () => {
+      const { data: holdingData } = await supabase
+        .from('holdings')
+        .select('symbol, name, quantity, avg_buy_price, metadata, brokers(id, name), portfolios(name, family_id, user_id)')
+        .eq('id', preloadHoldingId)
+        .single();
+      if (!holdingData) return;
+
+      const meta = (holdingData.metadata ?? {}) as Record<string, unknown>;
+      setSelectedStock({
+        symbol: holdingData.symbol,
+        companyName: holdingData.name,
+        exchange: String(meta.exchange ?? 'NSE'),
+        sector: String(meta.sector ?? ''),
+        industry: String(meta.industry ?? ''),
+        isin: String(meta.isin ?? ''),
+        bseCode: String(meta.bse_code ?? ''),
+      });
+      setQuery(`${holdingData.symbol} — ${holdingData.name}`);
+
+      // Set transaction type based on mode
+      if (isSellMode) setTxnType('sell');
+      else if (isDividendMode) setTxnType('dividend');
+      else setTxnType('buy');
+
+      // Pre-select family/member from holding's portfolio (fallback if not in URL)
+      if (holdingData.portfolios) {
+        const p = holdingData.portfolios as unknown as { name: string; family_id: string; user_id: string };
+        console.log("Holding portfolio:", { family_id: p.family_id, user_id: p.user_id, portfolio_name: p.name });
+        setPortfolioName(p.name);
+        if (p.family_id && !urlFamilyId) { setSelectedFamily(p.family_id); setFamilyId(p.family_id); }
+        if (p.user_id && !urlMemberId) {
+          setMember(p.user_id);
+          memberLockedRef.current = true;
+        }
+      }
+      if (holdingData.brokers) {
+        setBrokerId((holdingData.brokers as unknown as { id: string }).id);
+      }
+    })();
+  }, [preloadHoldingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load user/family ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -222,13 +278,19 @@ function IndianStocksFormContent() {
       const { data: profile } = await supabase
         .from('users').select('id, name, family_id').eq('id', user.id).single();
       if (!profile) return;
-      setMember(profile.id);
+
+      // Only set defaults if no URL override
+      if (!urlFamilyId && !urlMemberId) setMember(profile.id);
 
       const fid = profile.family_id;
       if (fid) {
-        setFamilyId(fid);
-        setSelectedFamily(fid);
-        const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', fid);
+        if (!urlFamilyId) {
+          setFamilyId(fid);
+          setSelectedFamily(fid);
+        }
+        // Load members for whichever family is selected
+        const activeFamilyId = urlFamilyId || fid;
+        const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', activeFamilyId);
         setMembers(fUsers ?? [{ id: profile.id, name: profile.name }]);
 
         // Load families the user has access to
@@ -249,6 +311,12 @@ function IndianStocksFormContent() {
             }
           } catch { /* table may not exist */ }
 
+          // If urlFamilyId is set but not in the list, add it
+          if (urlFamilyId && !famList.find(x => x.id === urlFamilyId)) {
+            const { data: urlFam } = await supabase.from('families').select('id, name').eq('id', urlFamilyId).single();
+            if (urlFam) famList.push(urlFam);
+          }
+
           setFamilies(famList);
         } catch { /* ignore */ }
       } else {
@@ -264,7 +332,12 @@ function IndianStocksFormContent() {
     (async () => {
       const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
       setMembers(fUsers ?? []);
-      if (fUsers?.length) setMember(fUsers[0].id);
+      // Don't overwrite member if it was locked by URL params or holding prefill
+      if (memberLockedRef.current) {
+        memberLockedRef.current = false; // consumed — future family changes reset normally
+      } else if (fUsers?.length) {
+        setMember(fUsers[0].id);
+      }
     })();
   }, [selectedFamily]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -326,39 +399,6 @@ function IndianStocksFormContent() {
       }
     })();
   }, [editTxnId, editHoldingId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Load holding data for add-more mode ──────────────────────────────────
-  useEffect(() => {
-    if (!isAddMoreMode) return;
-    (async () => {
-      const { data: holdingData } = await supabase
-        .from('holdings')
-        .select('symbol, name, quantity, avg_buy_price, metadata, brokers(id, name), portfolios(name)')
-        .eq('id', addToHoldingId)
-        .single();
-      if (!holdingData) return;
-
-      const meta = (holdingData.metadata ?? {}) as Record<string, unknown>;
-      setSelectedStock({
-        symbol: holdingData.symbol,
-        companyName: holdingData.name,
-        exchange: String(meta.exchange ?? 'NSE'),
-        sector: String(meta.sector ?? ''),
-        industry: String(meta.industry ?? ''),
-        isin: String(meta.isin ?? ''),
-        bseCode: String(meta.bse_code ?? ''),
-      });
-      setQuery(`${holdingData.symbol} — ${holdingData.name}`);
-      setTxnType('buy');
-
-      if (holdingData.portfolios) {
-        setPortfolioName((holdingData.portfolios as unknown as { name: string }).name);
-      }
-      if (holdingData.brokers) {
-        setBrokerId((holdingData.brokers as unknown as { id: string }).id);
-      }
-    })();
-  }, [addToHoldingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Search with debounce ────────────────────────────────────────────────────
   useEffect(() => {
@@ -670,11 +710,11 @@ function IndianStocksFormContent() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#9CA3AF' }} />
                 <Input
                   value={query}
-                  onChange={e => { if (!isEditMode && !isAddMoreMode) { setQuery(e.target.value); setSelectedStock(null); setStockPrice(null); } }}
-                  onFocus={() => { if (!isEditMode && !isAddMoreMode && results.length > 0) setShowDrop(true); }}
-                  readOnly={isEditMode || isAddMoreMode}
+                  onChange={e => { if (!isEditMode && !preloadHoldingId) { setQuery(e.target.value); setSelectedStock(null); setStockPrice(null); } }}
+                  onFocus={() => { if (!isEditMode && !preloadHoldingId && results.length > 0) setShowDrop(true); }}
+                  readOnly={!!(isEditMode || preloadHoldingId)}
                   placeholder="Search by symbol or company name (min 2 chars)…"
-                  className={`h-9 text-xs pl-9 pr-8 ${isEditMode || isAddMoreMode ? 'bg-[#F7F5F0] cursor-not-allowed' : ''}`}
+                  className={`h-9 text-xs pl-9 pr-8 ${isEditMode || preloadHoldingId ? 'bg-[#F7F5F0] cursor-not-allowed' : ''}`}
                 />
                 {searching
                   ? <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin" style={{ color: '#9CA3AF' }} />
@@ -806,9 +846,9 @@ function IndianStocksFormContent() {
               <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
                 Step 3 — Transaction Details
               </p>
-            {isAddMoreMode && selectedStock && (
+            {preloadHoldingId && selectedStock && (
               <div className="mb-4 p-3 rounded-xl text-xs" style={{ backgroundColor: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)', color: '#92620A' }}>
-                Adding shares to: <strong>{selectedStock.companyName}</strong>
+                {isSellMode ? 'Selling shares of' : isDividendMode ? 'Recording dividend for' : 'Adding shares to'}: <strong>{selectedStock.companyName}</strong>
               </div>
             )}
 

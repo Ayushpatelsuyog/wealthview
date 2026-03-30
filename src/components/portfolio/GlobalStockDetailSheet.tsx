@@ -32,7 +32,7 @@ export interface GlobalStockHoldingDetail {
   avg_buy_price: number;
   metadata: Record<string, unknown>;
   transactions: Transaction[];
-  portfolios: { id: string; name: string; type: string; user_id: string } | null;
+  portfolios: { id: string; name: string; type: string; user_id: string; family_id: string } | null;
   brokers: { id: string; name: string; platform_type: string } | null;
   investedValue: number;
   currentValue: number | null;
@@ -484,17 +484,17 @@ export function GlobalStockDetailSheet({
             <Button
               className="h-9 text-xs gap-1.5"
               style={{ backgroundColor: '#1B2A4A', color: 'white' }}
-              onClick={() => { onClose(); router.push(`/add-assets/global-stocks?add_to=${holding.id}`); }}>
+              onClick={() => { const ep = `${holding.portfolios?.family_id ? `&family_id=${holding.portfolios.family_id}` : ''}${holding.portfolios?.user_id ? `&member_id=${holding.portfolios.user_id}` : ''}`; onClose(); router.push(`/add-assets/global-stocks?add_to=${holding.id}${ep}`); }}>
               <Plus className="w-3.5 h-3.5" />Add More Shares
             </Button>
             <Button variant="outline" className="h-9 text-xs gap-1.5"
               style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
-              onClick={() => { onClose(); router.push(`/add-assets/global-stocks?sell=${holding.id}`); }}>
+              onClick={() => { const ep = `${holding.portfolios?.family_id ? `&family_id=${holding.portfolios.family_id}` : ''}${holding.portfolios?.user_id ? `&member_id=${holding.portfolios.user_id}` : ''}`; onClose(); router.push(`/add-assets/global-stocks?sell=${holding.id}${ep}`); }}>
               Sell / Exit
             </Button>
             <Button variant="outline" className="h-9 text-xs gap-1.5"
               style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
-              onClick={() => { onClose(); router.push(`/add-assets/global-stocks?dividend=${holding.id}`); }}>
+              onClick={() => { const ep = `${holding.portfolios?.family_id ? `&family_id=${holding.portfolios.family_id}` : ''}${holding.portfolios?.user_id ? `&member_id=${holding.portfolios.user_id}` : ''}`; onClose(); router.push(`/add-assets/global-stocks?dividend=${holding.id}${ep}`); }}>
               Record Dividend
             </Button>
             <Button variant="outline" className="h-9 text-xs gap-1.5"

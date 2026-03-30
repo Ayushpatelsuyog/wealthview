@@ -95,6 +95,7 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
     setAddSaving(true);
     setAddError(null);
 
+    console.log("Creating portfolio with family_id:", familyId, "member_id:", memberId);
     const { data, error: err } = await supabase
       .from('portfolios')
       .insert({
