@@ -144,6 +144,9 @@ function ChargeRow({ label, value, onChange, autoCalc, onAutoClick }: {
 
 // ─── Main Form Content ─────────────────────────────────────────────────────────
 
+// Module-level: survives re-renders, consumed once when members load
+let _pendingMember: string | null = null;
+
 function IndianStocksFormContent() {
   const router   = useRouter();
   const supabase = createClient();
@@ -169,6 +172,8 @@ function IndianStocksFormContent() {
     sessionStorage.removeItem('wv_prefill_member');
     sessionStorage.removeItem('wv_prefill_active');
   }
+  _pendingMember = prefillMember;
+  console.log('=== ADD PAGE INIT ===', { prefillFamily, prefillMember, prefillActive, _pendingMember });
   const urlFamilyId = _searchParams.get('family_id') || prefillFamily;
   const urlMemberId = _searchParams.get('member_id') || prefillMember;
   const hasPrefill = prefillActive || !!(_searchParams.get('family_id') || _searchParams.get('member_id'));
@@ -236,6 +241,9 @@ function IndianStocksFormContent() {
   const prefillLockedRef = useRef(hasPrefill);
   // Store the target member ID permanently so it can be re-applied when members list loads
   const targetMemberRef = useRef(urlMemberId || '');
+  // Always-current family ref to avoid stale closures in async member fetches
+  const activeFamilyRef = useRef(selectedFamily);
+  activeFamilyRef.current = selectedFamily;
 
   // ── Load holding for add-more / sell / dividend modes ──
   useEffect(() => {
@@ -276,6 +284,7 @@ function IndianStocksFormContent() {
         if (p.user_id) {
           setMember(p.user_id);
           targetMemberRef.current = p.user_id;
+          _pendingMember = p.user_id;
         }
         prefillLockedRef.current = true; // lock — database values are the definitive source
       }
@@ -302,10 +311,22 @@ function IndianStocksFormContent() {
           setFamilyId(fid);
           setSelectedFamily(fid);
         }
-        const activeFamilyId = hasOverride ? (urlFamilyId || fid) : fid;
+        const activeFamilyId = hasOverride ? (activeFamilyRef.current || urlFamilyId || fid) : fid;
+        console.log('Fetching members for family (init):', activeFamilyId);
         const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', activeFamilyId);
         if (fUsers && fUsers.length > 0) {
           setMembers(fUsers);
+          console.log('=== MEMBERS LOADED (init) ===', {
+            selectedFamily: activeFamilyRef.current,
+            membersCount: fUsers.length,
+            members: fUsers.map(m => ({ id: m.id, name: m.name })),
+            _pendingMember,
+            currentMember: member,
+          });
+          if (_pendingMember && fUsers.find(m => m.id === _pendingMember)) {
+            setMember(_pendingMember);
+            _pendingMember = null;
+          }
         } else {
           setMembers([{ id: profile.id, name: profile.name }]);
         }
@@ -350,12 +371,28 @@ function IndianStocksFormContent() {
   useEffect(() => {
     if (!selectedFamily) return;
     setFamilyId(selectedFamily);
+    const targetFamily = selectedFamily;
     (async () => {
-      const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
+      console.log('Fetching members for family:', targetFamily);
+      const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', targetFamily);
+      // Bail if family changed while fetching (stale result)
+      if (activeFamilyRef.current !== targetFamily) return;
       setMembers(fUsers ?? []);
       const target = targetMemberRef.current;
       const targetInList = target && fUsers?.find(m => m.id === target);
-      if (targetInList) {
+      console.log('=== MEMBERS LOADED ===', {
+        selectedFamily: targetFamily,
+        membersCount: fUsers?.length,
+        members: fUsers?.map(m => ({ id: m.id, name: m.name })),
+        _pendingMember,
+        targetMemberRef: target,
+        currentMember: member,
+      });
+      // Apply pending member from module-level variable (survives async load)
+      if (_pendingMember && fUsers?.find(m => m.id === _pendingMember)) {
+        setMember(_pendingMember);
+        _pendingMember = null;
+      } else if (targetInList) {
         setMember(target);
       } else if (!prefillLockedRef.current && fUsers?.length) {
         setMember(fUsers[0].id);

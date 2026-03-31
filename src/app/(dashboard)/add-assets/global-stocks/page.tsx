@@ -115,6 +115,9 @@ function AutoTag({ label }: { label: string }) {
 
 // ─── Main Form Content ─────────────────────────────────────────────────────────
 
+// Module-level: survives re-renders, consumed once when members load
+let _pendingMember: string | null = null;
+
 function GlobalStocksFormContent() {
   const router   = useRouter();
   const supabase = createClient();
@@ -142,7 +145,8 @@ function GlobalStocksFormContent() {
     sessionStorage.removeItem('wv_prefill_member');
     sessionStorage.removeItem('wv_prefill_active');
   }
-  console.log('=== ADD PAGE INIT ===', { prefillFamily, prefillMember, prefillActive });
+  _pendingMember = prefillMember;
+  console.log('=== ADD PAGE INIT ===', { prefillFamily, prefillMember, prefillActive, _pendingMember });
   // Also check URL params as fallback
   const urlFamilyId = _searchParams.get('family_id') || prefillFamily;
   const urlMemberId = _searchParams.get('member_id') || prefillMember;
@@ -207,6 +211,9 @@ function GlobalStocksFormContent() {
   const prefillLockedRef = useRef(hasPrefill);
   // Store the target member ID permanently so it can be re-applied when members list loads
   const targetMemberRef = useRef(urlMemberId || '');
+  // Always-current family ref to avoid stale closures in async member fetches
+  const activeFamilyRef = useRef(selectedFamily);
+  activeFamilyRef.current = selectedFamily;
 
   // ── Load holding for add-more / sell / dividend modes ──
   useEffect(() => {
@@ -247,6 +254,7 @@ function GlobalStocksFormContent() {
         if (p.user_id) {
           setMember(p.user_id);
           targetMemberRef.current = p.user_id;
+          _pendingMember = p.user_id;
         }
         prefillLockedRef.current = true; // lock — database values are the definitive source
       }
@@ -277,10 +285,22 @@ function GlobalStocksFormContent() {
         }
 
         // Load members for the active family (URL override or default)
-        const activeFamilyId = hasUrlOverride ? (urlFamilyId || fid) : fid;
+        const activeFamilyId = hasUrlOverride ? (activeFamilyRef.current || urlFamilyId || fid) : fid;
+        console.log('Fetching members for family (init):', activeFamilyId);
         const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', activeFamilyId);
         if (fUsers && fUsers.length > 0) {
           setMembers(fUsers);
+          console.log('=== MEMBERS LOADED (init) ===', {
+            selectedFamily: activeFamilyRef.current,
+            membersCount: fUsers.length,
+            members: fUsers.map(m => ({ id: m.id, name: m.name })),
+            _pendingMember,
+            currentMember: member,
+          });
+          if (_pendingMember && fUsers.find(m => m.id === _pendingMember)) {
+            setMember(_pendingMember);
+            _pendingMember = null;
+          }
         } else {
           setMembers([{ id: profile.id, name: profile.name }]);
         }
@@ -325,13 +345,28 @@ function GlobalStocksFormContent() {
   useEffect(() => {
     if (!selectedFamily) return;
     setFamilyId(selectedFamily);
+    const targetFamily = selectedFamily;
     (async () => {
-      const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
+      console.log('Fetching members for family:', targetFamily);
+      const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', targetFamily);
+      // Bail if family changed while fetching (stale result)
+      if (activeFamilyRef.current !== targetFamily) return;
       setMembers(fUsers ?? []);
       const target = targetMemberRef.current;
       const targetInList = target && fUsers?.find(m => m.id === target);
-      console.log('=== FAMILY CHANGE EFFECT ===', { selectedFamily, locked: prefillLockedRef.current, target, targetInList: !!targetInList, membersLoaded: fUsers?.length });
-      if (targetInList) {
+      console.log('=== MEMBERS LOADED ===', {
+        selectedFamily: targetFamily,
+        membersCount: fUsers?.length,
+        members: fUsers?.map(m => ({ id: m.id, name: m.name })),
+        _pendingMember,
+        targetMemberRef: target,
+        currentMember: member,
+      });
+      // Apply pending member from module-level variable (survives async load)
+      if (_pendingMember && fUsers?.find(m => m.id === _pendingMember)) {
+        setMember(_pendingMember);
+        _pendingMember = null;
+      } else if (targetInList) {
         // Re-apply the target member (from sessionStorage/holding preload)
         setMember(target);
       } else if (!prefillLockedRef.current && fUsers?.length) {
