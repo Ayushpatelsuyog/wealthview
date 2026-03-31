@@ -132,9 +132,21 @@ function GlobalStocksFormContent() {
   const isDividendMode = !!dividendHoldingId;
   const preloadHoldingId = addToHoldingId || sellHoldingId || dividendHoldingId;
 
-  // URL-based family/member override (passed from portfolio page)
-  const urlFamilyId = _searchParams.get('family_id');
-  const urlMemberId = _searchParams.get('member_id');
+  // Family/member prefill from sessionStorage (set by portfolio page before navigation)
+  const prefillFamily = typeof window !== 'undefined' ? sessionStorage.getItem('wv_prefill_family') : null;
+  const prefillMember = typeof window !== 'undefined' ? sessionStorage.getItem('wv_prefill_member') : null;
+  const prefillActive = typeof window !== 'undefined' ? sessionStorage.getItem('wv_prefill_active') === 'true' : false;
+  if (typeof window !== 'undefined') {
+    // Always clear so future visits aren't affected
+    sessionStorage.removeItem('wv_prefill_family');
+    sessionStorage.removeItem('wv_prefill_member');
+    sessionStorage.removeItem('wv_prefill_active');
+  }
+  console.log('=== ADD PAGE INIT ===', { prefillFamily, prefillMember, prefillActive });
+  // Also check URL params as fallback
+  const urlFamilyId = _searchParams.get('family_id') || prefillFamily;
+  const urlMemberId = _searchParams.get('member_id') || prefillMember;
+  const hasPrefill = prefillActive || !!(_searchParams.get('family_id') || _searchParams.get('member_id'));
 
   // Auth / family
   const [familyId, setFamilyId] = useState<string | null>(urlFamilyId);
@@ -191,8 +203,8 @@ function GlobalStocksFormContent() {
   const [errors,  setErrors]  = useState<Record<string, string>>({});
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // When URL params specify family/member, this stays TRUE permanently to prevent any overwrite
-  const urlOverrideRef = useRef(!!(urlFamilyId || urlMemberId));
+  // Stays TRUE permanently when prefill/URL params specified family/member — prevents any overwrite
+  const prefillLockedRef = useRef(hasPrefill);
 
   // ── Load holding for add-more / sell / dividend modes ──
   useEffect(() => {
@@ -221,19 +233,19 @@ function GlobalStocksFormContent() {
       else if (isDividendMode) setTxnType('dividend');
       else setTxnType('buy');
 
-      // Pre-select family/member from holding's portfolio (fallback if not in URL)
+      // ALWAYS set family/member from the holding's portfolio record (database truth)
       if (holdingData.portfolios) {
         const p = holdingData.portfolios as unknown as { name: string; family_id: string; user_id: string };
+        console.log('=== HOLDING PRELOAD ===', { family_id: p.family_id, user_id: p.user_id, portfolio: p.name });
         setPortfolioName(p.name);
-        if (p.family_id && !urlFamilyId) {
+        if (p.family_id) {
           setSelectedFamily(p.family_id);
           setFamilyId(p.family_id);
-          urlOverrideRef.current = true; // lock from holding data too
         }
-        if (p.user_id && !urlMemberId) {
+        if (p.user_id) {
           setMember(p.user_id);
-          urlOverrideRef.current = true; // lock from holding data too
         }
+        prefillLockedRef.current = true; // lock — database values are the definitive source
       }
       if (holdingData.brokers) {
         setBrokerId((holdingData.brokers as unknown as { id: string }).id);
@@ -249,12 +261,12 @@ function GlobalStocksFormContent() {
         .from('users').select('id, name, family_id').eq('id', user.id).single();
       if (!profile) return;
 
-      const hasUrlOverride = urlOverrideRef.current;
-
-      // Only set member default if no URL/holding override active
-      if (!hasUrlOverride) setMember(profile.id);
-
+      const hasUrlOverride = prefillLockedRef.current;
       const fid = profile.family_id;
+      console.log('=== LOAD USER/FAMILY ===', { hasUrlOverride, profileId: profile.id, profileFamilyId: fid });
+
+      // Only set member default if no prefill/holding override active
+      if (!hasUrlOverride) setMember(profile.id);
       if (fid) {
         if (!hasUrlOverride) {
           setFamilyId(fid);
@@ -303,20 +315,20 @@ function GlobalStocksFormContent() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Reload members when family changes ──────────────────────────────────
-  const familyChangeCount = useRef(0);
+  function handleManualFamilyChange(fid: string) {
+    prefillLockedRef.current = false; // user is manually changing — unlock
+    setSelectedFamily(fid);
+  }
   useEffect(() => {
     if (!selectedFamily) return;
-    familyChangeCount.current++;
-    const isInitialMount = familyChangeCount.current === 1;
     setFamilyId(selectedFamily);
     (async () => {
       const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
       setMembers(fUsers ?? []);
-      // On initial mount with URL override OR holding preload, don't overwrite the member
-      // On subsequent family changes (user manually clicked a different family), select first member
-      if (isInitialMount && urlOverrideRef.current) {
-        // Keep the URL/holding-specified member — do nothing
-      } else if (fUsers?.length) {
+      console.log('=== FAMILY CHANGE EFFECT ===', { selectedFamily, locked: prefillLockedRef.current, membersLoaded: fUsers?.length });
+      // If prefill is locked (from sessionStorage/holding preload), keep the current member
+      // If not locked (user manually changed family), pick first member
+      if (!prefillLockedRef.current && fUsers?.length) {
         setMember(fUsers[0].id);
       }
     })();
@@ -737,7 +749,7 @@ function GlobalStocksFormContent() {
                 <div className="flex flex-wrap gap-2">
                   {families.map(f => (
                     <button key={f.id}
-                      onClick={() => setSelectedFamily(f.id)}
+                      onClick={() => handleManualFamilyChange(f.id)}
                       className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border"
                       style={{
                         backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
@@ -1029,6 +1041,19 @@ function GlobalStocksFormContent() {
                     </div>
                   </div>
 
+                  {/* Brokerage / Charges — before FX rate so it's included in Invested INR */}
+                  <div className="pt-3 border-t space-y-2.5" style={{ borderColor: '#F0EDE6' }}>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#9CA3AF' }}>Charges</p>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs w-44 flex-shrink-0" style={{ color: '#6B7280' }}>Brokerage / Charges ({cSymbol})</Label>
+                      <Input
+                        type="number" step="0.01" min="0"
+                        value={brokerage} onChange={e => setBrokerage(e.target.value)}
+                        placeholder="0.00" className="h-8 text-xs flex-1"
+                      />
+                    </div>
+                  </div>
+
                   {/* FX Rate */}
                   <div className="space-y-1.5">
                     <Label className="text-xs" style={{ color: '#6B7280' }}>
@@ -1036,15 +1061,15 @@ function GlobalStocksFormContent() {
                       {fxRateLoaded && <AutoTag label="auto-fetched" />}
                     </Label>
                     <Input
-                      type="number" step="0.01" min="0.01"
+                      type="number" step="0.0001" min="0.0001"
                       value={fxRateValue}
                       onChange={e => { setFxRateValue(e.target.value); setFxRateLoaded(false); }}
-                      placeholder="e.g. 83.92"
+                      placeholder="e.g. 83.9200"
                       className="h-9 text-xs"
                     />
                     {fxRateLoaded && fxRateValue && date && (
                       <p className="text-[10px] mt-0.5" style={{ color: '#059669' }}>
-                        {fmtINR(parseFloat(fxRateValue))} per {stockCurrency} on {formatDateLabel(date)} (auto-fetched)
+                        ₹{parseFloat(fxRateValue).toFixed(4)} per {stockCurrency} on {formatDateLabel(date)} (auto-fetched)
                       </p>
                     )}
                     <FieldError msg={errors.fxRate} />
@@ -1062,23 +1087,10 @@ function GlobalStocksFormContent() {
                         </span>
                       </div>
                       <p className="text-[10px] mt-0.5 text-right" style={{ color: '#9CA3AF' }}>
-                        ({cSymbol}{valueLocal.toFixed(2)}{brokerageNum > 0 ? ` + ${cSymbol}${brokerageNum.toFixed(2)} charges` : ''}) &times; ₹{fx.toFixed(4)}/{stockCurrency} = {fmtINR(valueINR)}
+                        ({cSymbol}{valueLocal.toFixed(2)}{brokerageNum > 0 ? ` + ${cSymbol}${brokerageNum.toFixed(2)} charges` : ''}) &times; ₹{fx.toFixed(4)}/{stockCurrency} = ₹{valueINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                       </p>
                     </div>
                   )}
-
-                  {/* Brokerage / Charges */}
-                  <div className="pt-3 border-t space-y-2.5" style={{ borderColor: '#F0EDE6' }}>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#9CA3AF' }}>Charges</p>
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs w-44 flex-shrink-0" style={{ color: '#6B7280' }}>Brokerage / Charges ({cSymbol})</Label>
-                      <Input
-                        type="number" step="0.01" min="0"
-                        value={brokerage} onChange={e => setBrokerage(e.target.value)}
-                        placeholder="0.00" className="h-8 text-xs flex-1"
-                      />
-                    </div>
-                  </div>
 
                   {/* Notes */}
                   <div className="space-y-1.5">

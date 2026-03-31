@@ -555,22 +555,34 @@ export function GlobalStockDetailSheet({
 
           {/* Action buttons */}
           <div className="grid grid-cols-2 gap-2">
+            {(() => {
+              const h = holding!;
+              function navTo(url: string) {
+                if (h.portfolios?.family_id) sessionStorage.setItem('wv_prefill_family', h.portfolios.family_id);
+                if (h.portfolios?.user_id) sessionStorage.setItem('wv_prefill_member', h.portfolios.user_id);
+                if (h.portfolios?.family_id || h.portfolios?.user_id) sessionStorage.setItem('wv_prefill_active', 'true');
+                onClose();
+                router.push(url);
+              }
+              return (<>
             <Button
               className="h-9 text-xs gap-1.5"
               style={{ backgroundColor: '#1B2A4A', color: 'white' }}
-              onClick={() => { const ep = `${holding.portfolios?.family_id ? `&family_id=${holding.portfolios.family_id}` : ''}${holding.portfolios?.user_id ? `&member_id=${holding.portfolios.user_id}` : ''}`; onClose(); router.push(`/add-assets/global-stocks?add_to=${holding.id}${ep}`); }}>
+              onClick={() => navTo(`/add-assets/global-stocks?add_to=${h.id}`)}>
               <Plus className="w-3.5 h-3.5" />Add More Shares
             </Button>
             <Button variant="outline" className="h-9 text-xs gap-1.5"
               style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
-              onClick={() => { const ep = `${holding.portfolios?.family_id ? `&family_id=${holding.portfolios.family_id}` : ''}${holding.portfolios?.user_id ? `&member_id=${holding.portfolios.user_id}` : ''}`; onClose(); router.push(`/add-assets/global-stocks?sell=${holding.id}${ep}`); }}>
+              onClick={() => navTo(`/add-assets/global-stocks?sell=${h.id}`)}>
               Sell / Exit
             </Button>
             <Button variant="outline" className="h-9 text-xs gap-1.5"
               style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
-              onClick={() => { const ep = `${holding.portfolios?.family_id ? `&family_id=${holding.portfolios.family_id}` : ''}${holding.portfolios?.user_id ? `&member_id=${holding.portfolios.user_id}` : ''}`; onClose(); router.push(`/add-assets/global-stocks?dividend=${holding.id}${ep}`); }}>
+              onClick={() => navTo(`/add-assets/global-stocks?dividend=${h.id}`)}>
               Record Dividend
             </Button>
+              </>);
+            })()}
             <Button variant="outline" className="h-9 text-xs gap-1.5"
               style={{ borderColor: 'rgba(220,38,38,0.2)', color: '#DC2626' }}
               onClick={() => { if (confirm('Delete this holding and all its transactions?')) { onDelete(holding.id); onClose(); } }}>

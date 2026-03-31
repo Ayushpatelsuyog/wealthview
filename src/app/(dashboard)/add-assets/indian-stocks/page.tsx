@@ -160,9 +160,18 @@ function IndianStocksFormContent() {
   const isDividendMode = !!dividendHoldingId;
   const preloadHoldingId = addToHoldingId || sellHoldingId || dividendHoldingId;
 
-  // URL-based family/member override (passed from portfolio page)
-  const urlFamilyId = _searchParams.get('family_id');
-  const urlMemberId = _searchParams.get('member_id');
+  // Family/member prefill from sessionStorage (set by portfolio page before navigation)
+  const prefillFamily = typeof window !== 'undefined' ? sessionStorage.getItem('wv_prefill_family') : null;
+  const prefillMember = typeof window !== 'undefined' ? sessionStorage.getItem('wv_prefill_member') : null;
+  const prefillActive = typeof window !== 'undefined' ? sessionStorage.getItem('wv_prefill_active') === 'true' : false;
+  if (prefillActive && typeof window !== 'undefined') {
+    sessionStorage.removeItem('wv_prefill_family');
+    sessionStorage.removeItem('wv_prefill_member');
+    sessionStorage.removeItem('wv_prefill_active');
+  }
+  const urlFamilyId = _searchParams.get('family_id') || prefillFamily;
+  const urlMemberId = _searchParams.get('member_id') || prefillMember;
+  const hasPrefill = prefillActive || !!(_searchParams.get('family_id') || _searchParams.get('member_id'));
 
   // Auth / family
   const [familyId, setFamilyId] = useState<string | null>(urlFamilyId);
@@ -223,8 +232,8 @@ function IndianStocksFormContent() {
   const [errors,  setErrors]  = useState<Record<string, string>>({});
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Track whether URL params have locked in the member (prevents overwrite by family-change effect)
-  const memberLockedRef = useRef(!!urlMemberId);
+  // Stays TRUE permanently when prefill specified family/member — prevents any overwrite
+  const prefillLockedRef = useRef(hasPrefill);
 
   // ── Load holding for add-more / sell / dividend modes ──
   useEffect(() => {
@@ -254,16 +263,18 @@ function IndianStocksFormContent() {
       else if (isDividendMode) setTxnType('dividend');
       else setTxnType('buy');
 
-      // Pre-select family/member from holding's portfolio (fallback if not in URL)
+      // Pre-select family/member from holding's portfolio (fallback if not already prefilled)
       if (holdingData.portfolios) {
         const p = holdingData.portfolios as unknown as { name: string; family_id: string; user_id: string };
-        console.log("Holding portfolio:", { family_id: p.family_id, user_id: p.user_id, portfolio_name: p.name });
         setPortfolioName(p.name);
-        if (p.family_id && !urlFamilyId) { setSelectedFamily(p.family_id); setFamilyId(p.family_id); }
-        if (p.user_id && !urlMemberId) {
-          setMember(p.user_id);
-          memberLockedRef.current = true;
+        if (p.family_id) {
+          setSelectedFamily(p.family_id);
+          setFamilyId(p.family_id);
         }
+        if (p.user_id) {
+          setMember(p.user_id);
+        }
+        prefillLockedRef.current = true; // lock — database values are the definitive source
       }
       if (holdingData.brokers) {
         setBrokerId((holdingData.brokers as unknown as { id: string }).id);
@@ -279,19 +290,22 @@ function IndianStocksFormContent() {
         .from('users').select('id, name, family_id').eq('id', user.id).single();
       if (!profile) return;
 
-      // Only set defaults if no URL override
-      if (!urlFamilyId && !urlMemberId) setMember(profile.id);
+      const hasOverride = prefillLockedRef.current;
+      if (!hasOverride) setMember(profile.id);
 
       const fid = profile.family_id;
       if (fid) {
-        if (!urlFamilyId) {
+        if (!hasOverride) {
           setFamilyId(fid);
           setSelectedFamily(fid);
         }
-        // Load members for whichever family is selected
-        const activeFamilyId = urlFamilyId || fid;
+        const activeFamilyId = hasOverride ? (urlFamilyId || fid) : fid;
         const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', activeFamilyId);
-        setMembers(fUsers ?? [{ id: profile.id, name: profile.name }]);
+        if (fUsers && fUsers.length > 0) {
+          setMembers(fUsers);
+        } else {
+          setMembers([{ id: profile.id, name: profile.name }]);
+        }
 
         // Load families the user has access to
         try {
@@ -326,16 +340,17 @@ function IndianStocksFormContent() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Reload members when family changes ──────────────────────────────────
+  function handleManualFamilyChange(fid: string) {
+    prefillLockedRef.current = false;
+    setSelectedFamily(fid);
+  }
   useEffect(() => {
     if (!selectedFamily) return;
     setFamilyId(selectedFamily);
     (async () => {
       const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
       setMembers(fUsers ?? []);
-      // Don't overwrite member if it was locked by URL params or holding prefill
-      if (memberLockedRef.current) {
-        memberLockedRef.current = false; // consumed — future family changes reset normally
-      } else if (fUsers?.length) {
+      if (!prefillLockedRef.current && fUsers?.length) {
         setMember(fUsers[0].id);
       }
     })();
@@ -648,7 +663,7 @@ function IndianStocksFormContent() {
                 <div className="flex flex-wrap gap-2">
                   {families.map(f => (
                     <button key={f.id}
-                      onClick={() => setSelectedFamily(f.id)}
+                      onClick={() => handleManualFamilyChange(f.id)}
                       className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border"
                       style={{
                         backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',

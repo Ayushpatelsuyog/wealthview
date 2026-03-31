@@ -100,12 +100,17 @@ function ActionMenu({
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
-  const extraParams = `${familyId ? `&family_id=${familyId}` : ''}${memberId ? `&member_id=${memberId}` : ''}`;
+  function navTo(url: string) {
+    if (familyId) sessionStorage.setItem('wv_prefill_family', familyId);
+    if (memberId) sessionStorage.setItem('wv_prefill_member', memberId);
+    if (familyId || memberId) sessionStorage.setItem('wv_prefill_active', 'true');
+    router.push(url);
+  }
   const actions = [
     { label: 'View details',         action: () => { onViewDetails(holdingId); setOpen(false); } },
-    { label: 'Add More Shares',      action: () => { router.push(`/add-assets/indian-stocks?add_to=${holdingId}${extraParams}`); setOpen(false); } },
-    { label: 'Sell',                 action: () => { router.push(`/add-assets/indian-stocks?sell=${holdingId}${extraParams}`); setOpen(false); } },
-    { label: 'Record Dividend',      action: () => { router.push(`/add-assets/indian-stocks?dividend=${holdingId}${extraParams}`); setOpen(false); } },
+    { label: 'Add More Shares',      action: () => { navTo(`/add-assets/indian-stocks?add_to=${holdingId}`); setOpen(false); } },
+    { label: 'Sell',                 action: () => { navTo(`/add-assets/indian-stocks?sell=${holdingId}`); setOpen(false); } },
+    { label: 'Record Dividend',      action: () => { navTo(`/add-assets/indian-stocks?dividend=${holdingId}`); setOpen(false); } },
     { label: 'Delete',               action: () => { onDelete(holdingId); setOpen(false); }, danger: true },
   ];
   return (
