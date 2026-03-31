@@ -545,7 +545,7 @@ function GlobalStocksFormContent() {
         exchange:        selectedStock!.exchange,
         country:         selectedStock!.country,
         currency:        selectedStock!.currency,
-        sector:          sectorOverride || selectedStock!.sector,
+        sector:          (sectorOverride && sectorOverride !== '__other__') ? sectorOverride : selectedStock!.sector,
         transactionType: txnType,
         quantity:        qty,
         price:           px,
@@ -851,9 +851,6 @@ function GlobalStocksFormContent() {
                     <span className="text-[10px]" style={{ color: '#6B7280' }}>
                       {selectedStock.symbol} &middot; {selectedStock.exchange} &middot; {selectedStock.currency}
                     </span>
-                    {selectedStock.sector && (
-                      <span className="text-[10px]" style={{ color: '#9CA3AF' }}>{selectedStock.sector}</span>
-                    )}
                   </div>
 
                   {/* Live price */}
@@ -905,32 +902,43 @@ function GlobalStocksFormContent() {
               </div>
             )}
 
-            {selectedStock && (
-              <div className="mt-3 space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>
-                  Sector {selectedStock.sector && <AutoTag label="from search" />}
-                </Label>
-                <div className="flex gap-2">
+            {selectedStock && (() => {
+              const STANDARD_SECTORS = ['Technology', 'Healthcare', 'Finance', 'Consumer', 'Energy', 'Materials',
+                'Industrials', 'Communication', 'Real Estate', 'Utilities', 'ETF'];
+              const currentSector = sectorOverride ?? selectedStock.sector ?? '';
+              const isOtherMode = sectorOverride === '__other__' || (sectorOverride != null && !STANDARD_SECTORS.includes(sectorOverride) && sectorOverride !== '');
+              const isStandard = STANDARD_SECTORS.includes(currentSector);
+              const dropdownValue = isOtherMode ? 'Other' : (isStandard ? currentSector : (currentSector ? 'Other' : ''));
+              const customText = isOtherMode && sectorOverride !== '__other__' ? sectorOverride : '';
+              return (
+                <div className="mt-3 space-y-1.5">
+                  <Label className="text-xs" style={{ color: '#6B7280' }}>
+                    Sector {selectedStock.sector && <AutoTag label="from search" />}
+                  </Label>
                   <select
-                    value={sectorOverride ?? selectedStock.sector ?? ''}
-                    onChange={e => setSectorOverride(e.target.value)}
-                    className="h-9 text-xs rounded-lg border px-2 flex-1"
+                    value={dropdownValue}
+                    onChange={e => {
+                      const v = e.target.value;
+                      setSectorOverride(v === 'Other' ? '__other__' : v);
+                    }}
+                    className="h-9 text-xs rounded-lg border px-2 w-full"
                     style={{ borderColor: '#E8E5DD', color: '#1A1A2E', backgroundColor: 'white' }}>
                     <option value="">Select sector...</option>
-                    {['Technology', 'Healthcare', 'Finance', 'Consumer', 'Energy', 'Materials',
-                      'Industrials', 'Communication', 'Real Estate', 'Utilities', 'ETF', 'Other'].map(s => (
+                    {[...STANDARD_SECTORS, 'Other'].map(s => (
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
-                  <Input
-                    value={sectorOverride ?? selectedStock.sector ?? ''}
-                    onChange={e => setSectorOverride(e.target.value)}
-                    placeholder="Or type custom sector"
-                    className="h-9 text-xs flex-1"
-                  />
+                  {dropdownValue === 'Other' && (
+                    <Input
+                      value={customText}
+                      onChange={e => setSectorOverride(e.target.value || '__other__')}
+                      placeholder="Enter custom sector"
+                      className="h-9 text-xs"
+                    />
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Step 3 — Transaction Details */}
@@ -988,11 +996,6 @@ function GlobalStocksFormContent() {
                       <Label className="text-xs" style={{ color: '#6B7280' }}>
                         {txnType === 'sell' ? 'Sell' : 'Buy'} Price ({cSymbol})
                         {priceLoaded && <AutoTag label="auto-fetched" />}
-                        {stockPrice && (
-                          <span className="ml-1 text-[10px]" style={{ color: '#9CA3AF' }}>
-                            CMP {cSymbol}{stockPrice.price.toLocaleString('en-US', { maximumFractionDigits: 2 })}
-                          </span>
-                        )}
                       </Label>
                       <Input
                         type="number" step="0.01" min="0.01"

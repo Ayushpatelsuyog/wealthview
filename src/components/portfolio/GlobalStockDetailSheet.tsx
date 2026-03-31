@@ -176,20 +176,25 @@ export function GlobalStockDetailSheet({
   if (!holding) return null;
 
   const currency       = holding.currency;
-  const fxRate         = holding.fxRate ?? 1;
-  const investedLocal  = holding.investedValue;
-  const investedINR    = holding.investedINR;
+  const fxRate         = holding.fxRate ?? 1;  // current FX rate
+  const investedLocal  = holding.investedValue;  // includes fees in local currency
+  const investedINR    = holding.investedINR;     // includes fees, uses purchase-time FX rates
   const currentLocal   = holding.currentValue ?? investedLocal;
   const currentINR     = holding.currentValueINR ?? investedINR;
-  const gainLossINR    = holding.gainLoss ?? 0;
-  const gainLossPct    = holding.gainLossPct ?? 0;
-  const isGain         = gainLossINR >= 0;
   const exchange       = String(holding.metadata?.exchange ?? '');
   const country        = holding.country;
 
-  // FX impact estimation: compare local P&L with INR P&L
+  // Local currency return (stock movement only, no FX impact)
   const localGainLoss  = currentLocal - investedLocal;
-  const localGainINR   = localGainLoss * fxRate; // P&L from stock movement alone
+  const localGainPct   = investedLocal > 0 ? (localGainLoss / investedLocal) * 100 : 0;
+
+  // INR return (includes FX impact — independently calculated)
+  const gainLossINR    = currentINR - investedINR;
+  const gainLossPct    = investedINR > 0 ? (gainLossINR / investedINR) * 100 : 0;
+  const isGain         = gainLossINR >= 0;
+
+  // FX impact = difference between INR P&L and what local P&L would be at current FX rate
+  const localGainINR   = localGainLoss * fxRate; // P&L from stock movement alone (at current FX)
   const fxImpact       = gainLossINR - localGainINR; // P&L from currency movement
 
   return (
@@ -295,9 +300,12 @@ export function GlobalStockDetailSheet({
               { label: 'P&L (INR)',
                 value: `${isGain ? '+' : ''}${formatLargeINR(gainLossINR)}`,
                 color: isGain ? '#059669' : '#DC2626' },
-              { label: 'Returns',
-                value: `${isGain ? '+' : ''}${gainLossPct.toFixed(2)}%`,
-                color: isGain ? '#059669' : '#DC2626' },
+              { label: `Return (${currency})`,
+                value: `${localGainPct >= 0 ? '+' : ''}${localGainPct.toFixed(2)}%`,
+                color: localGainPct >= 0 ? '#059669' : '#DC2626' },
+              { label: 'Return (INR)',
+                value: `${gainLossPct >= 0 ? '+' : ''}${gainLossPct.toFixed(2)}%`,
+                color: gainLossPct >= 0 ? '#059669' : '#DC2626' },
               { label: 'Shares Held',  value: Number(holding.quantity).toLocaleString('en-IN', { maximumFractionDigits: 4 }) },
               { label: `Avg Price (${currency})`, value: fmtLocal(Number(holding.avg_buy_price), currency) },
               { label: 'FX Rate',     value: `1 ${currency} = ₹${fxRate.toFixed(4)}` },
@@ -312,34 +320,100 @@ export function GlobalStockDetailSheet({
             ))}
           </div>
 
-          {/* FX Impact section */}
+          {/* Returns card */}
           <div className="wv-card p-4">
             <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#9CA3AF' }}>
-              FX Impact Breakdown
+              Returns
             </p>
+            {/* Two-column: Local Currency | INR */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.12)' }}>
-                <p className="text-[10px] font-bold" style={{ color: '#1B2A4A' }}>Stock Movement</p>
-                <p className="text-sm font-bold mt-1" style={{ color: localGainINR >= 0 ? '#059669' : '#DC2626' }}>
-                  {localGainINR >= 0 ? '+' : ''}{formatLargeINR(localGainINR)}
+              {/* Local Currency column */}
+              <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.10)' }}>
+                <p className="text-[10px] font-bold mb-2" style={{ color: '#1B2A4A' }}>
+                  Local ({currency})
                 </p>
-                <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                  {localGainLoss >= 0 ? '+' : ''}{fmtLocal(localGainLoss, currency)} in local
-                </p>
+                <div className="space-y-1.5">
+                  <div>
+                    <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Invested</p>
+                    <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fmtLocal(investedLocal, currency)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Current Value</p>
+                    <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fmtLocal(currentLocal, currency)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px]" style={{ color: '#9CA3AF' }}>P&L</p>
+                    <p className="text-xs font-bold" style={{ color: localGainLoss >= 0 ? '#059669' : '#DC2626' }}>
+                      {localGainLoss >= 0 ? '+' : ''}{fmtLocal(localGainLoss, currency)}
+                      <span className="text-[10px] font-medium ml-1">
+                        ({localGainPct >= 0 ? '+' : ''}{localGainPct.toFixed(1)}%)
+                      </span>
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="p-3 rounded-xl" style={{ backgroundColor: fxImpact >= 0 ? 'rgba(5,150,105,0.06)' : 'rgba(220,38,38,0.06)', border: `1px solid ${fxImpact >= 0 ? 'rgba(5,150,105,0.12)' : 'rgba(220,38,38,0.12)'}` }}>
-                <p className="text-[10px] font-bold" style={{ color: fxImpact >= 0 ? '#059669' : '#DC2626' }}>Currency Impact</p>
-                <p className="text-sm font-bold mt-1" style={{ color: fxImpact >= 0 ? '#059669' : '#DC2626' }}>
-                  {fxImpact >= 0 ? '+' : ''}{formatLargeINR(fxImpact)}
+
+              {/* INR column */}
+              <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(201,168,76,0.04)', border: '1px solid rgba(201,168,76,0.12)' }}>
+                <p className="text-[10px] font-bold mb-2" style={{ color: '#C9A84C' }}>
+                  INR (after FX)
                 </p>
-                <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                  {currency}/INR movement
-                </p>
+                <div className="space-y-1.5">
+                  <div>
+                    <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Invested</p>
+                    <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(investedINR)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Current Value</p>
+                    <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(currentINR)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px]" style={{ color: '#9CA3AF' }}>P&L</p>
+                    <p className="text-xs font-bold" style={{ color: gainLossINR >= 0 ? '#059669' : '#DC2626' }}>
+                      {gainLossINR >= 0 ? '+' : ''}{formatLargeINR(gainLossINR)}
+                      <span className="text-[10px] font-medium ml-1">
+                        ({gainLossPct >= 0 ? '+' : ''}{gainLossPct.toFixed(1)}%)
+                      </span>
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="mt-3 p-2 rounded-lg text-center" style={{ backgroundColor: 'rgba(201,168,76,0.06)' }}>
+
+            {/* FX Impact row */}
+            {(() => {
+              const avgBuyFxRate = investedLocal > 0 ? investedINR / investedLocal : fxRate;
+              const fxChangePct = avgBuyFxRate > 0 ? ((fxRate - avgBuyFxRate) / avgBuyFxRate) * 100 : 0;
+              return (
+                <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: fxImpact >= 0 ? 'rgba(5,150,105,0.04)' : 'rgba(220,38,38,0.04)', border: `1px solid ${fxImpact >= 0 ? 'rgba(5,150,105,0.10)' : 'rgba(220,38,38,0.10)'}` }}>
+                  <p className="text-[10px] font-bold mb-2" style={{ color: fxImpact >= 0 ? '#059669' : '#DC2626' }}>
+                    FX Impact
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Purchase FX Rate</p>
+                      <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>₹{avgBuyFxRate.toFixed(2)}/{currency}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Current FX Rate</p>
+                      <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>₹{fxRate.toFixed(2)}/{currency}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px]" style={{ color: '#9CA3AF' }}>FX Gain/Loss</p>
+                      <p className="text-xs font-bold" style={{ color: fxImpact >= 0 ? '#059669' : '#DC2626' }}>
+                        {fxImpact >= 0 ? '+' : ''}{formatLargeINR(fxImpact)}
+                        <span className="text-[10px] font-medium ml-1">({fxChangePct >= 0 ? '+' : ''}{fxChangePct.toFixed(2)}%)</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Total P&L summary */}
+            <div className="mt-2 p-2 rounded-lg text-center" style={{ backgroundColor: 'rgba(201,168,76,0.06)' }}>
               <p className="text-[10px]" style={{ color: '#6B7280' }}>
-                Total P&L:{' '}
+                Total INR P&L:{' '}
                 <span className="font-bold" style={{ color: gainLossINR >= 0 ? '#059669' : '#DC2626' }}>
                   {gainLossINR >= 0 ? '+' : ''}{formatLargeINR(gainLossINR)}
                 </span>

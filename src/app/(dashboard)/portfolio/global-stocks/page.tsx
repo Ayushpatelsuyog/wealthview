@@ -363,13 +363,30 @@ export default function GlobalStocksPortfolioPage() {
       const cur        = String(h.metadata?.currency ?? 'USD');
       const country    = resolveCountry(h.metadata, cur);
       const rate       = rates[cur] ?? null;
-      const invested   = Number(h.quantity) * Number(h.avg_buy_price);
-      const investedINR = rate != null ? invested * rate : invested;
       const ownerId    = h.portfolios?.user_id ?? '';
+
+      // Compute invested from transactions to include fees and use purchase-time FX rates
+      const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip');
+      let investedLocal = 0;
+      let investedINR = 0;
+      if (buyTxns.length > 0) {
+        for (const t of buyTxns) {
+          const tFees = Number(t.fees) || 0;
+          const tLocal = Number(t.quantity) * Number(t.price) + tFees;
+          const tFx = Number((t.metadata as Record<string, unknown>)?.fx_rate ?? rate ?? 1);
+          investedLocal += tLocal;
+          investedINR += tLocal * tFx;
+        }
+      } else {
+        // Fallback if no transactions loaded
+        investedLocal = Number(h.quantity) * Number(h.avg_buy_price);
+        investedINR = rate != null ? investedLocal * rate : investedLocal;
+      }
+
       return {
         ...h,
         currentPrice: null, priceLoading: true, priceUnavailable: false,
-        investedValue: invested,
+        investedValue: investedLocal,
         currentValue: null,
         investedINR,
         currentValueINR: null,
@@ -394,7 +411,8 @@ export default function GlobalStocksPortfolioPage() {
     const rate = rates[h.currency] ?? h.fxRate ?? 1;
     const currentValue = Number(h.quantity) * price;
     const currentValueINR = currentValue * rate;
-    const investedINR = h.investedValue * rate;
+    // Keep investedINR from transaction-based calculation (includes fees + purchase FX rates)
+    const investedINR = h.investedINR;
     const gainLoss = currentValueINR - investedINR;
     const gainLossPct = investedINR > 0 ? (gainLoss / investedINR) * 100 : 0;
     let xirr: number | null = null;

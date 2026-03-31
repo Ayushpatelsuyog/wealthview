@@ -24,10 +24,16 @@ export function FamilyMemberSelector({ onSelectionChange, compact }: FamilyMembe
   const {
     families, allMembers, selectedFamilyId, selectedMemberIds,
     setFamilies, setAllMembers, setSelectedFamilyId, toggleMember, selectAllMembers,
-    getVisibleMembers, getSelectedMemberIds,
+    resetSelection, getVisibleMembers, getSelectedMemberIds,
   } = useFamilyStore();
 
   const [loaded, setLoaded] = useState(false);
+
+  // Reset selection to "All Families" + "All Members" on mount
+  // so navigating back to Dashboard/Portfolio always starts fresh
+  useEffect(() => {
+    resetSelection();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load families and members on mount (only once)
   useEffect(() => {

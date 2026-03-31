@@ -894,12 +894,7 @@ function IndianStocksFormContent() {
                     <div className="space-y-1.5">
                       <Label className="text-xs" style={{ color: '#6B7280' }}>
                         {txnType === 'sell' ? 'Sell' : txnType === 'rights' ? 'Rights'  : 'Buy'} Price (₹)
-                        {priceLoaded && <AutoTag label="auto-filled" />}
-                        {stockPrice && (
-                          <span className="ml-1 text-[10px]" style={{ color: '#9CA3AF' }}>
-                            CMP ₹{stockPrice.price.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                          </span>
-                        )}
+                        {priceLoaded && <AutoTag label="auto-fetched" />}
                       </Label>
                       <Input
                         type="number" step="0.01" min="0.01"
@@ -1084,20 +1079,6 @@ function IndianStocksFormContent() {
                     </p>
                     <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>{formatLargeINR(txnType === 'buy' ? totalCost : value - totalFees)}</p>
                   </div>
-                  {stockPrice && (
-                    <div>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>vs CMP</p>
-                      {(() => {
-                        const diff = txnType === 'buy' ? stockPrice.price - px : px - (Number(price) || 0);
-                        const diffPct = px > 0 ? (diff / px) * 100 : 0;
-                        return (
-                          <p className="text-xs font-bold" style={{ color: diff >= 0 ? '#059669' : '#DC2626' }}>
-                            {diff >= 0 ? '+' : ''}{diffPct.toFixed(1)}%
-                          </p>
-                        );
-                      })()}
-                    </div>
-                  )}
                 </div>
               )}
             </div>

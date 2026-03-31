@@ -291,8 +291,17 @@ export default function IndianStocksPortfolioPage() {
     if (!data) { setError('Failed to load holdings'); setLoading(false); return; }
 
     const rows: HoldingRow[] = (data as unknown as RawHolding[]).map(h => {
-      const invested = Number(h.quantity) * Number(h.avg_buy_price);
       const ownerId  = h.portfolios?.user_id ?? '';
+
+      // Compute invested from transactions to include fees (brokerage, STT, GST, stamp duty, etc.)
+      const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip');
+      let invested: number;
+      if (buyTxns.length > 0) {
+        invested = buyTxns.reduce((sum, t) => sum + Number(t.quantity) * Number(t.price) + (Number(t.fees) || 0), 0);
+      } else {
+        invested = Number(h.quantity) * Number(h.avg_buy_price);
+      }
+
       return {
         ...h,
         currentPrice: null, priceLoading: true, priceUnavailable: false, manualPrice: null,
