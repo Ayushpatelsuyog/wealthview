@@ -234,6 +234,8 @@ function IndianStocksFormContent() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Stays TRUE permanently when prefill specified family/member — prevents any overwrite
   const prefillLockedRef = useRef(hasPrefill);
+  // Store the target member ID permanently so it can be re-applied when members list loads
+  const targetMemberRef = useRef(urlMemberId || '');
 
   // ── Load holding for add-more / sell / dividend modes ──
   useEffect(() => {
@@ -273,6 +275,7 @@ function IndianStocksFormContent() {
         }
         if (p.user_id) {
           setMember(p.user_id);
+          targetMemberRef.current = p.user_id;
         }
         prefillLockedRef.current = true; // lock — database values are the definitive source
       }
@@ -350,7 +353,11 @@ function IndianStocksFormContent() {
     (async () => {
       const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
       setMembers(fUsers ?? []);
-      if (!prefillLockedRef.current && fUsers?.length) {
+      const target = targetMemberRef.current;
+      const targetInList = target && fUsers?.find(m => m.id === target);
+      if (targetInList) {
+        setMember(target);
+      } else if (!prefillLockedRef.current && fUsers?.length) {
         setMember(fUsers[0].id);
       }
     })();

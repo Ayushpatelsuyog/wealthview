@@ -205,6 +205,8 @@ function GlobalStocksFormContent() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Stays TRUE permanently when prefill/URL params specified family/member — prevents any overwrite
   const prefillLockedRef = useRef(hasPrefill);
+  // Store the target member ID permanently so it can be re-applied when members list loads
+  const targetMemberRef = useRef(urlMemberId || '');
 
   // ── Load holding for add-more / sell / dividend modes ──
   useEffect(() => {
@@ -244,6 +246,7 @@ function GlobalStocksFormContent() {
         }
         if (p.user_id) {
           setMember(p.user_id);
+          targetMemberRef.current = p.user_id;
         }
         prefillLockedRef.current = true; // lock — database values are the definitive source
       }
@@ -325,10 +328,14 @@ function GlobalStocksFormContent() {
     (async () => {
       const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
       setMembers(fUsers ?? []);
-      console.log('=== FAMILY CHANGE EFFECT ===', { selectedFamily, locked: prefillLockedRef.current, membersLoaded: fUsers?.length });
-      // If prefill is locked (from sessionStorage/holding preload), keep the current member
-      // If not locked (user manually changed family), pick first member
-      if (!prefillLockedRef.current && fUsers?.length) {
+      const target = targetMemberRef.current;
+      const targetInList = target && fUsers?.find(m => m.id === target);
+      console.log('=== FAMILY CHANGE EFFECT ===', { selectedFamily, locked: prefillLockedRef.current, target, targetInList: !!targetInList, membersLoaded: fUsers?.length });
+      if (targetInList) {
+        // Re-apply the target member (from sessionStorage/holding preload)
+        setMember(target);
+      } else if (!prefillLockedRef.current && fUsers?.length) {
+        // User manually changed family — pick first member
         setMember(fUsers[0].id);
       }
     })();
