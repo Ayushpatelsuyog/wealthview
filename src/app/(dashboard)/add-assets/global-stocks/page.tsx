@@ -191,8 +191,8 @@ function GlobalStocksFormContent() {
   const [errors,  setErrors]  = useState<Record<string, string>>({});
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Track whether URL params have locked in the member (prevents overwrite by family-change effect)
-  const memberLockedRef = useRef(!!urlMemberId);
+  // When URL params specify family/member, this stays TRUE permanently to prevent any overwrite
+  const urlOverrideRef = useRef(!!(urlFamilyId || urlMemberId));
 
   // ── Load holding for add-more / sell / dividend modes ──
   useEffect(() => {
@@ -224,12 +224,15 @@ function GlobalStocksFormContent() {
       // Pre-select family/member from holding's portfolio (fallback if not in URL)
       if (holdingData.portfolios) {
         const p = holdingData.portfolios as unknown as { name: string; family_id: string; user_id: string };
-        console.log("Holding portfolio:", { family_id: p.family_id, user_id: p.user_id, portfolio_name: p.name });
         setPortfolioName(p.name);
-        if (p.family_id && !urlFamilyId) { setSelectedFamily(p.family_id); setFamilyId(p.family_id); }
+        if (p.family_id && !urlFamilyId) {
+          setSelectedFamily(p.family_id);
+          setFamilyId(p.family_id);
+          urlOverrideRef.current = true; // lock from holding data too
+        }
         if (p.user_id && !urlMemberId) {
           setMember(p.user_id);
-          memberLockedRef.current = true;
+          urlOverrideRef.current = true; // lock from holding data too
         }
       }
       if (holdingData.brokers) {
@@ -246,19 +249,26 @@ function GlobalStocksFormContent() {
         .from('users').select('id, name, family_id').eq('id', user.id).single();
       if (!profile) return;
 
-      // Only set defaults if no URL override
-      if (!urlFamilyId && !urlMemberId) setMember(profile.id);
+      const hasUrlOverride = urlOverrideRef.current;
+
+      // Only set member default if no URL/holding override active
+      if (!hasUrlOverride) setMember(profile.id);
 
       const fid = profile.family_id;
       if (fid) {
-        if (!urlFamilyId) {
+        if (!hasUrlOverride) {
           setFamilyId(fid);
           setSelectedFamily(fid);
         }
-        // Load members for whichever family is selected
-        const activeFamilyId = urlFamilyId || fid;
+
+        // Load members for the active family (URL override or default)
+        const activeFamilyId = hasUrlOverride ? (urlFamilyId || fid) : fid;
         const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', activeFamilyId);
-        setMembers(fUsers ?? [{ id: profile.id, name: profile.name }]);
+        if (fUsers && fUsers.length > 0) {
+          setMembers(fUsers);
+        } else {
+          setMembers([{ id: profile.id, name: profile.name }]);
+        }
 
         // Load families the user has access to
         try {
@@ -278,7 +288,7 @@ function GlobalStocksFormContent() {
             }
           } catch { /* table may not exist */ }
 
-          // If urlFamilyId is set but not in the list, add it
+          // If URL override family is set but not in the list, add it
           if (urlFamilyId && !famList.find(x => x.id === urlFamilyId)) {
             const { data: urlFam } = await supabase.from('families').select('id, name').eq('id', urlFamilyId).single();
             if (urlFam) famList.push(urlFam);
@@ -293,15 +303,19 @@ function GlobalStocksFormContent() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Reload members when family changes ──────────────────────────────────
+  const familyChangeCount = useRef(0);
   useEffect(() => {
     if (!selectedFamily) return;
+    familyChangeCount.current++;
+    const isInitialMount = familyChangeCount.current === 1;
     setFamilyId(selectedFamily);
     (async () => {
       const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
       setMembers(fUsers ?? []);
-      // Don't overwrite member if it was locked by URL params or holding prefill
-      if (memberLockedRef.current) {
-        memberLockedRef.current = false; // consumed — future family changes reset normally
+      // On initial mount with URL override OR holding preload, don't overwrite the member
+      // On subsequent family changes (user manually clicked a different family), select first member
+      if (isInitialMount && urlOverrideRef.current) {
+        // Keep the URL/holding-specified member — do nothing
       } else if (fUsers?.length) {
         setMember(fUsers[0].id);
       }
@@ -429,7 +443,7 @@ function GlobalStocksFormContent() {
         .then(r => r.json())
         .then(d => {
           if (d.rate) {
-            setFxRateValue(d.rate.toFixed(2));
+            setFxRateValue(d.rate.toFixed(4));
             setFxRateLoaded(true);
           }
         })
@@ -467,8 +481,9 @@ function GlobalStocksFormContent() {
   const px        = parseFloat(price)       || 0;
   const fx        = parseFloat(fxRateValue) || 0;
   const valueLocal = qty * px;
-  const valueINR   = valueLocal * fx;
   const brokerageNum = parseFloat(brokerage || '0') || 0;
+  const totalLocalCost = valueLocal + brokerageNum; // local amount including all charges
+  const valueINR   = totalLocalCost * fx; // INR invested = (qty × price + charges) × FX rate
 
   // Dividend calculations
   const divPS       = parseFloat(divPerShare)    || 0;
@@ -501,7 +516,7 @@ function GlobalStocksFormContent() {
         const data = await res.json();
         setFxRate(data);
         if (data.rate) {
-          setFxRateValue(data.rate.toFixed(2));
+          setFxRateValue(data.rate.toFixed(4));
         }
       } catch { setFxRate(null); }
       setFxLoading(false);
@@ -1040,14 +1055,14 @@ function GlobalStocksFormContent() {
                     <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.08)' }}>
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium" style={{ color: '#6B7280' }}>
-                          {txnType === 'buy' ? 'Invested' : 'Sale Value'} in INR
+                          {txnType === 'buy' ? 'Total Invested' : 'Sale Value'} in INR
                         </span>
                         <span className="text-xs font-bold" style={{ color: '#1A1A2E' }}>
-                          {fmtLocal(valueLocal)} &times; {fmtINR(fx)}/{stockCurrency} = {formatLargeINR(valueINR)}
+                          {formatLargeINR(valueINR)}
                         </span>
                       </div>
                       <p className="text-[10px] mt-0.5 text-right" style={{ color: '#9CA3AF' }}>
-                        Qty {qty} &times; {cSymbol}{px.toFixed(2)} &times; {fmtINR(fx)} = {fmtINR(valueINR)}
+                        ({cSymbol}{valueLocal.toFixed(2)}{brokerageNum > 0 ? ` + ${cSymbol}${brokerageNum.toFixed(2)} charges` : ''}) &times; ₹{fx.toFixed(4)}/{stockCurrency} = {fmtINR(valueINR)}
                       </p>
                     </div>
                   )}
