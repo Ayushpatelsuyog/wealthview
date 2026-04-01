@@ -197,6 +197,45 @@ export function GlobalStockDetailSheet({
   const localGainINR   = localGainLoss * fxRate; // P&L from stock movement alone (at current FX)
   const fxImpact       = gainLossINR - localGainINR; // P&L from currency movement
 
+  // ── Realized P&L from sell transactions ─────────────────────────────────────
+  const sellTxns = (holding.transactions ?? []).filter(t => t.type === 'sell');
+  const totalSoldQty = sellTxns.reduce((s, t) => s + Number(t.quantity), 0);
+  let realizedPnlLocal = 0;
+  let realizedPnlINR = 0;
+  let totalSaleValueLocal = 0;
+
+  for (const t of sellTxns) {
+    const metaMatch = (t.notes ?? '').match(/meta:(\{[^}]+\})/);
+    if (metaMatch) {
+      try {
+        const meta = JSON.parse(metaMatch[1]);
+        realizedPnlLocal += meta.pnl_local ?? 0;
+        realizedPnlINR += meta.pnl_inr ?? 0;
+      } catch { /* skip */ }
+    }
+    totalSaleValueLocal += Number(t.quantity) * Number(t.price);
+  }
+
+  // FIFO cost of sold shares
+  const buyTxnsSorted = [...(holding.transactions ?? [])]
+    .filter(t => t.type === 'buy' || t.type === 'sip')
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  let totalSaleCostLocal = 0;
+  let tempSold = totalSoldQty;
+  for (const t of buyTxnsSorted) {
+    if (tempSold <= 0) break;
+    const fromLot = Math.min(tempSold, Number(t.quantity));
+    totalSaleCostLocal += fromLot * Number(t.price);
+    tempSold -= fromLot;
+  }
+
+  // Fallback if no metadata
+  if (realizedPnlLocal === 0 && totalSoldQty > 0) {
+    realizedPnlLocal = totalSaleValueLocal - totalSaleCostLocal;
+    realizedPnlINR = realizedPnlLocal * fxRate;
+  }
+  const hasSells = totalSoldQty > 0;
+
   return (
     <Sheet open={open} onOpenChange={o => { if (!o) onClose(); }}>
       <SheetContent side="right" className="w-full sm:max-w-lg p-0 overflow-y-auto"
@@ -290,40 +329,121 @@ export function GlobalStockDetailSheet({
         {/* Body */}
         <div className="px-5 py-4 space-y-4">
 
-          {/* Summary stats */}
-          <div className="wv-card p-4 grid grid-cols-2 gap-4">
-            {[
-              { label: `Invested (${currency})`, value: fmtLocal(investedLocal, currency) },
-              { label: 'Invested (INR)',          value: formatLargeINR(investedINR) },
-              { label: `Value (${currency})`,     value: fmtLocal(currentLocal, currency) },
-              { label: 'Value (INR)',             value: formatLargeINR(currentINR) },
-              { label: 'P&L (INR)',
-                value: `${isGain ? '+' : ''}${formatLargeINR(gainLossINR)}`,
-                color: isGain ? '#059669' : '#DC2626' },
-              { label: `Return (${currency})`,
-                value: `${localGainPct >= 0 ? '+' : ''}${localGainPct.toFixed(2)}%`,
-                color: localGainPct >= 0 ? '#059669' : '#DC2626' },
-              { label: 'Return (INR)',
-                value: `${gainLossPct >= 0 ? '+' : ''}${gainLossPct.toFixed(2)}%`,
-                color: gainLossPct >= 0 ? '#059669' : '#DC2626' },
-              { label: 'Shares Held',  value: Number(holding.quantity).toLocaleString('en-IN', { maximumFractionDigits: 4 }) },
-              { label: `Avg Price (${currency})`, value: fmtLocal(Number(holding.avg_buy_price), currency) },
-              { label: 'FX Rate',     value: `1 ${currency} = ₹${fxRate.toFixed(4)}` },
-              { label: 'Broker',      value: holding.brokers?.name ?? '—' },
-              { label: 'Portfolio',   value: holding.portfolios?.name ?? '—' },
-              { label: 'Country',     value: `${countryFlag(country)} ${country}` },
-            ].map(({ label, value, color }) => (
-              <div key={label}>
-                <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{label}</p>
-                <p className="text-sm font-bold mt-0.5" style={{ color: color ?? '#1A1A2E' }}>{value}</p>
-              </div>
-            ))}
+          {/* Position details */}
+          <div className="wv-card p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#9CA3AF' }}>Position Details</p>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: 'Shares Held', value: Number(holding.quantity).toLocaleString('en-IN', { maximumFractionDigits: 4 }) },
+                { label: `Avg Price (${currency})`, value: fmtLocal(Number(holding.avg_buy_price), currency) },
+                { label: 'FX Rate', value: `1 ${currency} = ₹${fxRate.toFixed(4)}` },
+                { label: 'Broker', value: holding.brokers?.name ?? '—' },
+                { label: 'Portfolio', value: holding.portfolios?.name ?? '—' },
+                { label: 'Country', value: `${countryFlag(country)} ${country}` },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <p className="text-[9px]" style={{ color: '#9CA3AF' }}>{label}</p>
+                  <p className="text-xs font-bold mt-0.5" style={{ color: '#1A1A2E' }}>{value}</p>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Unrealized P&L */}
+          <div className="wv-card p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#9CA3AF' }}>
+              Unrealized P&L
+              <span className="normal-case font-normal ml-1">({Number(holding.quantity).toLocaleString('en-IN', { maximumFractionDigits: 0 })} shares remaining)</span>
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Cost Basis ({currency})</p>
+                <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fmtLocal(investedLocal, currency)}</p>
+              </div>
+              <div>
+                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Cost Basis (INR)</p>
+                <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(investedINR)}</p>
+              </div>
+              <div>
+                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Current Value ({currency})</p>
+                <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fmtLocal(currentLocal, currency)}</p>
+              </div>
+              <div>
+                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Current Value (INR)</p>
+                <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(currentINR)}</p>
+              </div>
+              <div>
+                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Unrealized P&L ({currency})</p>
+                <p className="text-xs font-bold" style={{ color: localGainLoss >= 0 ? '#059669' : '#DC2626' }}>
+                  {localGainLoss >= 0 ? '+' : ''}{fmtLocal(localGainLoss, currency)} ({localGainPct >= 0 ? '+' : ''}{localGainPct.toFixed(1)}%)
+                </p>
+              </div>
+              <div>
+                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Unrealized P&L (INR)</p>
+                <p className="text-xs font-bold" style={{ color: gainLossINR >= 0 ? '#059669' : '#DC2626' }}>
+                  {gainLossINR >= 0 ? '+' : ''}{formatLargeINR(gainLossINR)} ({gainLossPct >= 0 ? '+' : ''}{gainLossPct.toFixed(1)}%)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Realized P&L (only if sells exist) */}
+          {hasSells && (
+            <div className="wv-card p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#9CA3AF' }}>
+                Realized P&L
+                <span className="normal-case font-normal ml-1">({totalSoldQty.toLocaleString('en-IN', { maximumFractionDigits: 0 })} shares sold)</span>
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Sale Value ({currency})</p>
+                  <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fmtLocal(totalSaleValueLocal, currency)}</p>
+                </div>
+                <div>
+                  <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Cost of Sold ({currency})</p>
+                  <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fmtLocal(totalSaleCostLocal, currency)}</p>
+                </div>
+                <div>
+                  <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Realized P&L ({currency})</p>
+                  <p className="text-xs font-bold" style={{ color: realizedPnlLocal >= 0 ? '#059669' : '#DC2626' }}>
+                    {realizedPnlLocal >= 0 ? '+' : ''}{fmtLocal(realizedPnlLocal, currency)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Realized P&L (INR)</p>
+                  <p className="text-xs font-bold" style={{ color: realizedPnlINR >= 0 ? '#059669' : '#DC2626' }}>
+                    {realizedPnlINR >= 0 ? '+' : ''}{formatLargeINR(realizedPnlINR)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Total P&L (if sells exist) */}
+          {hasSells && (
+            <div className="wv-card p-3" style={{ backgroundColor: 'rgba(201,168,76,0.06)' }}>
+              <p className="text-[9px] font-semibold uppercase tracking-widest text-center mb-2" style={{ color: '#9CA3AF' }}>Total P&L (Unrealized + Realized)</p>
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div>
+                  <p className="text-[9px]" style={{ color: '#6B7280' }}>Total ({currency})</p>
+                  <p className="text-sm font-bold" style={{ color: (localGainLoss + realizedPnlLocal) >= 0 ? '#059669' : '#DC2626' }}>
+                    {(localGainLoss + realizedPnlLocal) >= 0 ? '+' : ''}{fmtLocal(localGainLoss + realizedPnlLocal, currency)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[9px]" style={{ color: '#6B7280' }}>Total (INR)</p>
+                  <p className="text-sm font-bold" style={{ color: (gainLossINR + realizedPnlINR) >= 0 ? '#059669' : '#DC2626' }}>
+                    {(gainLossINR + realizedPnlINR) >= 0 ? '+' : ''}{formatLargeINR(gainLossINR + realizedPnlINR)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Returns card */}
           <div className="wv-card p-4">
             <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#9CA3AF' }}>
-              Returns
+              Unrealized Returns Breakdown
             </p>
             {/* Two-column: Local Currency | INR */}
             <div className="grid grid-cols-2 gap-3">
@@ -510,9 +630,20 @@ export function GlobalStockDetailSheet({
                               FX: {txnFx.toFixed(2)}
                             </span>
                           </div>
-                          {t.notes && !t.notes.startsWith('Buy') && !t.notes.startsWith('Sell at') && (
+                          {t.notes && !t.notes.startsWith('Buy') && !t.notes.startsWith('Sell at') && !t.notes.includes('meta:') && (
                             <p className="text-[10px] mt-0.5 truncate" style={{ color: '#9CA3AF' }}>{t.notes}</p>
                           )}
+                          {t.type === 'sell' && (() => {
+                            const metaMatch = (t.notes ?? '').match(/meta:(\{[^}]+\})/);
+                            let pnl: number | null = null;
+                            if (metaMatch) { try { pnl = JSON.parse(metaMatch[1]).pnl_local ?? null; } catch { /* skip */ } }
+                            if (pnl == null) return null;
+                            return (
+                              <p className="text-[10px] font-semibold mt-0.5" style={{ color: pnl >= 0 ? '#059669' : '#DC2626' }}>
+                                Realized: {pnl >= 0 ? '+' : ''}{fmtLocal(pnl, currency)}
+                              </p>
+                            );
+                          })()}
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <button

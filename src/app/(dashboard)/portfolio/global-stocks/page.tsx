@@ -40,6 +40,8 @@ interface HoldingRow extends RawHolding {
   currentValueINR:  number | null;
   gainLoss:         number | null;
   gainLossPct:      number | null;
+  gainLossLocal:    number | null;
+  gainLossLocalPct: number | null;
   xirr:             number | null;
   dayChange:        number | null;
   dayChangePct:     number | null;
@@ -271,6 +273,8 @@ export default function GlobalStocksPortfolioPage() {
   const supabase = createClient();
 
   const [holdings,       setHoldings]       = useState<HoldingRow[]>([]);
+  const [pastHoldings,   setPastHoldings]   = useState<HoldingRow[]>([]);
+  const [showPast,       setShowPast]       = useState(false);
   const [loading,        setLoading]        = useState(true);
   const [error,          setError]          = useState<string | null>(null);
   const [priceRefreshing,setPriceRefreshing]= useState(false);
@@ -342,7 +346,7 @@ export default function GlobalStocksPortfolioPage() {
           transactions(id, date, price, quantity, type, fees, notes, metadata)
         `)
         .eq('asset_type', 'global_stock')
-        .gt('quantity', 0)
+        .gte('quantity', 0)
         .order('created_at', { ascending: false });
 
       if (dbErr) { setError(dbErr.message); setLoading(false); return; }
@@ -352,7 +356,24 @@ export default function GlobalStocksPortfolioPage() {
 
     if (!data) { setError('Failed to load holdings'); setLoading(false); return; }
 
-    const rawRows = data as unknown as RawHolding[];
+    // Merge holdings with same symbol + broker + portfolio into a single row
+    const preRows = data as unknown as RawHolding[];
+    const mergeMap = new Map<string, RawHolding[]>();
+    for (const h of preRows) {
+      const key = `${h.symbol}|${h.brokers?.id ?? ''}|${h.portfolios?.id ?? ''}`;
+      if (!mergeMap.has(key)) mergeMap.set(key, []);
+      mergeMap.get(key)!.push(h);
+    }
+    const rawRows: RawHolding[] = [];
+    Array.from(mergeMap.values()).forEach(group => {
+      if (group.length === 1) { rawRows.push(group[0]); return; }
+      const primary = { ...group[0] };
+      primary.quantity = group.reduce((s, h) => s + Number(h.quantity), 0);
+      primary.transactions = group.flatMap(h => h.transactions ?? []);
+      const totalCost = group.reduce((s, h) => s + Number(h.quantity) * Number(h.avg_buy_price), 0);
+      primary.avg_buy_price = primary.quantity > 0 ? totalCost / primary.quantity : 0;
+      rawRows.push(primary);
+    });
 
     // Determine currencies from metadata
     const currencySet = new Set<string>();
@@ -371,20 +392,34 @@ export default function GlobalStocksPortfolioPage() {
       const rate       = rates[cur] ?? null;
       const ownerId    = h.portfolios?.user_id ?? '';
 
-      // Compute invested from transactions to include fees and use purchase-time FX rates
-      const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip');
+      // Compute invested from transactions using FIFO (account for sells)
+      const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip')
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const sellTxns = (h.transactions ?? []).filter(t => t.type === 'sell');
+      const totalSold = sellTxns.reduce((sum, t) => sum + Number(t.quantity), 0);
       let investedLocal = 0;
       let investedINR = 0;
       if (buyTxns.length > 0) {
-        for (const t of buyTxns) {
-          const tFees = Number(t.fees) || 0;
-          const tLocal = Number(t.quantity) * Number(t.price) + tFees;
-          const tFx = Number((t.metadata as Record<string, unknown>)?.fx_rate ?? rate ?? 1);
+        const lots = buyTxns.map(t => {
+          const q = Number(t.quantity);
+          return { qty: q, origQty: q, price: Number(t.price), fees: Number(t.fees) || 0,
+            fxRate: Number((t.metadata as Record<string, unknown>)?.fx_rate ?? rate ?? 1) };
+        });
+        let soldRemaining = totalSold;
+        for (const lot of lots) {
+          if (soldRemaining <= 0) break;
+          const consumed = Math.min(soldRemaining, lot.qty);
+          lot.qty -= consumed;
+          soldRemaining -= consumed;
+        }
+        for (const lot of lots) {
+          if (lot.qty <= 0) continue;
+          const feePerShare = lot.origQty > 0 ? lot.fees / lot.origQty : 0;
+          const tLocal = lot.qty * lot.price + lot.qty * feePerShare;
           investedLocal += tLocal;
-          investedINR += tLocal * tFx;
+          investedINR += tLocal * lot.fxRate;
         }
       } else {
-        // Fallback if no transactions loaded
         investedLocal = Number(h.quantity) * Number(h.avg_buy_price);
         investedINR = rate != null ? investedLocal * rate : investedLocal;
       }
@@ -396,7 +431,7 @@ export default function GlobalStocksPortfolioPage() {
         currentValue: null,
         investedINR,
         currentValueINR: null,
-        gainLoss: null, gainLossPct: null, xirr: null,
+        gainLoss: null, gainLossPct: null, gainLossLocal: null, gainLossLocalPct: null, xirr: null,
         dayChange: null, dayChangePct: null,
         memberName: names[ownerId] ?? '',
         country,
@@ -405,11 +440,14 @@ export default function GlobalStocksPortfolioPage() {
       };
     });
 
-    setHoldings(rows);
+    const activeRows = rows.filter(r => Number(r.quantity) > 0);
+    const pastRows = rows.filter(r => Number(r.quantity) <= 0);
+    setHoldings(activeRows);
+    setPastHoldings(pastRows);
     setLoading(false);
 
-    // Batch-fetch all prices in a single request
-    const uniqueSymbols = Array.from(new Set(rows.map(r => r.symbol)));
+    // Batch-fetch all prices in a single request (active holdings only)
+    const uniqueSymbols = Array.from(new Set(activeRows.map(r => r.symbol)));
     await fetchPriceBatch(uniqueSymbols, rows, rates, false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -433,11 +471,13 @@ export default function GlobalStocksPortfolioPage() {
         } catch { /* skip */ }
       }
     }
+    const gainLossLocal = currentValue - h.investedValue;
+    const gainLossLocalPct = h.investedValue > 0 ? (gainLossLocal / h.investedValue) * 100 : 0;
     return {
       ...h,
       currentPrice: price, priceLoading: false, priceUnavailable: false,
       currentValue, currentValueINR, investedINR,
-      gainLoss, gainLossPct, xirr, fxRate: rate,
+      gainLoss, gainLossPct, gainLossLocal, gainLossLocalPct, xirr, fxRate: rate,
     };
   }
 
@@ -544,8 +584,8 @@ export default function GlobalStocksPortfolioPage() {
   interface StockGroup {
     symbol: string; name: string; country: string; currency: string;
     holdings: HoldingRow[]; isMultiBroker: boolean;
-    totalQty: number; totalInvestedINR: number;
-    totalCurrentValueINR: number | null;
+    totalQty: number; totalInvestedINR: number; totalInvestedLocal: number;
+    totalCurrentValueINR: number | null; totalCurrentValueLocal: number | null;
     currentPrice: number | null; priceLoading: boolean; priceUnavailable: boolean;
     fxRate: number | null;
   }
@@ -566,8 +606,11 @@ export default function GlobalStocksPortfolioPage() {
       isMultiBroker: rows.length > 1,
       totalQty: rows.reduce((s, r) => s + Number(r.quantity), 0),
       totalInvestedINR: rows.reduce((s, r) => s + r.investedINR, 0),
+      totalInvestedLocal: rows.reduce((s, r) => s + r.investedValue, 0),
       totalCurrentValueINR: rows.every(r => r.currentValueINR != null)
         ? rows.reduce((s, r) => s + (r.currentValueINR ?? 0), 0) : null,
+      totalCurrentValueLocal: rows.every(r => r.currentValue != null)
+        ? rows.reduce((s, r) => s + (r.currentValue ?? 0), 0) : null,
       currentPrice: rows[0].currentPrice,
       priceLoading: rows.some(r => r.priceLoading),
       priceUnavailable: rows.every(r => r.priceUnavailable),
@@ -670,7 +713,7 @@ export default function GlobalStocksPortfolioPage() {
 
   const detailHolding: GlobalStockHoldingDetail | null = useMemo(() => {
     if (!detailId) return null;
-    const h = holdings.find(x => x.id === detailId);
+    const h = holdings.find(x => x.id === detailId) ?? pastHoldings.find(x => x.id === detailId);
     if (!h) return null;
     return {
       ...h,
@@ -685,7 +728,7 @@ export default function GlobalStocksPortfolioPage() {
       investedINR:   h.investedINR,
       currentValueINR: h.currentValueINR,
     };
-  }, [detailId, holdings]);
+  }, [detailId, holdings, pastHoldings]);
 
   // ── Row renderer ──────────────────────────────────────────────────────────
 
@@ -695,7 +738,7 @@ export default function GlobalStocksPortfolioPage() {
       <div key={h.id}
         className="grid items-center px-4 py-3 border-b hover:bg-[#FAFAF8] transition-colors cursor-pointer"
         style={{
-          gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 0.7fr 40px',
+          gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 40px',
           borderColor: '#F0EDE6',
           backgroundColor: h.gainLoss != null ? (isGain ? 'rgba(5,150,105,0.01)' : 'rgba(220,38,38,0.01)') : 'transparent',
           ...extraStyle,
@@ -748,14 +791,22 @@ export default function GlobalStocksPortfolioPage() {
           {h.priceLoading ? (
             <Loader2 className="w-3 h-3 animate-spin ml-auto" style={{ color: '#C9A84C' }} />
           ) : h.currentPrice !== null ? (
-            <div>
-              <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{fmtLocal(h.currentPrice, h.currency)}</p>
-              {h.fxRate != null && <p className="text-[9px]" style={{ color: '#9CA3AF' }}>≈ ₹{(h.currentPrice * h.fxRate).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>}
-            </div>
+            <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{fmtLocal(h.currentPrice, h.currency)}</p>
           ) : h.priceUnavailable ? (
             <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Unavailable</p>
           ) : (
             <p className="text-[10px]" style={{ color: '#DC2626' }}>Error</p>
+          )}
+        </div>
+        {/* Value */}
+        <div className="text-right">
+          {h.currentValue != null ? (
+            <div>
+              <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{fmtLocal(h.currentValue, h.currency)}</p>
+              {h.currentValueINR != null && <p className="text-[9px]" style={{ color: '#9CA3AF' }}>≈ {formatLargeINR(h.currentValueINR)}</p>}
+            </div>
+          ) : (
+            <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>
           )}
         </div>
         {/* Day P&L */}
@@ -773,20 +824,21 @@ export default function GlobalStocksPortfolioPage() {
             <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>
           )}
         </div>
-        {/* Value */}
+        {/* P&L (local currency) */}
         <div className="text-right">
-          {h.currentValue != null ? (
-            <div>
-              <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{fmtLocal(h.currentValue, h.currency)}</p>
-              {h.currentValueINR != null && <p className="text-[9px]" style={{ color: '#9CA3AF' }}>≈ {formatLargeINR(h.currentValueINR)}</p>}
-            </div>
-          ) : (
-            <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>
-          )}
-        </div>
-        {/* P&L */}
-        <div className="text-right">
-          {h.gainLoss != null && <_PnlBadge value={h.gainLoss} pct={h.gainLossPct ?? 0} />}
+          {h.gainLossLocal != null && (() => {
+            const up = h.gainLossLocal >= 0;
+            return (
+              <div>
+                <p className="text-xs font-semibold" style={{ color: up ? '#059669' : '#DC2626' }}>
+                  {up ? '+' : ''}{fmtLocal(h.gainLossLocal, h.currency)}
+                </p>
+                <p className="text-[10px]" style={{ color: (h.gainLossLocalPct ?? 0) >= 0 ? '#059669' : '#DC2626' }}>
+                  {(h.gainLossLocalPct ?? 0) >= 0 ? '+' : ''}{(h.gainLossLocalPct ?? 0).toFixed(1)}%
+                </p>
+              </div>
+            );
+          })()}
         </div>
         {/* Actions */}
         <div onClick={e => e.stopPropagation()}>
@@ -1049,17 +1101,17 @@ export default function GlobalStocksPortfolioPage() {
           <div className="wv-card">
             {/* Table header */}
             <div className="grid text-[10px] font-semibold uppercase tracking-wide px-4 py-2 border-b"
-              style={{ gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 0.7fr 40px', borderColor: '#F0EDE6', color: '#9CA3AF', backgroundColor: '#F7F5F0' }}>
+              style={{ gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.7fr 0.6fr 0.8fr 40px', borderColor: '#F0EDE6', color: '#9CA3AF', backgroundColor: '#F7F5F0' }}>
               <span>Stock</span>
               <span>Country</span>
               <span>Distributor</span>
               <span>Portfolio</span>
               <span className="text-right">Qty &middot; Avg</span>
-              <span className="text-right">Invested (INR)</span>
+              <span className="text-right">Invested</span>
               <span className="text-right">CMP</span>
-              <span className="text-right">Day</span>
-              <span className="text-right">Value (INR)</span>
-              <span className="text-right">P&amp;L</span>
+              <span className="text-right">Value</span>
+              <span className="text-right">Day P&amp;L</span>
+              <span className="text-right">Unrealized</span>
               <span />
             </div>
 
@@ -1071,9 +1123,7 @@ export default function GlobalStocksPortfolioPage() {
               groupedFiltered.map(group => {
                 if (!group.isMultiBroker) return renderStockRow(group.holdings[0]);
                 const isExpanded = expandedGroups.has(group.symbol);
-                const tGain = group.totalCurrentValueINR != null ? group.totalCurrentValueINR - group.totalInvestedINR : null;
-                const tGainPct = tGain != null && group.totalInvestedINR > 0 ? (tGain / group.totalInvestedINR) * 100 : null;
-                const wtdAvgLocal = group.totalQty > 0 ? (group.totalInvestedINR / group.totalQty) / (group.fxRate ?? 1) : 0;
+                const wtdAvgLocal = group.totalQty > 0 ? (group.totalInvestedLocal / group.totalQty) : 0;
                 return (
                   <div key={group.symbol}>
                     {isExpanded && group.holdings.map(h => renderStockRow(h, { borderLeft: '3px solid #C9A84C' }))}
@@ -1081,7 +1131,7 @@ export default function GlobalStocksPortfolioPage() {
                     <div
                       className="grid items-center px-4 py-3 border-b cursor-pointer"
                       style={{
-                        gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 0.7fr 40px',
+                        gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 40px',
                         borderColor: '#F0EDE6',
                         backgroundColor: 'rgba(201,168,76,0.08)',
                         borderLeft: '3px solid #C9A84C',
@@ -1105,31 +1155,51 @@ export default function GlobalStocksPortfolioPage() {
                         <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{group.totalQty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                         <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{fmtLocal(wtdAvgLocal, group.currency)}</p>
                       </div>
-                      <div className="text-right"><p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(group.totalInvestedINR)}</p></div>
+                      <div className="text-right">
+                        <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fmtLocal(group.totalInvestedLocal, group.currency)}</p>
+                        <p className="text-[9px]" style={{ color: '#9CA3AF' }}>≈ {formatLargeINR(group.totalInvestedINR)}</p>
+                      </div>
                       <div className="text-right">
                         {group.currentPrice != null ? (
-                          <div>
-                            <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{fmtLocal(group.currentPrice, group.currency)}</p>
-                            {group.fxRate != null && (
-                              <p className="text-[9px]" style={{ color: '#9CA3AF' }}>₹{(group.currentPrice * group.fxRate).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
-                            )}
-                          </div>
+                          <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{fmtLocal(group.currentPrice, group.currency)}</p>
                         ) : group.priceLoading ? <Loader2 className="w-3 h-3 animate-spin ml-auto" style={{ color: '#C9A84C' }} /> : <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>}
                       </div>
                       <div className="text-right">
+                        {group.totalCurrentValueLocal != null ? (
+                          <div>
+                            <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fmtLocal(group.totalCurrentValueLocal, group.currency)}</p>
+                            {group.totalCurrentValueINR != null && <p className="text-[9px]" style={{ color: '#9CA3AF' }}>≈ {formatLargeINR(group.totalCurrentValueINR)}</p>}
+                          </div>
+                        ) : <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>}
+                      </div>
+                      <div className="text-right">
                         {(() => {
-                          const gDayPnl = group.holdings.reduce((s, h) => s + (h.dayChange != null && h.fxRate != null ? Number(h.quantity) * h.dayChange * h.fxRate : 0), 0);
+                          const gDayPnl = group.holdings.reduce((s, h) => s + (h.dayChange != null ? Number(h.quantity) * (h.dayChange ?? 0) : 0), 0);
                           return gDayPnl !== 0 ? (
                             <p className="text-[10px] font-semibold" style={{ color: gDayPnl >= 0 ? '#059669' : '#DC2626' }}>
-                              {gDayPnl >= 0 ? '+' : ''}{formatLargeINR(gDayPnl)}
+                              {gDayPnl >= 0 ? '+' : ''}{fmtLocal(gDayPnl, group.currency)}
                             </p>
                           ) : <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>;
                         })()}
                       </div>
                       <div className="text-right">
-                        {group.totalCurrentValueINR != null ? <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(group.totalCurrentValueINR)}</p> : <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>}
+                        {(() => {
+                          const tGainLocal = group.totalCurrentValueLocal != null ? group.totalCurrentValueLocal - group.totalInvestedLocal : null;
+                          const tGainLocalPct = tGainLocal != null && group.totalInvestedLocal > 0 ? (tGainLocal / group.totalInvestedLocal) * 100 : null;
+                          if (tGainLocal == null || tGainLocalPct == null) return null;
+                          const up = tGainLocal >= 0;
+                          return (
+                            <div>
+                              <p className="text-xs font-semibold" style={{ color: up ? '#059669' : '#DC2626' }}>
+                                {up ? '+' : ''}{fmtLocal(tGainLocal, group.currency)}
+                              </p>
+                              <p className="text-[10px]" style={{ color: tGainLocalPct >= 0 ? '#059669' : '#DC2626' }}>
+                                {tGainLocalPct >= 0 ? '+' : ''}{tGainLocalPct.toFixed(1)}%
+                              </p>
+                            </div>
+                          );
+                        })()}
                       </div>
-                      <div className="text-right">{tGain != null && tGainPct != null && <_PnlBadge value={tGain} pct={tGainPct} />}</div>
                       <div />
                     </div>
                   </div>
@@ -1138,6 +1208,56 @@ export default function GlobalStocksPortfolioPage() {
             )}
           </div>
         </>
+      )}
+
+      {/* Past Holdings (fully exited) */}
+      {pastHoldings.length > 0 && (
+        <div className="wv-card mt-4">
+          <button
+            className="w-full flex items-center justify-between px-4 py-3 text-xs font-semibold"
+            style={{ color: '#9CA3AF' }}
+            onClick={() => setShowPast(!showPast)}>
+            <span>Past Holdings ({pastHoldings.length})</span>
+            {showPast ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          </button>
+          {showPast && (
+            <div className="divide-y" style={{ borderColor: '#F0EDE6' }}>
+              {pastHoldings.map(h => {
+                const sellTxns = (h.transactions ?? []).filter(t => t.type === 'sell');
+                let realizedLocal = 0;
+                let realizedINR = 0;
+                for (const t of sellTxns) {
+                  const m = (t.notes ?? '').match(/meta:(\{[^}]+\})/);
+                  if (m) { try { const p = JSON.parse(m[1]); realizedLocal += p.pnl_local ?? 0; realizedINR += p.pnl_inr ?? 0; } catch {} }
+                }
+                return (
+                  <div key={h.id} className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-[#FAFAF8]"
+                    onClick={() => setDetailId(h.id)}>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[9px] font-bold"
+                        style={{ backgroundColor: '#9CA3AF' }}>{h.symbol.slice(0, 2)}</div>
+                      <div>
+                        <p className="text-xs font-medium" style={{ color: '#6B7280' }}>{h.name}</p>
+                        <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{h.symbol} · Fully exited</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Realized P&L</p>
+                      <p className="text-xs font-semibold" style={{ color: realizedLocal >= 0 ? '#059669' : '#DC2626' }}>
+                        {realizedLocal >= 0 ? '+' : ''}{fmtLocal(realizedLocal, h.currency)}
+                      </p>
+                      {realizedINR !== 0 && (
+                        <p className="text-[9px]" style={{ color: realizedINR >= 0 ? '#059669' : '#DC2626' }}>
+                          {realizedINR >= 0 ? '+' : ''}{formatLargeINR(realizedINR)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Detail sheet */}

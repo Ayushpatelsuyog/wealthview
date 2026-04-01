@@ -295,14 +295,52 @@ export default function IndianStocksPortfolioPage() {
 
     if (!data) { setError('Failed to load holdings'); setLoading(false); return; }
 
-    const rows: HoldingRow[] = (data as unknown as RawHolding[]).map(h => {
+    // Merge holdings with same symbol + broker + portfolio into a single row
+    const preRows = data as unknown as RawHolding[];
+    const mergeMap = new Map<string, RawHolding[]>();
+    for (const h of preRows) {
+      const key = `${h.symbol}|${h.brokers?.id ?? ''}|${h.portfolios?.id ?? ''}`;
+      if (!mergeMap.has(key)) mergeMap.set(key, []);
+      mergeMap.get(key)!.push(h);
+    }
+    const mergedRows: RawHolding[] = [];
+    Array.from(mergeMap.values()).forEach(group => {
+      if (group.length === 1) { mergedRows.push(group[0]); return; }
+      const primary = { ...group[0] };
+      primary.quantity = group.reduce((s, h) => s + Number(h.quantity), 0);
+      primary.transactions = group.flatMap(h => h.transactions ?? []);
+      const totalCost = group.reduce((s, h) => s + Number(h.quantity) * Number(h.avg_buy_price), 0);
+      primary.avg_buy_price = primary.quantity > 0 ? totalCost / primary.quantity : 0;
+      mergedRows.push(primary);
+    });
+
+    const rows: HoldingRow[] = mergedRows.map(h => {
       const ownerId  = h.portfolios?.user_id ?? '';
 
-      // Compute invested from transactions to include fees (brokerage, STT, GST, stamp duty, etc.)
-      const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip');
+      // Compute invested from transactions using FIFO (account for sells)
+      const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip')
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const sellTxns = (h.transactions ?? []).filter(t => t.type === 'sell');
+      const totalSold = sellTxns.reduce((sum, t) => sum + Number(t.quantity), 0);
       let invested: number;
       if (buyTxns.length > 0) {
-        invested = buyTxns.reduce((sum, t) => sum + Number(t.quantity) * Number(t.price) + (Number(t.fees) || 0), 0);
+        const lots = buyTxns.map(t => {
+          const q = Number(t.quantity);
+          return { qty: q, origQty: q, price: Number(t.price), fees: Number(t.fees) || 0 };
+        });
+        let soldRemaining = totalSold;
+        for (const lot of lots) {
+          if (soldRemaining <= 0) break;
+          const consumed = Math.min(soldRemaining, lot.qty);
+          lot.qty -= consumed;
+          soldRemaining -= consumed;
+        }
+        invested = 0;
+        for (const lot of lots) {
+          if (lot.qty <= 0) continue;
+          const feePerShare = lot.origQty > 0 ? lot.fees / lot.origQty : 0;
+          invested += lot.qty * lot.price + lot.qty * feePerShare;
+        }
       } else {
         invested = Number(h.quantity) * Number(h.avg_buy_price);
       }

@@ -128,13 +128,29 @@ export async function POST(req: NextRequest) {
   // FX gain/loss: impact of currency movement on the investment
   const fxImpact = (sellFxRate - avgBuyFxRate) * sellQty * avgBuyPriceLocal;
 
-  // -- Update holding quantity --
+  // -- Update holding quantity & recalculate avg_buy_price (FIFO) --
   const newQty    = currentQty - sellQty;
-  const currentAvg = Number(holding.avg_buy_price);
+
+  // Compute FIFO cost basis of remaining shares
+  const totalBuyQty = buyLots.reduce((s, l) => s + l.qty, 0);
+  const totalConsumed = totalBuyQty - newQty;
+  let tempConsumed = 0;
+  let remainingCostLocal = 0;
+  let remainingQty = 0;
+  for (const lot of buyLots) {
+    const toConsume = Math.min(lot.qty, Math.max(0, totalConsumed - tempConsumed));
+    const kept = lot.qty - toConsume;
+    if (kept > 0) {
+      remainingCostLocal += kept * lot.price;
+      remainingQty += kept;
+    }
+    tempConsumed += toConsume;
+  }
+  const newAvgPrice = remainingQty > 0 ? remainingCostLocal / remainingQty : 0;
 
   const { error: updateErr } = await supabase
     .from('holdings')
-    .update({ quantity: newQty, avg_buy_price: newQty > 0 ? currentAvg : 0 })
+    .update({ quantity: newQty, avg_buy_price: newQty > 0 ? newAvgPrice : 0 })
     .eq('id', holdingId);
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
 

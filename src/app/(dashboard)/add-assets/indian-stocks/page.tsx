@@ -622,24 +622,43 @@ function IndianStocksFormContent() {
         dividendPerShare: divPerShare, dividendType: divType, exDate, paymentDate: payDate,
       };
 
-      let endpoint = '/api/stocks/save';
-      if (txnType === 'sell') {
-        // For sell we need holdingId — use save route with transactionType='sell'
-        // The save route handles it through the existing holding
-        endpoint = '/api/stocks/save';
-      }
+      if (txnType === 'sell' && sellHoldingId) {
+        // Sell mode: use dedicated sell API to reduce existing holding
+        const res = await fetch('/api/stocks/sell', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            holdingId: sellHoldingId,
+            quantity: qty,
+            price: px,
+            date,
+            brokerage, stt, gst, stampDuty, exchangeCharges, dpCharges,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? 'Sell failed');
 
-      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Save failed');
-
-      setToast({ type: 'success', message: `${txnType === 'buy' ? 'Holding saved' : txnType.charAt(0).toUpperCase() + txnType.slice(1)} recorded successfully!${data.consolidated ? ' (Consolidated with existing holding)' : ''}` });
-      holdingsCacheClearAll();
-
-      if (andAnother) {
-        resetForm();
-      } else {
+        const pnlSign = (data.pnl ?? 0) >= 0 ? '+' : '';
+        setToast({
+          type: 'success',
+          message: `Sell recorded! Realized P&L: ${pnlSign}₹${Math.abs(data.pnl ?? 0).toFixed(0)}`,
+        });
+        holdingsCacheClearAll();
         setTimeout(() => router.push('/portfolio/indian-stocks'), 1200);
+      } else {
+        // Normal mode: buy, dividend, bonus, split, rights, or sell without holdingId
+        const res = await fetch('/api/stocks/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? 'Save failed');
+
+        setToast({ type: 'success', message: `${txnType === 'buy' ? 'Holding saved' : txnType.charAt(0).toUpperCase() + txnType.slice(1)} recorded successfully!${data.consolidated ? ' (Consolidated with existing holding)' : ''}` });
+        holdingsCacheClearAll();
+
+        if (andAnother) {
+          resetForm();
+        } else {
+          setTimeout(() => router.push('/portfolio/indian-stocks'), 1200);
+        }
       }
     } catch (e) {
       setToast({ type: 'error', message: (e as Error).message });

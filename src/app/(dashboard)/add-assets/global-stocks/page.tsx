@@ -684,8 +684,33 @@ function GlobalStocksFormContent() {
         setToast({ type: 'success', message: 'Transaction updated successfully!' });
         holdingsCacheClearAll();
         setTimeout(() => router.back(), 1200);
+      } else if (txnType === 'sell' && sellHoldingId) {
+        // Sell mode: use dedicated sell API to reduce existing holding
+        const res = await fetch('/api/stocks/global/sell', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            holdingId: sellHoldingId,
+            quantity: qty,
+            price: px,
+            date,
+            fxRate: fx,
+            brokerage: brokerageNum,
+            notes,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? 'Sell failed');
+
+        const pnlSign = (data.pnlLocal ?? 0) >= 0 ? '+' : '';
+        setToast({
+          type: 'success',
+          message: `Sell recorded! Realized P&L: ${pnlSign}${data.currency ?? ''} ${(data.pnlLocal ?? 0).toFixed(2)}`,
+        });
+        holdingsCacheClearAll();
+        setTimeout(() => router.push('/portfolio/global-stocks'), 1200);
       } else {
-        // Normal mode: create new transaction
+        // Normal mode: create new transaction (buy, dividend, or sell without holdingId)
         const res = await fetch('/api/stocks/global/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

@@ -97,15 +97,28 @@ export async function POST(req: NextRequest) {
   const netProceeds    = totalSellValue - totalFees;
   const pnl            = netProceeds - totalCostBasis;
 
-  // Compute new holding qty and avg price
+  // Compute new holding qty and recalculate avg_buy_price (FIFO)
   const newQty = currentQty - sellQty;
-  const currentAvg = Number(holding.avg_buy_price);
-  // Keep avg_buy_price unchanged (it represents historical cost for remaining shares)
+  const totalBuyQty = buyLots.reduce((s, l) => s + l.qty, 0);
+  const totalConsumed = totalBuyQty - newQty;
+  let tempConsumed = 0;
+  let remainingCost = 0;
+  let remainingQty = 0;
+  for (const lot of buyLots) {
+    const toConsume = Math.min(lot.qty, Math.max(0, totalConsumed - tempConsumed));
+    const kept = lot.qty - toConsume;
+    if (kept > 0) {
+      remainingCost += kept * lot.price;
+      remainingQty += kept;
+    }
+    tempConsumed += toConsume;
+  }
+  const newAvgPrice = remainingQty > 0 ? remainingCost / remainingQty : 0;
 
   // ── Update holding quantity ─────────────────────────────────────────────────
   const { error: updateErr } = await supabase
     .from('holdings')
-    .update({ quantity: newQty, avg_buy_price: newQty > 0 ? currentAvg : 0 })
+    .update({ quantity: newQty, avg_buy_price: newQty > 0 ? newAvgPrice : 0 })
     .eq('id', holdingId);
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
 
