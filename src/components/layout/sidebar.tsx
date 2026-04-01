@@ -28,7 +28,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { label: 'Indian Stocks',  href: '/portfolio/indian-stocks',  icon: TrendingUp, addHref: '/add-assets/indian-stocks' },
       { label: 'Global Stocks',  href: '/portfolio/global-stocks',  icon: Globe, addHref: '/add-assets/global-stocks' },
       { label: 'Mutual Funds',   href: '/portfolio/mutual-funds',   icon: BarChart3,  addHref: '/add-assets/mutual-funds' },
-      { label: 'SIF',            href: '/add-assets/sif',           icon: Shield,     addHref: '/add-assets/sif' },
+      { label: 'SIF',            href: '/portfolio/sif',            icon: Shield,     addHref: '/add-assets/sif' },
       { label: 'PMS',            href: '/add-assets/pms',           icon: Layers },
       { label: 'AIF',            href: '/add-assets/aif',           icon: Building2 },
     ],
@@ -43,11 +43,11 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: 'FIXED INCOME',
     items: [
-      { label: 'Bonds',          href: '/add-assets/bonds',          icon: FileText },
+      { label: 'Bonds',          href: '/portfolio/bonds',          icon: FileText, addHref: '/add-assets/bonds' },
       { label: 'Fixed Deposits', href: '/portfolio/fixed-deposits', icon: Landmark, addHref: '/add-assets/fixed-deposits' },
       { label: 'PPF',            href: '/portfolio/ppf',            icon: Leaf, addHref: '/add-assets/ppf' },
       { label: 'EPF / VPF',      href: '/add-assets/epf-vpf',        icon: UserCheck },
-      { label: 'Gratuity',       href: '/add-assets/gratuity',       icon: PiggyBank },
+      { label: 'Gratuity',       href: '/portfolio/gratuity',       icon: PiggyBank, addHref: '/add-assets/gratuity' },
       { label: 'NPS',            href: '/add-assets/nps',            icon: Shield },
     ],
   },
