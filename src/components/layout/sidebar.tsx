@@ -29,15 +29,15 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { label: 'Global Stocks',  href: '/portfolio/global-stocks',  icon: Globe, addHref: '/add-assets/global-stocks' },
       { label: 'Mutual Funds',   href: '/portfolio/mutual-funds',   icon: BarChart3,  addHref: '/add-assets/mutual-funds' },
       { label: 'SIF',            href: '/portfolio/sif',            icon: Shield,     addHref: '/add-assets/sif' },
-      { label: 'PMS',            href: '/add-assets/pms',           icon: Layers },
-      { label: 'AIF',            href: '/add-assets/aif',           icon: Building2 },
+      { label: 'PMS',            href: '/portfolio/pms',            icon: Layers,   addHref: '/add-assets/pms' },
+      { label: 'AIF',            href: '/portfolio/aif',            icon: Building2, addHref: '/add-assets/aif' },
     ],
   },
   {
     title: 'CRYPTO & FOREX',
     items: [
-      { label: 'Crypto', href: '/add-assets/crypto', icon: Bitcoin    },
-      { label: 'Forex',  href: '/add-assets/forex',  icon: DollarSign },
+      { label: 'Crypto', href: '/portfolio/crypto', icon: Bitcoin,    addHref: '/add-assets/crypto' },
+      { label: 'Forex',  href: '/portfolio/forex',  icon: DollarSign, addHref: '/add-assets/forex' },
     ],
   },
   {
@@ -46,15 +46,15 @@ const navGroups: { title: string; items: NavItem[] }[] = [
       { label: 'Bonds',          href: '/portfolio/bonds',          icon: FileText, addHref: '/add-assets/bonds' },
       { label: 'Fixed Deposits', href: '/portfolio/fixed-deposits', icon: Landmark, addHref: '/add-assets/fixed-deposits' },
       { label: 'PPF',            href: '/portfolio/ppf',            icon: Leaf, addHref: '/add-assets/ppf' },
-      { label: 'EPF / VPF',      href: '/add-assets/epf-vpf',        icon: UserCheck },
+      { label: 'EPF / VPF',      href: '/portfolio/epf',            icon: UserCheck, addHref: '/add-assets/epf-vpf' },
       { label: 'Gratuity',       href: '/portfolio/gratuity',       icon: PiggyBank, addHref: '/add-assets/gratuity' },
-      { label: 'NPS',            href: '/add-assets/nps',            icon: Shield },
+      { label: 'NPS',            href: '/portfolio/nps',            icon: Shield, addHref: '/add-assets/nps' },
     ],
   },
   {
     title: 'INSURANCE',
     items: [
-      { label: 'Life & Health', href: '/add-assets/insurance', icon: Heart },
+      { label: 'Life & Health', href: '/portfolio/insurance', icon: Heart, addHref: '/add-assets/insurance' },
     ],
   },
   {
@@ -66,8 +66,8 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: 'PHYSICAL ASSETS',
     items: [
-      { label: 'Gold & Jewelry', href: '/add-assets/gold',        icon: Gem      },
-      { label: 'Real Estate',    href: '/add-assets/real-estate', icon: Building },
+      { label: 'Gold & Jewelry', href: '/portfolio/gold',        icon: Gem,     addHref: '/add-assets/gold' },
+      { label: 'Real Estate',    href: '/portfolio/real-estate',  icon: Building, addHref: '/add-assets/real-estate' },
     ],
   },
 ];
