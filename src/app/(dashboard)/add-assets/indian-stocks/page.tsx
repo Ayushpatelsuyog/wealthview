@@ -901,7 +901,7 @@ function IndianStocksFormContent() {
                     value={sectorOverride ?? selectedStock.sector ?? ''}
                     onChange={e => setSectorOverride(e.target.value)}
                     className="h-9 text-xs rounded-lg border px-2 flex-1"
-                    style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)', backgroundColor: 'white' }}>
+                    style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)', backgroundColor: 'var(--wv-surface)' }}>
                     <option value="">Select sector...</option>
                     {['IT', 'Banking', 'Pharma', 'Auto', 'FMCG', 'Energy', 'Metals', 'Chemicals',
                       'Industrials', 'Infrastructure', 'Real Estate', 'Media', 'Telecom', 'Textiles',

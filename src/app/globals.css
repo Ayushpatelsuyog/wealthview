@@ -237,6 +237,67 @@
   color: #F87171 !important;
 }
 
+/* Arbitrary Tailwind color classes */
+.dark .text-\[\#1A1A2E\] { color: var(--wv-text) !important; }
+.dark .text-\[\#1B2A4A\] { color: var(--wv-text) !important; }
+.dark .text-\[\#374151\] { color: var(--wv-text) !important; }
+.dark .text-\[\#6B7280\] { color: var(--wv-text-secondary) !important; }
+.dark .text-\[\#4B5563\] { color: var(--wv-text-secondary) !important; }
+.dark .text-\[\#9CA3AF\] { color: var(--wv-text-muted) !important; }
+.dark .bg-\[\#F7F5F0\]   { background-color: var(--wv-bg) !important; }
+.dark .bg-\[\#FFFDF7\]   { background-color: var(--wv-surface) !important; }
+.dark .bg-\[\#FFF\]       { background-color: var(--wv-surface) !important; }
+.dark .border-\[\#E8E5DD\] { border-color: var(--wv-border) !important; }
+.dark .border-\[\#D4D0C8\] { border-color: var(--wv-border) !important; }
+
+/* Headings & labels */
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 { color: var(--wv-text); }
+.dark label { color: var(--wv-text-secondary); }
+
+/* Form inputs — typed selectors for specificity */
+.dark select,
+.dark input[type="text"],
+.dark input[type="number"],
+.dark input[type="date"],
+.dark input[type="password"],
+.dark input[type="email"],
+.dark textarea {
+  background-color: var(--wv-input-bg) !important;
+  color: var(--wv-text) !important;
+  border-color: var(--wv-border) !important;
+}
+.dark select option {
+  background-color: var(--wv-surface);
+  color: var(--wv-text);
+}
+.dark ::placeholder {
+  color: var(--wv-text-muted) !important;
+}
+
+/* Popover / dropdown menus */
+.dark [data-radix-popper-content-wrapper] [role="listbox"],
+.dark [data-radix-popper-content-wrapper] [role="menu"],
+.dark [data-radix-select-content],
+.dark [data-radix-popover-content] {
+  background-color: var(--wv-surface) !important;
+  border-color: var(--wv-border) !important;
+  color: var(--wv-text) !important;
+}
+.dark [role="option"] {
+  color: var(--wv-text) !important;
+}
+.dark [role="option"]:hover,
+.dark [role="option"][data-highlighted] {
+  background-color: var(--wv-surface-2) !important;
+}
+
+/* Modal overlays — white bg overrides */
+.dark .shadow-xl.rounded-xl,
+.dark .shadow-xl.rounded-2xl {
+  background-color: var(--wv-surface) !important;
+  color: var(--wv-text) !important;
+}
+
 /* ── Z-index stacking layer fixes ──────────────────────────────────────────
    Radix UI portals render outside the normal DOM tree but can still be
    clipped by transformed/overflow-hidden ancestors. Force every overlay

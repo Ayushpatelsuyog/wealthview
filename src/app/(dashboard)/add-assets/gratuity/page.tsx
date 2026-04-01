@@ -315,7 +315,7 @@ export default function Page() {
             </div>
 
             {/* Formula breakdown */}
-            <div className="text-xs rounded-lg p-3" style={{ backgroundColor: 'white', border: '1px solid var(--wv-border)' }}>
+            <div className="text-xs rounded-lg p-3" style={{ backgroundColor: 'var(--wv-surface)', border: '1px solid var(--wv-border)' }}>
               <p className="font-medium mb-1" style={{ color: 'var(--wv-text)' }}>Formula: (Basic + DA) x 15 x Years / 26</p>
               <p style={{ color: 'var(--wv-text-secondary)' }}>
                 {formatCurrency(salary)} x 15 x {yearsOfService} yrs / 26 = <span className="font-bold" style={{ color: 'var(--wv-text)' }}>{formatCurrency(Math.round(estimatedGratuity))}</span>

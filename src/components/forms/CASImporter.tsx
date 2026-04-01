@@ -611,11 +611,11 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
           </p>
           {success && (
             <div className="mt-3 grid grid-cols-2 gap-3 text-left">
-              <div className="p-3 rounded-lg" style={{ backgroundColor: 'white' }}>
+              <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--wv-surface)' }}>
                 <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Total Invested</p>
                 <p className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(importResult.totalInvested)}</p>
               </div>
-              <div className="p-3 rounded-lg" style={{ backgroundColor: 'white' }}>
+              <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--wv-surface)' }}>
                 <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
                 <p className="text-sm font-semibold" style={{ color: '#059669' }}>{formatLargeINR(importResult.totalCurrentValue)}</p>
               </div>

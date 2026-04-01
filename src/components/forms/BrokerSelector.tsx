@@ -178,7 +178,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
                   className="w-full flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all"
                   style={{
                     borderColor:     isSelected ? b.logo_color : 'var(--wv-border)',
-                    backgroundColor: isSelected ? `${b.logo_color}12` : 'white',
+                    backgroundColor: isSelected ? `${b.logo_color}12` : 'var(--wv-surface)',
                     boxShadow:       isSelected ? `0 0 0 1px ${b.logo_color}` : 'none',
                   }}
                 >
@@ -242,7 +242,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
         >
           <div
             className="w-full max-w-sm rounded-2xl p-6 shadow-xl"
-            style={{ backgroundColor: 'white' }}
+            style={{ backgroundColor: 'var(--wv-surface)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--wv-text)' }}>Add Distributor / Platform</h3>
@@ -341,7 +341,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
         >
           <div
             className="w-full max-w-xs rounded-2xl p-5 shadow-xl"
-            style={{ backgroundColor: 'white' }}
+            style={{ backgroundColor: 'var(--wv-surface)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div

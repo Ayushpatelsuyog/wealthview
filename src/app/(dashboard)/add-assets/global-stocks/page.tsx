@@ -1019,7 +1019,7 @@ function GlobalStocksFormContent() {
                       setSectorOverride(v === 'Other' ? '__other__' : v);
                     }}
                     className="h-9 text-xs rounded-lg border px-2 w-full"
-                    style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)', backgroundColor: 'white' }}>
+                    style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)', backgroundColor: 'var(--wv-surface)' }}>
                     <option value="">Select sector...</option>
                     {[...STANDARD_SECTORS, 'Other'].map(s => (
                       <option key={s} value={s}>{s}</option>

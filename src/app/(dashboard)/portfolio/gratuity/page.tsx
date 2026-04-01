@@ -464,7 +464,7 @@ export default function GratuityPortfolioPage() {
                   </span>
                 </div>
 
-                <div className="text-xs rounded-lg p-3" style={{ backgroundColor: 'white', border: '1px solid var(--wv-border)' }}>
+                <div className="text-xs rounded-lg p-3" style={{ backgroundColor: 'var(--wv-surface)', border: '1px solid var(--wv-border)' }}>
                   <p className="font-medium mb-1" style={{ color: 'var(--wv-text)' }}>Formula: (Basic + DA) x 15 x Years / 26</p>
                   <p style={{ color: 'var(--wv-text-secondary)' }}>
                     {formatCurrency(selectedAsset.basicSalary)} x 15 x {selectedAsset.yearsOfService} yrs / 26 ={' '}

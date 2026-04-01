@@ -718,7 +718,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
           <Label className="text-xs font-medium" style={{ color: '#374151' }}>Distributor / Platform</Label>
           <select
             className="w-full rounded-md border px-3 py-2 text-sm"
-            style={{ borderColor: '#E5E7EB', color: 'var(--wv-text)', backgroundColor: 'white' }}
+            style={{ borderColor: '#E5E7EB', color: 'var(--wv-text)', backgroundColor: 'var(--wv-surface)' }}
             value={globalBrokerId}
             onChange={e => setGlobalBrokerId(e.target.value)}
           >
@@ -732,7 +732,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
           <Label className="text-xs font-medium" style={{ color: '#374151' }}>Portfolio</Label>
           <select
             className="w-full rounded-md border px-3 py-2 text-sm"
-            style={{ borderColor: '#E5E7EB', color: 'var(--wv-text)', backgroundColor: 'white' }}
+            style={{ borderColor: '#E5E7EB', color: 'var(--wv-text)', backgroundColor: 'var(--wv-surface)' }}
             value={globalPortfolio}
             onChange={e => setGlobalPortfolio(e.target.value)}
           >
@@ -749,7 +749,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
             <Label className="text-xs font-medium" style={{ color: '#374151' }}>Family Member</Label>
             <select
               className="w-full rounded-md border px-3 py-2 text-sm"
-              style={{ borderColor: '#E5E7EB', color: 'var(--wv-text)', backgroundColor: 'white' }}
+              style={{ borderColor: '#E5E7EB', color: 'var(--wv-text)', backgroundColor: 'var(--wv-surface)' }}
               value={globalMemberId}
               onChange={e => setGlobalMemberId(e.target.value)}
             >

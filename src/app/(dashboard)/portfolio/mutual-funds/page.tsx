@@ -802,7 +802,7 @@ export default function MutualFundsPortfolioPage() {
           <p className="text-sm mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>Live NAVs from mfapi.in · {totalUniqueFundCount} fund{totalUniqueFundCount === 1 ? '' : 's'} tracked</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={exportCsv} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-colors" style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)', backgroundColor: 'white' }}>
+          <button onClick={exportCsv} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-colors" style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)', backgroundColor: 'var(--wv-surface)' }}>
             <Download className="w-3.5 h-3.5" /> Export CSV
           </button>
           <button onClick={refreshAllNavs} disabled={navRefreshing} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-secondary)' }}>

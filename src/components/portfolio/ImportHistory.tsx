@@ -418,7 +418,7 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
         >
           <div
             className="w-full max-w-sm rounded-2xl p-6 shadow-xl"
-            style={{ backgroundColor: 'white' }}
+            style={{ backgroundColor: 'var(--wv-surface)' }}
             onClick={e => e.stopPropagation()}
           >
             <div
@@ -470,7 +470,7 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
         >
           <div
             className="w-full max-w-xs rounded-2xl p-5 shadow-xl"
-            style={{ backgroundColor: 'white' }}
+            style={{ backgroundColor: 'var(--wv-surface)' }}
             onClick={e => e.stopPropagation()}
           >
             <div
