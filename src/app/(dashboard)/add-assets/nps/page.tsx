@@ -181,7 +181,7 @@ export default function Page() {
         {/* Family member selector */}
         {members.length > 1 && (
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
             <Select value={member} onValueChange={setMember}>
               <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -194,7 +194,7 @@ export default function Page() {
         {/* Account Details */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>PRAN *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>PRAN *</Label>
             <Input
               placeholder="e.g. 110012345678"
               required
@@ -204,7 +204,7 @@ export default function Page() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>NPS Tier *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>NPS Tier *</Label>
             <Select value={tier} onValueChange={setTier}>
               <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -214,7 +214,7 @@ export default function Page() {
             </Select>
           </div>
           <div className="space-y-1.5 col-span-2">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Fund Manager *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Fund Manager *</Label>
             <Select value={fundManager} onValueChange={setFundManager}>
               <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select fund manager" /></SelectTrigger>
               <SelectContent>
@@ -223,7 +223,7 @@ export default function Page() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Total Contribution (&#8377;) *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Total Contribution (&#8377;) *</Label>
             <Input
               type="number"
               required
@@ -236,7 +236,7 @@ export default function Page() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Current Value (&#8377;) *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Current Value (&#8377;) *</Label>
             <Input
               type="number"
               required
@@ -249,7 +249,7 @@ export default function Page() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Employer Contribution (&#8377;, optional)</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Employer Contribution (&#8377;, optional)</Label>
             <Input
               type="number"
               min="0"
@@ -264,7 +264,7 @@ export default function Page() {
 
         {/* Notes */}
         <div className="space-y-1.5">
-          <Label className="text-xs" style={{ color: '#6B7280' }}>Notes (optional)</Label>
+          <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes (optional)</Label>
           <Input
             placeholder="Add any notes..."
             value={notes}
@@ -276,10 +276,10 @@ export default function Page() {
         {/* Auto-calculated summary */}
         {contribution > 0 && value > 0 && (
           <div className="rounded-xl p-4 space-y-2"
-            style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
+            style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
             <div className="flex items-center gap-2 mb-2">
               <Calculator className="w-4 h-4" style={{ color: '#C9A84C' }} />
-              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-secondary)' }}>
                 Auto-calculated Summary
               </span>
             </div>
@@ -299,7 +299,7 @@ export default function Page() {
               {empContrib > 0 && (
                 <div className="flex justify-between">
                   <span className="text-gray-500">Self Contribution</span>
-                  <span className="font-medium" style={{ color: '#1B2A4A' }}>{formatCurrency(calcs.selfContribution)}</span>
+                  <span className="font-medium" style={{ color: 'var(--wv-text)' }}>{formatCurrency(calcs.selfContribution)}</span>
                 </div>
               )}
               <div className="flex justify-between">

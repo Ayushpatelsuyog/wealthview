@@ -90,7 +90,7 @@ export function StatCards({ snapshot }: Props) {
       {stats.map((stat) => (
         <div key={stat.label} className="wv-card p-4">
           <div className="flex items-start justify-between mb-2">
-            <p className="text-[10px] uppercase tracking-wider font-medium" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--wv-text-muted)' }}>
               {stat.label}
             </p>
             {stat.badge && (
@@ -105,7 +105,7 @@ export function StatCards({ snapshot }: Props) {
           <p className="font-display text-xl font-semibold leading-none" style={{ color: stat.valueColor ?? '#1A1A2E' }}>
             {stat.value}
           </p>
-          <p className="text-[11px] mt-1.5" style={{ color: '#9CA3AF' }}>{stat.sub}</p>
+          <p className="text-[11px] mt-1.5" style={{ color: 'var(--wv-text-muted)' }}>{stat.sub}</p>
         </div>
       ))}
     </div>

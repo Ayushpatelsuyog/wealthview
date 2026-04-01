@@ -206,7 +206,7 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
     return (
       <div className="flex items-center gap-2 py-6">
         <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#C9A84C' }} />
-        <span className="text-xs" style={{ color: '#9CA3AF' }}>Loading import history…</span>
+        <span className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Loading import history…</span>
       </div>
     );
   }
@@ -214,8 +214,8 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
   if (batches.length === 0) {
     return (
       <div className="text-center py-10">
-        <FileText className="w-8 h-8 mx-auto mb-2" style={{ color: '#E8E5DD' }} />
-        <p className="text-sm" style={{ color: '#9CA3AF' }}>No bulk imports yet</p>
+        <FileText className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--wv-border)' }} />
+        <p className="text-sm" style={{ color: 'var(--wv-text-muted)' }}>No bulk imports yet</p>
         <p className="text-xs mt-1" style={{ color: '#D1D5DB' }}>CAS statement imports will appear here</p>
       </div>
     );
@@ -255,7 +255,7 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
               key={batch.id}
               className="rounded-xl border overflow-hidden"
               style={{
-                borderColor: '#E8E5DD',
+                borderColor: 'var(--wv-border)',
                 opacity: isUndone ? 0.65 : 1,
               }}
             >
@@ -267,7 +267,7 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
                 {/* File icon */}
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: isUndone ? '#F3F4F6' : 'rgba(201,168,76,0.1)' }}
+                  style={{ backgroundColor: isUndone ? 'var(--wv-border)' : 'rgba(201,168,76,0.1)' }}
                 >
                   <FileText className="w-4 h-4" style={{ color: isUndone ? '#D1D5DB' : '#C9A84C' }} />
                 </div>
@@ -278,7 +278,7 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
                     <p
                       className="text-xs font-semibold"
                       style={{
-                        color: '#1A1A2E',
+                        color: 'var(--wv-text)',
                         textDecoration: isUndone ? 'line-through' : 'none',
                         wordBreak: 'break-all',
                       }}
@@ -288,7 +288,7 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
                     <span
                       className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
                       style={{
-                        backgroundColor: isUndone ? '#F3F4F6' : 'rgba(5,150,105,0.1)',
+                        backgroundColor: isUndone ? 'var(--wv-border)' : 'rgba(5,150,105,0.1)',
                         color:           isUndone ? '#9CA3AF' : '#059669',
                       }}
                     >
@@ -296,12 +296,12 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
                     </span>
                     <span
                       className="text-[10px] px-1.5 py-0.5 rounded"
-                      style={{ backgroundColor: '#F7F5F0', color: '#9CA3AF' }}
+                      style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-muted)' }}
                     >
                       {SOURCE_LABELS[batch.source_type] ?? batch.source_type}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 mt-0.5 text-[10px]" style={{ color: '#9CA3AF' }}>
+                  <div className="flex items-center gap-3 mt-0.5 text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                     <span>{fmtDateTime(batch.imported_at)}</span>
                     <span>·</span>
                     <span>{batch.funds_count} fund{batch.funds_count !== 1 ? 's' : ''}</span>
@@ -333,7 +333,7 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
                   <button
                     onClick={() => toggleExpand(batch.id)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-colors"
-                    style={{ borderColor: '#E8E5DD', color: '#6B7280', backgroundColor: '#F7F5F0' }}
+                    style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)', backgroundColor: 'var(--wv-surface-2)' }}
                   >
                     {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                     {isExpanded ? 'Hide' : 'View Details'}
@@ -346,19 +346,19 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
                 <div style={{ borderTop: '1px solid #F0EDE6', backgroundColor: '#FAFAF8' }}>
                   {loadingBatch === batch.id ? (
                     <div className="flex items-center gap-2 px-4 py-3">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: '#9CA3AF' }} />
-                      <span className="text-xs" style={{ color: '#9CA3AF' }}>Loading funds…</span>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: 'var(--wv-text-muted)' }} />
+                      <span className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Loading funds…</span>
                     </div>
                   ) : !holdings || holdings.length === 0 ? (
-                    <p className="px-4 py-3 text-xs" style={{ color: '#9CA3AF' }}>
+                    <p className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-muted)' }}>
                       {isUndone ? 'All funds from this import have been removed.' : 'No holdings found for this import.'}
                     </p>
                   ) : (
                     <table className="w-full text-xs">
                       <thead>
-                        <tr style={{ borderBottom: '1px solid #E8E5DD' }}>
+                        <tr style={{ borderBottom: '1px solid var(--wv-border)' }}>
                           {['Fund', 'Units', 'Avg NAV', 'Invested', ''].map(h => (
-                            <th key={h} className="text-left px-4 py-2 font-medium" style={{ color: '#9CA3AF' }}>{h}</th>
+                            <th key={h} className="text-left px-4 py-2 font-medium" style={{ color: 'var(--wv-text-muted)' }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -368,20 +368,20 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
                           return (
                             <tr key={h.id} style={{ borderBottom: '1px solid #F7F5F0' }}>
                               <td className="px-4 py-2.5">
-                                <p className="font-medium" style={{ color: '#1A1A2E', whiteSpace: 'normal', wordBreak: 'break-word' }}>{h.name}</p>
+                                <p className="font-medium" style={{ color: 'var(--wv-text)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{h.name}</p>
                                 {h.metadata?.folio ? (
                                   <p className="text-[10px] mt-0.5" style={{ color: '#D1D5DB' }}>
                                     Folio: {String(h.metadata.folio)}
                                   </p>
                                 ) : null}
                               </td>
-                              <td className="px-4 py-2.5 font-mono" style={{ color: '#6B7280' }}>
+                              <td className="px-4 py-2.5 font-mono" style={{ color: 'var(--wv-text-secondary)' }}>
                                 {Number(h.quantity).toFixed(3)}
                               </td>
-                              <td className="px-4 py-2.5" style={{ color: '#6B7280' }}>
+                              <td className="px-4 py-2.5" style={{ color: 'var(--wv-text-secondary)' }}>
                                 ₹{Number(h.avg_buy_price).toFixed(4)}
                               </td>
-                              <td className="px-4 py-2.5 font-medium" style={{ color: '#1A1A2E' }}>
+                              <td className="px-4 py-2.5 font-medium" style={{ color: 'var(--wv-text)' }}>
                                 {formatLargeINR(invested)}
                               </td>
                               <td className="px-4 py-2.5 text-right">
@@ -427,10 +427,10 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
             >
               <Trash2 className="w-5 h-5" style={{ color: '#DC2626' }} />
             </div>
-            <h3 className="text-sm font-semibold mb-2" style={{ color: '#1A1A2E' }}>
+            <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--wv-text)' }}>
               Undo this import?
             </h3>
-            <p className="text-xs mb-4 leading-relaxed" style={{ color: '#6B7280' }}>
+            <p className="text-xs mb-4 leading-relaxed" style={{ color: 'var(--wv-text-secondary)' }}>
               This will remove all <strong>{undoConfirm.funds_count} fund{undoConfirm.funds_count !== 1 ? 's' : ''}</strong> and
               their transactions imported from{' '}
               <strong>{undoConfirm.source_filename}</strong> on{' '}
@@ -440,7 +440,7 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
             <div className="flex gap-2">
               <button
                 className="flex-1 h-9 rounded-lg text-xs font-medium border transition-colors"
-                style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
+                style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}
                 onClick={() => setUndoConfirm(null)}
               >
                 Cancel
@@ -479,17 +479,17 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
             >
               <Minus className="w-5 h-5" style={{ color: '#DC2626' }} />
             </div>
-            <h3 className="text-sm font-semibold mb-1" style={{ color: '#1A1A2E' }}>Remove this fund?</h3>
-            <p className="text-xs mb-1" style={{ color: '#6B7280' }}>
+            <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--wv-text)' }}>Remove this fund?</h3>
+            <p className="text-xs mb-1" style={{ color: 'var(--wv-text-secondary)' }}>
               <strong>{removeConfirm.name.split(' - ')[0]}</strong>
             </p>
-            <p className="text-xs mb-4" style={{ color: '#9CA3AF' }}>
+            <p className="text-xs mb-4" style={{ color: 'var(--wv-text-muted)' }}>
               The holding and all its transactions will be deleted permanently.
             </p>
             <div className="flex gap-2">
               <button
                 className="flex-1 h-9 rounded-lg text-xs font-medium border transition-colors"
-                style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
+                style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}
                 onClick={() => setRemoveConfirm(null)}
               >
                 Cancel

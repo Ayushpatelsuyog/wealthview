@@ -198,8 +198,8 @@ export default function SavingsAccountsPortfolioPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1B2A4A' }} />
-        <span className="ml-2 text-sm" style={{ color: '#6B7280' }}>Loading savings accounts...</span>
+        <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--wv-text)' }} />
+        <span className="ml-2 text-sm" style={{ color: 'var(--wv-text-secondary)' }}>Loading savings accounts...</span>
       </div>
     );
   }
@@ -223,8 +223,8 @@ export default function SavingsAccountsPortfolioPage() {
             <Wallet className="w-5 h-5" style={{ color: '#0891b2' }} />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: '#1B2A4A' }}>Savings Accounts</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Bank savings and emergency fund accounts</p>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--wv-text)' }}>Savings Accounts</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Bank savings and emergency fund accounts</p>
           </div>
         </div>
         <Button
@@ -247,30 +247,30 @@ export default function SavingsAccountsPortfolioPage() {
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <IndianRupee className="w-4 h-4" style={{ color: '#C9A84C' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Total Balance</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Total Balance</p>
           </div>
-          <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(summary.totalBalance)}</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(summary.totalBalance)}</p>
         </div>
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <ShieldCheck className="w-4 h-4" style={{ color: '#059669' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Emergency Fund</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Emergency Fund</p>
           </div>
           <p className="text-lg font-bold" style={{ color: '#059669' }}>{formatLargeINR(summary.emergencyTotal)}</p>
         </div>
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <Hash className="w-4 h-4" style={{ color: '#C9A84C' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Accounts</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Accounts</p>
           </div>
-          <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{summary.accountCount}</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{summary.accountCount}</p>
         </div>
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4" style={{ color: '#C9A84C' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Avg Interest Rate</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Avg Interest Rate</p>
           </div>
-          <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{summary.avgRate.toFixed(2)}%</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{summary.avgRate.toFixed(2)}%</p>
         </div>
       </div>
 
@@ -278,8 +278,8 @@ export default function SavingsAccountsPortfolioPage() {
       {rows.length === 0 ? (
         <div className="wv-card p-12 text-center">
           <Wallet className="w-10 h-10 mx-auto mb-3" style={{ color: '#D1D5DB' }} />
-          <p className="text-sm font-medium" style={{ color: '#6B7280' }}>No savings accounts found</p>
-          <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Add your first savings account to start tracking</p>
+          <p className="text-sm font-medium" style={{ color: 'var(--wv-text-secondary)' }}>No savings accounts found</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--wv-text-muted)' }}>Add your first savings account to start tracking</p>
           <Button
             onClick={() => router.push('/add-assets/savings-accounts')}
             className="mt-4 text-white text-sm"
@@ -294,15 +294,15 @@ export default function SavingsAccountsPortfolioPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr style={{ backgroundColor: '#F7F5F0' }}>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Bank</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Type</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Account No.</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Balance</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Interest Rate</th>
-                  <th className="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Emergency</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Last Updated</th>
-                  <th className="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Quick Update</th>
+                <tr style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Bank</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Type</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Account No.</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Balance</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Interest Rate</th>
+                  <th className="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Emergency</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Last Updated</th>
+                  <th className="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Quick Update</th>
                 </tr>
               </thead>
               <tbody>
@@ -318,8 +318,8 @@ export default function SavingsAccountsPortfolioPage() {
                     style={{ borderColor: '#F3F0E8' }}
                   >
                     <td className="px-4 py-3">
-                      <p className="font-medium text-sm" style={{ color: '#1B2A4A' }}>{row.bank}</p>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{row.memberName}</p>
+                      <p className="font-medium text-sm" style={{ color: 'var(--wv-text)' }}>{row.bank}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{row.memberName}</p>
                     </td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#374151' }}>{row.accountType}</td>
                     <td className="px-4 py-3 text-sm font-mono" style={{ color: '#374151' }}>{row.maskedAccount}</td>
@@ -352,7 +352,7 @@ export default function SavingsAccountsPortfolioPage() {
                           </button>
                         </div>
                       ) : (
-                        <span className="font-semibold text-sm" style={{ color: '#1B2A4A' }}>{formatLargeINR(row.balance)}</span>
+                        <span className="font-semibold text-sm" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(row.balance)}</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm text-right" style={{ color: '#374151' }}>{row.interestRate}%</td>
@@ -366,7 +366,7 @@ export default function SavingsAccountsPortfolioPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm" style={{ color: '#9CA3AF' }}>{fmtDate(row.last_updated)}</td>
+                    <td className="px-4 py-3 text-sm" style={{ color: 'var(--wv-text-muted)' }}>{fmtDate(row.last_updated)}</td>
                     <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => {
@@ -391,7 +391,7 @@ export default function SavingsAccountsPortfolioPage() {
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="right" className="overflow-y-auto w-full sm:max-w-md">
           <SheetHeader>
-            <SheetTitle style={{ color: '#1B2A4A' }}>Account Details</SheetTitle>
+            <SheetTitle style={{ color: 'var(--wv-text)' }}>Account Details</SheetTitle>
             <SheetDescription>
               {selectedAsset?.bank} — {selectedAsset?.maskedAccount}
             </SheetDescription>
@@ -402,31 +402,31 @@ export default function SavingsAccountsPortfolioPage() {
               {/* Info grid */}
               <div className="wv-card p-4 grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Bank</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.bank}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Bank</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.bank}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Account Type</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.accountType}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Account Type</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.accountType}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Account Number</p>
-                  <p className="text-sm font-medium font-mono" style={{ color: '#1B2A4A' }}>{selectedAsset.accountNumber}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Account Number</p>
+                  <p className="text-sm font-medium font-mono" style={{ color: 'var(--wv-text)' }}>{selectedAsset.accountNumber}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Member</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.memberName}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Member</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.memberName}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Balance</p>
-                  <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(selectedAsset.balance)}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Balance</p>
+                  <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(selectedAsset.balance)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Interest Rate</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.interestRate}%</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Interest Rate</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.interestRate}%</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Emergency Fund</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Emergency Fund</p>
                   {selectedAsset.isEmergencyFund ? (
                     <span
                       className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
@@ -435,12 +435,12 @@ export default function SavingsAccountsPortfolioPage() {
                       Yes
                     </span>
                   ) : (
-                    <p className="text-sm" style={{ color: '#9CA3AF' }}>No</p>
+                    <p className="text-sm" style={{ color: 'var(--wv-text-muted)' }}>No</p>
                   )}
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Last Updated</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{fmtDate(selectedAsset.last_updated)}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Last Updated</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{fmtDate(selectedAsset.last_updated)}</p>
                 </div>
               </div>
 

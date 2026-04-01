@@ -70,7 +70,7 @@ function statusStyle(status: string): { bg: string; text: string } {
     case 'Active':        return { bg: 'rgba(5,150,105,0.12)', text: '#059669' };
     case 'Maturing Soon': return { bg: 'rgba(217,119,6,0.12)', text: '#D97706' };
     case 'Matured':       return { bg: 'rgba(220,38,38,0.12)', text: '#DC2626' };
-    default:              return { bg: '#F3F4F6', text: '#6B7280' };
+    default:              return { bg: 'var(--wv-border)', text: '#6B7280' };
   }
 }
 
@@ -79,7 +79,7 @@ function ratingStyle(rating: string): { bg: string; text: string } {
   if (['AA', 'AA-', 'A+', 'A'].includes(rating)) return { bg: 'rgba(5,150,105,0.06)', text: '#047857' };
   if (['BBB+', 'BBB'].includes(rating)) return { bg: 'rgba(217,119,6,0.10)', text: '#D97706' };
   if (['BB', 'Below BB'].includes(rating)) return { bg: 'rgba(220,38,38,0.10)', text: '#DC2626' };
-  return { bg: '#F3F4F6', text: '#6B7280' }; // Unrated
+  return { bg: 'var(--wv-border)', text: '#6B7280' }; // Unrated
 }
 
 function formatDate(dateStr: string): string {
@@ -238,8 +238,8 @@ export default function BondsPortfolioPage() {
             <FileText className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: '#1B2A4A' }}>Bonds</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Track your bond investments, coupons &amp; maturities</p>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--wv-text)' }}>Bonds</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Track your bond investments, coupons &amp; maturities</p>
           </div>
         </div>
         <Button
@@ -264,7 +264,7 @@ export default function BondsPortfolioPage() {
       {loading && (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#C9A84C' }} />
-          <span className="ml-3 text-sm" style={{ color: '#9CA3AF' }}>Loading bonds...</span>
+          <span className="ml-3 text-sm" style={{ color: 'var(--wv-text-muted)' }}>Loading bonds...</span>
         </div>
       )}
 
@@ -272,8 +272,8 @@ export default function BondsPortfolioPage() {
       {!loading && bonds.length === 0 && (
         <div className="wv-card p-12 text-center">
           <FileText className="w-12 h-12 mx-auto mb-4" style={{ color: '#C9A84C' }} />
-          <h3 className="text-lg font-semibold mb-2" style={{ color: '#1B2A4A' }}>No Bonds Yet</h3>
-          <p className="text-sm mb-6" style={{ color: '#9CA3AF' }}>Start tracking your bond holdings by adding your first bond.</p>
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--wv-text)' }}>No Bonds Yet</h3>
+          <p className="text-sm mb-6" style={{ color: 'var(--wv-text-muted)' }}>Start tracking your bond holdings by adding your first bond.</p>
           <Button
             onClick={() => router.push('/add-assets/bonds')}
             className="gap-2"
@@ -297,7 +297,7 @@ export default function BondsPortfolioPage() {
               { label: 'Number of Bonds', value: String(bondCount), color: undefined },
             ].map((c) => (
               <div key={c.label} className="wv-card p-4">
-                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: '#9CA3AF' }}>{c.label}</p>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--wv-text-muted)' }}>{c.label}</p>
                 <p className="font-display text-lg font-semibold" style={{ color: c.color ?? '#1B2A4A' }}>{c.value}</p>
               </div>
             ))}
@@ -309,9 +309,9 @@ export default function BondsPortfolioPage() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #E8E5DD' }}>
+                  <tr style={{ borderBottom: '1px solid var(--wv-border)' }}>
                     {['Bond Name', 'Type', 'Rating', 'Units', 'Invested (₹)', 'Coupon Rate', 'Frequency', 'Maturity Date', 'Days to Maturity', 'Status'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap" style={{ color: '#9CA3AF' }}>
+                      <th key={h} className="px-4 py-3 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap" style={{ color: 'var(--wv-text-muted)' }}>
                         {h}
                       </th>
                     ))}
@@ -326,13 +326,13 @@ export default function BondsPortfolioPage() {
                         key={bond.id}
                         onClick={() => openDetail(bond)}
                         className="cursor-pointer transition-colors hover:bg-gray-50"
-                        style={{ borderBottom: '1px solid #F3F4F6' }}
+                        style={{ borderBottom: '1px solid var(--wv-border)' }}
                       >
                         <td className="px-4 py-3">
-                          <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{bond.name}</p>
-                          {bond.memberName && <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{bond.memberName}</p>}
+                          <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{bond.name}</p>
+                          {bond.memberName && <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{bond.memberName}</p>}
                         </td>
-                        <td className="px-4 py-3 text-xs" style={{ color: '#4B5563' }}>{bond.bondType}</td>
+                        <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{bond.bondType}</td>
                         <td className="px-4 py-3">
                           <span
                             className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
@@ -341,11 +341,11 @@ export default function BondsPortfolioPage() {
                             {bond.creditRating}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{bond.quantity}</td>
-                        <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatINRFull(bond.investedValue)}</td>
-                        <td className="px-4 py-3 text-xs font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>{bond.couponRate.toFixed(2)}%</td>
-                        <td className="px-4 py-3 text-xs" style={{ color: '#4B5563' }}>{frequencyLabel(bond.couponFrequency)}</td>
-                        <td className="px-4 py-3 text-xs tabular-nums" style={{ color: '#4B5563' }}>{formatDate(bond.maturityDate)}</td>
+                        <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{bond.quantity}</td>
+                        <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatINRFull(bond.investedValue)}</td>
+                        <td className="px-4 py-3 text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{bond.couponRate.toFixed(2)}%</td>
+                        <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{frequencyLabel(bond.couponFrequency)}</td>
+                        <td className="px-4 py-3 text-xs tabular-nums" style={{ color: 'var(--wv-text-secondary)' }}>{formatDate(bond.maturityDate)}</td>
                         <td className="px-4 py-3 text-xs tabular-nums" style={{ color: bond.daysToMaturity <= 90 ? '#D97706' : '#4B5563' }}>
                           {bond.maturityDate ? `${bond.daysToMaturity} days` : '--'}
                         </td>
@@ -365,7 +365,7 @@ export default function BondsPortfolioPage() {
             </div>
 
             {/* Mobile card layout */}
-            <div className="md:hidden divide-y" style={{ borderColor: '#F3F4F6' }}>
+            <div className="md:hidden divide-y" style={{ borderColor: 'var(--wv-border)' }}>
               {filtered.map((bond) => {
                 const st = statusStyle(bond.status);
                 const rt = ratingStyle(bond.creditRating);
@@ -377,8 +377,8 @@ export default function BondsPortfolioPage() {
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <p className="text-sm font-semibold" style={{ color: '#1A1A2E' }}>{bond.name}</p>
-                        <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                        <p className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>{bond.name}</p>
+                        <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                           {bond.bondType} {bond.memberName ? `· ${bond.memberName}` : ''}
                         </p>
                       </div>
@@ -399,27 +399,27 @@ export default function BondsPortfolioPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Invested</p>
-                        <p className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(bond.investedValue)}</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Invested</p>
+                        <p className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(bond.investedValue)}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Current Value</p>
-                        <p className="text-xs font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>{formatLargeINR(bond.currentValue)}</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
+                        <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(bond.currentValue)}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Coupon</p>
-                        <p className="text-xs font-medium tabular-nums" style={{ color: '#1B2A4A' }}>{bond.couponRate.toFixed(2)}% ({frequencyLabel(bond.couponFrequency)})</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Coupon</p>
+                        <p className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{bond.couponRate.toFixed(2)}% ({frequencyLabel(bond.couponFrequency)})</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Units</p>
-                        <p className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{bond.quantity}</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Units</p>
+                        <p className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{bond.quantity}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Maturity</p>
-                        <p className="text-xs tabular-nums" style={{ color: '#4B5563' }}>{formatDate(bond.maturityDate)}</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Maturity</p>
+                        <p className="text-xs tabular-nums" style={{ color: 'var(--wv-text-secondary)' }}>{formatDate(bond.maturityDate)}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Days Left</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Days Left</p>
                         <p className="text-xs tabular-nums" style={{ color: bond.daysToMaturity <= 90 ? '#D97706' : '#4B5563' }}>
                           {bond.maturityDate ? `${bond.daysToMaturity} days` : '--'}
                         </p>
@@ -445,12 +445,12 @@ export default function BondsPortfolioPage() {
                     <FileText className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold" style={{ color: '#1B2A4A' }}>{selectedBond.name}</h2>
-                    <p className="text-xs" style={{ color: '#9CA3AF' }}>{selectedBond.bondType}</p>
+                    <h2 className="text-base font-bold" style={{ color: 'var(--wv-text)' }}>{selectedBond.name}</h2>
+                    <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>{selectedBond.bondType}</p>
                   </div>
                 </div>
                 {selectedBond.memberName && (
-                  <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Held by: {selectedBond.memberName}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--wv-text-muted)' }}>Held by: {selectedBond.memberName}</p>
                 )}
               </div>
 
@@ -482,7 +482,7 @@ export default function BondsPortfolioPage() {
 
               {/* Bond Details */}
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Bond Details</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Bond Details</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'Bond Type', value: selectedBond.bondType },
@@ -495,8 +495,8 @@ export default function BondsPortfolioPage() {
                     { label: 'Tax Treatment', value: selectedBond.taxTreatment },
                   ].map((item) => (
                     <div key={item.label}>
-                      <p className="text-[10px] uppercase tracking-wider" style={{ color: '#9CA3AF' }}>{item.label}</p>
-                      <p className="text-sm font-medium" style={{ color: '#1A1A2E' }}>{item.value}</p>
+                      <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</p>
+                      <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{item.value}</p>
                     </div>
                   ))}
                 </div>
@@ -504,28 +504,28 @@ export default function BondsPortfolioPage() {
 
               {/* Coupon Info */}
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Coupon Information</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Coupon Information</h3>
                 <div className="wv-card p-4 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Coupon Rate</span>
-                    <span className="text-sm font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>{selectedBond.couponRate.toFixed(2)}%</span>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Coupon Rate</span>
+                    <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{selectedBond.couponRate.toFixed(2)}%</span>
                   </div>
-                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 12 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Frequency</span>
-                    <span className="text-sm font-medium" style={{ color: '#1A1A2E' }}>{frequencyLabel(selectedBond.couponFrequency)}</span>
+                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 12 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Frequency</span>
+                    <span className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{frequencyLabel(selectedBond.couponFrequency)}</span>
                   </div>
-                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 12 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Annual Coupon Income</span>
+                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 12 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Annual Coupon Income</span>
                     <span className="text-sm font-semibold tabular-nums" style={{ color: '#059669' }}>
                       {selectedBond.couponFrequency === 'zero_coupon' ? 'N/A (Zero Coupon)' : `+${formatINRFull(selectedBond.annualCoupon)}`}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid #E8E5DD', paddingTop: 12 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Maturity Date</span>
-                    <span className="text-sm font-medium" style={{ color: '#1A1A2E' }}>{formatDate(selectedBond.maturityDate)}</span>
+                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 12 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Maturity Date</span>
+                    <span className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{formatDate(selectedBond.maturityDate)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Days to Maturity</span>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Days to Maturity</span>
                     <span className="text-sm font-medium tabular-nums" style={{ color: selectedBond.daysToMaturity <= 90 ? '#D97706' : '#1A1A2E' }}>
                       {selectedBond.maturityDate ? `${selectedBond.daysToMaturity} days` : '--'}
                     </span>
@@ -551,12 +551,12 @@ export default function BondsPortfolioPage() {
                 if (extras.length === 0) return null;
                 return (
                   <div className="space-y-3">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Additional Details</h3>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Additional Details</h3>
                     <div className="space-y-2">
                       {extras.map((item) => (
                         <div key={item.label} className="flex justify-between">
-                          <span className="text-xs" style={{ color: '#9CA3AF' }}>{item.label}</span>
-                          <span className="text-xs font-medium text-right max-w-[60%]" style={{ color: '#1A1A2E' }}>{item.value}</span>
+                          <span className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</span>
+                          <span className="text-xs font-medium text-right max-w-[60%]" style={{ color: 'var(--wv-text)' }}>{item.value}</span>
                         </div>
                       ))}
                     </div>
@@ -567,17 +567,17 @@ export default function BondsPortfolioPage() {
               {/* Transaction History */}
               {selectedBond.transactions && selectedBond.transactions.length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Transactions</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Transactions</h3>
                   <div className="space-y-2">
                     {selectedBond.transactions.map((tx) => (
                       <div key={tx.id} className="flex justify-between items-center p-2 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.03)' }}>
                         <div>
-                          <p className="text-xs font-medium capitalize" style={{ color: '#1A1A2E' }}>{tx.type}</p>
-                          <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{formatDate(tx.date)}</p>
+                          <p className="text-xs font-medium capitalize" style={{ color: 'var(--wv-text)' }}>{tx.type}</p>
+                          <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{formatDate(tx.date)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs font-semibold tabular-nums" style={{ color: '#1A1A2E' }}>{tx.quantity} units</p>
-                          <p className="text-[10px] tabular-nums" style={{ color: '#9CA3AF' }}>@ {formatINRFull(tx.price)}</p>
+                          <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{tx.quantity} units</p>
+                          <p className="text-[10px] tabular-nums" style={{ color: 'var(--wv-text-muted)' }}>@ {formatINRFull(tx.price)}</p>
                         </div>
                       </div>
                     ))}
@@ -586,7 +586,7 @@ export default function BondsPortfolioPage() {
               )}
 
               {/* Actions */}
-              <div className="flex gap-3 pt-2" style={{ borderTop: '1px solid #E8E5DD' }}>
+              <div className="flex gap-3 pt-2" style={{ borderTop: '1px solid var(--wv-border)' }}>
                 <Button
                   onClick={() => {
                     router.push(`/add-assets/bonds?edit=${selectedBond.id}`);

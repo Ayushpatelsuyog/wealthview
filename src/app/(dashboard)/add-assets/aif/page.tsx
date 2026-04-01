@@ -251,6 +251,7 @@ function AIFFormContent() {
             notes: notes.trim() || undefined,
           },
           memberId: member,
+          familyId: selectedFamily || undefined,
           portfolioName: portfolioName.trim(),
         }),
       });
@@ -268,18 +269,18 @@ function AIFFormContent() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: '#F7F5F0' }}>
+    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
       <div className="max-w-2xl mx-auto space-y-5">
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-            <Building2 className="w-5 h-5" style={{ color: '#1B2A4A' }} />
+            style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+            <Building2 className="w-5 h-5" style={{ color: 'var(--wv-text)' }} />
           </div>
           <div>
-            <h1 className="text-lg font-bold" style={{ color: '#1B2A4A' }}>Add AIF</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Enter your Alternative Investment Fund details</p>
+            <h1 className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>Add AIF</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Enter your Alternative Investment Fund details</p>
           </div>
         </div>
 
@@ -288,14 +289,14 @@ function AIFFormContent() {
 
         {/* Step 1 — Family & Portfolio */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 1 — Family &amp; Portfolio
           </p>
 
           {/* Family selector */}
           {families.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family</Label>
               <div className="flex flex-wrap gap-2">
                 {families.map(f => (
                   <button key={f.id}
@@ -304,7 +305,7 @@ function AIFFormContent() {
                     style={{
                       backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
                       color: selectedFamily === f.id ? 'white' : '#6B7280',
-                      borderColor: selectedFamily === f.id ? '#1B2A4A' : '#E8E5DD',
+                      borderColor: selectedFamily === f.id ? '#1B2A4A' : 'var(--wv-border)',
                     }}>
                     {f.name}
                   </button>
@@ -316,7 +317,7 @@ function AIFFormContent() {
           {/* Family member */}
           {members.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
               <Select value={member} onValueChange={setMember}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -328,7 +329,7 @@ function AIFFormContent() {
 
           {/* Portfolio name */}
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio Name</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio Name</Label>
             <Input
               value={portfolioName}
               onChange={e => setPortfolioName(e.target.value)}
@@ -341,14 +342,14 @@ function AIFFormContent() {
 
         {/* Step 2 — AIF Details */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 2 — AIF Details
           </p>
 
           <div className="space-y-4">
             {/* AIF Name */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>AIF Name <span style={{ color: '#DC2626' }}>*</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>AIF Name <span style={{ color: '#DC2626' }}>*</span></Label>
               <Input
                 value={aifName}
                 onChange={e => setAifName(e.target.value)}
@@ -361,7 +362,7 @@ function AIFFormContent() {
             {/* Row: Category + Fund Manager */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Category</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Category</Label>
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -370,7 +371,7 @@ function AIFFormContent() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Fund Manager</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Fund Manager</Label>
                 <Input
                   value={fundManager}
                   onChange={e => setFundManager(e.target.value)}
@@ -382,7 +383,7 @@ function AIFFormContent() {
 
             {/* Commitment Amount */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Commitment Amount (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Commitment Amount (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
               <Input
                 type="number"
                 value={commitmentAmount}
@@ -398,7 +399,7 @@ function AIFFormContent() {
             {/* Row: Called Amount + Distributions */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Called Amount (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Called Amount (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={calledAmount}
@@ -411,7 +412,7 @@ function AIFFormContent() {
                 <FieldError msg={errors.calledAmount} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Distributions Received (₹)</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Distributions Received (₹)</Label>
                 <Input
                   type="number"
                   value={distributions}
@@ -426,7 +427,7 @@ function AIFFormContent() {
 
             {/* Current NAV/Valuation */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Current NAV/Valuation (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Current NAV/Valuation (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
               <Input
                 type="number"
                 value={currentValue}
@@ -442,7 +443,7 @@ function AIFFormContent() {
             {/* Row: Vintage Year + Investment Date */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Vintage Year</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Vintage Year</Label>
                 <Input
                   type="number"
                   value={vintageYear}
@@ -454,7 +455,7 @@ function AIFFormContent() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Investment Date <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Investment Date <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="date"
                   value={investmentDate}
@@ -467,7 +468,7 @@ function AIFFormContent() {
 
             {/* Notes */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Notes <span className="text-gray-400">(optional)</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes <span className="text-gray-400">(optional)</span></Label>
               <Input
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
@@ -486,20 +487,20 @@ function AIFFormContent() {
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Uncalled</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(Math.max(0, uncalled))}</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Uncalled</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(Math.max(0, uncalled))}</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(201,168,76,0.08)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>TVPI</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>TVPI</p>
                 <p className="text-sm font-bold" style={{ color: '#C9A84C' }}>{tvpi.toFixed(2)}x</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(5,150,105,0.06)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>DPI</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>DPI</p>
                 <p className="text-sm font-bold" style={{ color: '#059669' }}>{dpi.toFixed(2)}x</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>RVPI</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{rvpi.toFixed(2)}x</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>RVPI</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{rvpi.toFixed(2)}x</p>
               </div>
             </div>
           </div>

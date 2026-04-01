@@ -296,6 +296,7 @@ function RealEstateFormContent() {
             notes: notes.trim() || undefined,
           },
           memberId: member,
+          familyId: selectedFamily || undefined,
           portfolioName: portfolioName.trim(),
         }),
       });
@@ -313,18 +314,18 @@ function RealEstateFormContent() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: '#F7F5F0' }}>
+    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
       <div className="max-w-2xl mx-auto space-y-5">
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-            <Building className="w-5 h-5" style={{ color: '#1B2A4A' }} />
+            style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+            <Building className="w-5 h-5" style={{ color: 'var(--wv-text)' }} />
           </div>
           <div>
-            <h1 className="text-lg font-bold" style={{ color: '#1B2A4A' }}>Add Real Estate</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Track your property investments</p>
+            <h1 className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>Add Real Estate</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Track your property investments</p>
           </div>
         </div>
 
@@ -333,14 +334,14 @@ function RealEstateFormContent() {
 
         {/* Step 1 — Family & Portfolio */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 1 — Family &amp; Portfolio
           </p>
 
           {/* Family selector */}
           {families.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family</Label>
               <div className="flex flex-wrap gap-2">
                 {families.map(f => (
                   <button key={f.id}
@@ -349,7 +350,7 @@ function RealEstateFormContent() {
                     style={{
                       backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
                       color: selectedFamily === f.id ? 'white' : '#6B7280',
-                      borderColor: selectedFamily === f.id ? '#1B2A4A' : '#E8E5DD',
+                      borderColor: selectedFamily === f.id ? '#1B2A4A' : 'var(--wv-border)',
                     }}>
                     {f.name}
                   </button>
@@ -361,7 +362,7 @@ function RealEstateFormContent() {
           {/* Family member */}
           {members.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
               <Select value={member} onValueChange={setMember}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -373,7 +374,7 @@ function RealEstateFormContent() {
 
           {/* Portfolio name */}
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio Name</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio Name</Label>
             <Input
               value={portfolioName}
               onChange={e => setPortfolioName(e.target.value)}
@@ -386,7 +387,7 @@ function RealEstateFormContent() {
 
         {/* Step 2 — Property Details */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 2 — Property Details
           </p>
 
@@ -394,7 +395,7 @@ function RealEstateFormContent() {
             {/* Property Type + Property Name */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Property Type</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Property Type</Label>
                 <Select value={propertyType} onValueChange={setPropertyType}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -403,7 +404,7 @@ function RealEstateFormContent() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Property Name <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Property Name <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   value={propertyName}
                   onChange={e => setPropertyName(e.target.value)}
@@ -416,7 +417,7 @@ function RealEstateFormContent() {
 
             {/* Address */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Street Address</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Street Address</Label>
               <Input
                 value={street}
                 onChange={e => setStreet(e.target.value)}
@@ -427,7 +428,7 @@ function RealEstateFormContent() {
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>City <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>City <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   value={city}
                   onChange={e => setCity(e.target.value)}
@@ -437,7 +438,7 @@ function RealEstateFormContent() {
                 <FieldError msg={errors.city} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>State</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>State</Label>
                 <Input
                   value={state}
                   onChange={e => setState(e.target.value)}
@@ -446,7 +447,7 @@ function RealEstateFormContent() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Pin Code</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Pin Code</Label>
                 <Input
                   value={pin}
                   onChange={e => setPin(e.target.value)}
@@ -459,7 +460,7 @@ function RealEstateFormContent() {
             {/* Area */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Carpet Area (sq ft)</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Carpet Area (sq ft)</Label>
                 <Input
                   type="number"
                   value={carpetArea}
@@ -471,7 +472,7 @@ function RealEstateFormContent() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Super Built-up Area (sq ft)</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Super Built-up Area (sq ft)</Label>
                 <Input
                   type="number"
                   value={superBuiltUp}
@@ -487,7 +488,7 @@ function RealEstateFormContent() {
             {/* Purchase Price + Purchase Date */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Purchase Price (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Purchase Price (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={purchasePrice}
@@ -500,7 +501,7 @@ function RealEstateFormContent() {
                 <FieldError msg={errors.purchasePrice} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Purchase Date <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Purchase Date <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="date"
                   value={purchaseDate}
@@ -513,7 +514,7 @@ function RealEstateFormContent() {
 
             {/* Current Value */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Current Market Value (₹)</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Current Market Value (₹)</Label>
               <Input
                 type="number"
                 value={currentValue}
@@ -528,7 +529,7 @@ function RealEstateFormContent() {
             {/* Registration + Stamp Duty + Ownership */}
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Registration Charges (₹)</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Registration Charges (₹)</Label>
                 <Input
                   type="number"
                   value={registrationCharges}
@@ -540,7 +541,7 @@ function RealEstateFormContent() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Stamp Duty (₹)</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Stamp Duty (₹)</Label>
                 <Input
                   type="number"
                   value={stampDuty}
@@ -552,7 +553,7 @@ function RealEstateFormContent() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Ownership</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Ownership</Label>
                 <Select value={ownership} onValueChange={setOwnership}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -565,7 +566,7 @@ function RealEstateFormContent() {
             {/* Total Cost (auto) */}
             {totalCost > 0 && (
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                   Total Cost (₹)
                   <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium"
                     style={{ backgroundColor: 'rgba(5,150,105,0.1)', color: '#059669' }}>
@@ -578,7 +579,7 @@ function RealEstateFormContent() {
                   readOnly
                   className="h-9 text-xs bg-gray-50"
                 />
-                <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Purchase Price + Registration + Stamp Duty</p>
+                <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Purchase Price + Registration + Stamp Duty</p>
               </div>
             )}
           </div>
@@ -590,17 +591,17 @@ function RealEstateFormContent() {
             onClick={() => setShowLoan(!showLoan)}
             className="flex items-center justify-between w-full"
           >
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--wv-text-muted)' }}>
               Loan Details
             </p>
-            {showLoan ? <ChevronUp className="w-4 h-4" style={{ color: '#9CA3AF' }} /> : <ChevronDown className="w-4 h-4" style={{ color: '#9CA3AF' }} />}
+            {showLoan ? <ChevronUp className="w-4 h-4" style={{ color: 'var(--wv-text-muted)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'var(--wv-text-muted)' }} />}
           </button>
 
           {showLoan && (
             <div className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Loan Amount (₹)</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Loan Amount (₹)</Label>
                   <Input
                     type="number"
                     value={loanAmount}
@@ -612,7 +613,7 @@ function RealEstateFormContent() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Bank / Lender</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Bank / Lender</Label>
                   <Input
                     value={loanBank}
                     onChange={e => setLoanBank(e.target.value)}
@@ -623,7 +624,7 @@ function RealEstateFormContent() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Interest Rate (% p.a.)</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Interest Rate (% p.a.)</Label>
                   <Input
                     type="number"
                     value={loanRate}
@@ -636,7 +637,7 @@ function RealEstateFormContent() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>EMI (₹)</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>EMI (₹)</Label>
                   <Input
                     type="number"
                     value={emi}
@@ -650,7 +651,7 @@ function RealEstateFormContent() {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Loan Start Date</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Loan Start Date</Label>
                   <Input
                     type="date"
                     value={loanStart}
@@ -659,7 +660,7 @@ function RealEstateFormContent() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Tenure (Years)</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Tenure (Years)</Label>
                   <Input
                     type="number"
                     value={loanTenure}
@@ -671,7 +672,7 @@ function RealEstateFormContent() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Outstanding Balance (₹)</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Outstanding Balance (₹)</Label>
                   <Input
                     type="number"
                     value={outstandingBalance}
@@ -693,17 +694,17 @@ function RealEstateFormContent() {
             onClick={() => setShowRental(!showRental)}
             className="flex items-center justify-between w-full"
           >
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--wv-text-muted)' }}>
               Rental Details
             </p>
-            {showRental ? <ChevronUp className="w-4 h-4" style={{ color: '#9CA3AF' }} /> : <ChevronDown className="w-4 h-4" style={{ color: '#9CA3AF' }} />}
+            {showRental ? <ChevronUp className="w-4 h-4" style={{ color: 'var(--wv-text-muted)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'var(--wv-text-muted)' }} />}
           </button>
 
           {showRental && (
             <div className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Monthly Rent (₹)</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Monthly Rent (₹)</Label>
                   <Input
                     type="number"
                     value={monthlyRent}
@@ -715,7 +716,7 @@ function RealEstateFormContent() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Tenant Name</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Tenant Name</Label>
                   <Input
                     value={tenantName}
                     onChange={e => setTenantName(e.target.value)}
@@ -726,7 +727,7 @@ function RealEstateFormContent() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Lease Start Date</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Lease Start Date</Label>
                   <Input
                     type="date"
                     value={leaseStart}
@@ -735,7 +736,7 @@ function RealEstateFormContent() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Lease End Date</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Lease End Date</Label>
                   <Input
                     type="date"
                     value={leaseEnd}
@@ -754,7 +755,7 @@ function RealEstateFormContent() {
         {/* Notes */}
         <div className="wv-card p-5">
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Notes <span className="text-gray-400">(optional)</span></Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes <span className="text-gray-400">(optional)</span></Label>
             <Input
               value={notes}
               onChange={e => setNotes(e.target.value)}
@@ -772,36 +773,36 @@ function RealEstateFormContent() {
             </p>
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Total Cost</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(totalCost)}</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Total Cost</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalCost)}</p>
               </div>
               {curValue > 0 && (
                 <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(5,150,105,0.06)' }}>
-                  <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Current Value</p>
+                  <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
                   <p className="text-sm font-bold" style={{ color: '#059669' }}>{formatLargeINR(curValue)}</p>
                 </div>
               )}
               {loanOut > 0 && (
                 <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(220,38,38,0.06)' }}>
-                  <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Loan Outstanding</p>
+                  <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Loan Outstanding</p>
                   <p className="text-sm font-bold" style={{ color: '#DC2626' }}>{formatLargeINR(loanOut)}</p>
                 </div>
               )}
               {curValue > 0 && (
                 <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                  <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Net Equity</p>
-                  <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(netEquity)}</p>
+                  <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Net Equity</p>
+                  <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(netEquity)}</p>
                 </div>
               )}
               {rentalYield > 0 && (
                 <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(201,168,76,0.08)' }}>
-                  <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Rental Yield</p>
+                  <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Rental Yield</p>
                   <p className="text-sm font-bold" style={{ color: '#C9A84C' }}>{rentalYield.toFixed(2)}%</p>
                 </div>
               )}
               {curValue > 0 && totalCost > 0 && (
                 <div className="text-center p-3 rounded-lg" style={{ backgroundColor: appreciation >= 0 ? 'rgba(5,150,105,0.06)' : 'rgba(220,38,38,0.06)' }}>
-                  <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Appreciation</p>
+                  <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Appreciation</p>
                   <p className="text-sm font-bold" style={{ color: appreciation >= 0 ? '#059669' : '#DC2626' }}>
                     {appreciation >= 0 ? '+' : ''}{formatLargeINR(Math.round(appreciation))} ({appreciationPercent >= 0 ? '+' : ''}{appreciationPercent.toFixed(1)}%)
                   </p>

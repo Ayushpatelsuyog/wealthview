@@ -295,6 +295,7 @@ function BondFormContent() {
           taxTreatment,
           notes: notes.trim() || undefined,
           memberId: member,
+          familyId: selectedFamily || undefined,
           portfolioName: portfolioName.trim(),
         }),
       });
@@ -312,18 +313,18 @@ function BondFormContent() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: '#F7F5F0' }}>
+    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
       <div className="max-w-2xl mx-auto space-y-5">
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-            <FileText className="w-5 h-5" style={{ color: '#1B2A4A' }} />
+            style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+            <FileText className="w-5 h-5" style={{ color: 'var(--wv-text)' }} />
           </div>
           <div>
-            <h1 className="text-lg font-bold" style={{ color: '#1B2A4A' }}>Add Bond</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Enter your bond details for tracking</p>
+            <h1 className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>Add Bond</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Enter your bond details for tracking</p>
           </div>
         </div>
 
@@ -332,14 +333,14 @@ function BondFormContent() {
 
         {/* Step 1 — Family & Portfolio */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 1 — Family &amp; Portfolio
           </p>
 
           {/* Family selector */}
           {families.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family</Label>
               <div className="flex flex-wrap gap-2">
                 {families.map(f => (
                   <button key={f.id}
@@ -348,7 +349,7 @@ function BondFormContent() {
                     style={{
                       backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
                       color: selectedFamily === f.id ? 'white' : '#6B7280',
-                      borderColor: selectedFamily === f.id ? '#1B2A4A' : '#E8E5DD',
+                      borderColor: selectedFamily === f.id ? '#1B2A4A' : 'var(--wv-border)',
                     }}>
                     {f.name}
                   </button>
@@ -360,7 +361,7 @@ function BondFormContent() {
           {/* Family member */}
           {members.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
               <Select value={member} onValueChange={setMember}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -372,7 +373,7 @@ function BondFormContent() {
 
           {/* Portfolio name */}
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio Name</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio Name</Label>
             <Input
               value={portfolioName}
               onChange={e => setPortfolioName(e.target.value)}
@@ -385,7 +386,7 @@ function BondFormContent() {
 
         {/* Step 2 — Bond Details */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 2 — Bond Details
           </p>
 
@@ -393,7 +394,7 @@ function BondFormContent() {
             {/* Row: Bond Type + Credit Rating */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Bond Type</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Bond Type</Label>
                 <Select value={bondType} onValueChange={setBondType}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -402,7 +403,7 @@ function BondFormContent() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Credit Rating</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Credit Rating</Label>
                 <Select value={creditRating} onValueChange={setCreditRating}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -414,7 +415,7 @@ function BondFormContent() {
 
             {/* Bond Name */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Bond Name / Description <span style={{ color: '#DC2626' }}>*</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Bond Name / Description <span style={{ color: '#DC2626' }}>*</span></Label>
               <Input
                 value={bondName}
                 onChange={e => setBondName(e.target.value)}
@@ -426,7 +427,7 @@ function BondFormContent() {
 
             {/* ISIN */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>ISIN <span className="text-gray-400">(optional)</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>ISIN <span className="text-gray-400">(optional)</span></Label>
               <Input
                 value={isin}
                 onChange={e => setIsin(e.target.value)}
@@ -438,7 +439,7 @@ function BondFormContent() {
             {/* Row: Face Value + Purchase Price */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Face Value (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Face Value (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={faceValue}
@@ -451,7 +452,7 @@ function BondFormContent() {
                 <FieldError msg={errors.faceValue} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Purchase Price per Unit (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Purchase Price per Unit (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={purchasePrice}
@@ -468,7 +469,7 @@ function BondFormContent() {
             {/* Row: Number of Units + Purchase Date */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Number of Units / Bonds <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Number of Units / Bonds <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={units}
@@ -481,7 +482,7 @@ function BondFormContent() {
                 <FieldError msg={errors.units} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Purchase Date <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Purchase Date <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="date"
                   value={purchaseDate}
@@ -495,7 +496,7 @@ function BondFormContent() {
             {/* Row: Coupon Rate + Coupon Frequency */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Coupon Rate (% p.a.) <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Coupon Rate (% p.a.) <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={couponRate}
@@ -509,7 +510,7 @@ function BondFormContent() {
                 <FieldError msg={errors.couponRate} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Coupon Frequency</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Coupon Frequency</Label>
                 <Select value={couponFrequency} onValueChange={setCouponFrequency}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -521,7 +522,7 @@ function BondFormContent() {
 
             {/* Maturity Date */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Maturity Date <span style={{ color: '#DC2626' }}>*</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Maturity Date <span style={{ color: '#DC2626' }}>*</span></Label>
               <Input
                 type="date"
                 value={maturityDate}
@@ -533,7 +534,7 @@ function BondFormContent() {
 
             {/* Tax Treatment */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Tax Treatment</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Tax Treatment</Label>
               <Select value={taxTreatment} onValueChange={setTaxTreatment}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -544,7 +545,7 @@ function BondFormContent() {
 
             {/* Notes */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Notes <span className="text-gray-400">(optional)</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes <span className="text-gray-400">(optional)</span></Label>
               <Input
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
@@ -563,23 +564,23 @@ function BondFormContent() {
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Total Investment</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(totalInvestment)}</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Total Investment</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalInvestment)}</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(5,150,105,0.06)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Annual Coupon Income</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Annual Coupon Income</p>
                 <p className="text-sm font-bold" style={{ color: '#059669' }}>
                   {couponFrequency === 'zero_coupon' ? 'N/A' : formatLargeINR(Math.round(annualCouponIncome))}
                 </p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Days to Maturity</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Days to Maturity</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>
                   {daysToMaturity > 0 ? daysToMaturity.toLocaleString('en-IN') : maturityDate ? 'Matured' : '—'}
                 </p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(201,168,76,0.08)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Approx. YTM</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Approx. YTM</p>
                 <p className="text-sm font-bold" style={{ color: '#C9A84C' }}>
                   {yearsToMaturity > 0 ? `${ytm.toFixed(2)}%` : '—'}
                 </p>

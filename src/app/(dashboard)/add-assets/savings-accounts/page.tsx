@@ -149,7 +149,7 @@ export default function Page() {
         {/* Family member selector */}
         {members.length > 1 && (
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
             <Select value={member} onValueChange={setMember}>
               <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -162,7 +162,7 @@ export default function Page() {
         {/* Account details */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Bank Name *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Bank Name *</Label>
             <Input
               required
               placeholder="e.g. SBI, HDFC, ICICI"
@@ -172,7 +172,7 @@ export default function Page() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Account Number</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Account Number</Label>
             <Input
               placeholder="e.g. 1234567890"
               value={accountNumber}
@@ -180,13 +180,13 @@ export default function Page() {
               className="h-9 text-sm"
             />
             {accountNumber.length > 4 && (
-              <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>
+              <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>
                 Display: {maskedAccount}
               </p>
             )}
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Account Type</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Account Type</Label>
             <Select value={accountType} onValueChange={setAccountType}>
               <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -195,7 +195,7 @@ export default function Page() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Current Balance (&#8377;) *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Current Balance (&#8377;) *</Label>
             <Input
               type="number"
               required
@@ -208,7 +208,7 @@ export default function Page() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Interest Rate (% p.a.)</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Interest Rate (% p.a.)</Label>
             <Input
               type="number"
               min="0"
@@ -221,7 +221,7 @@ export default function Page() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>IFSC Code</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>IFSC Code</Label>
             <Input
               placeholder="e.g. SBIN0001234"
               value={ifscCode}
@@ -232,7 +232,7 @@ export default function Page() {
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs" style={{ color: '#6B7280' }}>Branch</Label>
+          <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Branch</Label>
           <Input
             placeholder="e.g. Koramangala, Bangalore"
             value={branch}
@@ -244,7 +244,7 @@ export default function Page() {
         {/* Emergency fund toggle */}
         <label className="flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer select-none"
           style={{ backgroundColor: isEmergencyFund ? 'rgba(5,150,105,0.06)' : '#F7F5F0',
-                   border: `1px solid ${isEmergencyFund ? 'rgba(5,150,105,0.2)' : '#E8E5DD'}` }}>
+                   border: `1px solid ${isEmergencyFund ? 'rgba(5,150,105,0.2)' : 'var(--wv-border)'}` }}>
           <input
             type="checkbox"
             checked={isEmergencyFund}
@@ -256,14 +256,14 @@ export default function Page() {
             <span className="text-sm font-medium" style={{ color: isEmergencyFund ? '#059669' : '#374151' }}>
               Emergency Fund
             </span>
-            <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
               Mark this account as part of your emergency corpus
             </p>
           </div>
         </label>
 
         <div className="space-y-1.5">
-          <Label className="text-xs" style={{ color: '#6B7280' }}>Notes (optional)</Label>
+          <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes (optional)</Label>
           <Input
             placeholder="Add any notes..."
             value={notes}

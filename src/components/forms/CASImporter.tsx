@@ -297,7 +297,7 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
         <label
           className="flex flex-col items-center justify-center w-full rounded-xl border-2 border-dashed cursor-pointer transition-all"
           style={{
-            borderColor: isDragging ? '#C9A84C' : '#E8E5DD',
+            borderColor: isDragging ? '#C9A84C' : 'var(--wv-border)',
             backgroundColor: isDragging ? 'rgba(201,168,76,0.05)' : 'transparent',
             minHeight: '10rem',
           }}
@@ -309,19 +309,19 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
           {isParsing ? (
             <>
               <Loader2 className="w-8 h-8 mb-2 animate-spin" style={{ color: '#C9A84C' }} />
-              <p className="text-sm font-medium" style={{ color: '#6B7280' }}>Parsing statement…</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--wv-text-secondary)' }}>Parsing statement…</p>
             </>
           ) : fileName ? (
             <>
-              <FileText className="w-8 h-8 mb-2" style={{ color: '#1B2A4A' }} />
-              <p className="text-sm font-medium" style={{ color: '#1A1A2E' }}>{fileName}</p>
-              <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Click to choose a different file</p>
+              <FileText className="w-8 h-8 mb-2" style={{ color: 'var(--wv-text)' }} />
+              <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{fileName}</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--wv-text-muted)' }}>Click to choose a different file</p>
             </>
           ) : (
             <>
-              <Upload className="w-8 h-8 mb-2" style={{ color: '#9CA3AF' }} />
-              <p className="text-sm font-medium" style={{ color: '#6B7280' }}>Drop your CAS statement here</p>
-              <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>PDF or CSV · CAMS or KFintech</p>
+              <Upload className="w-8 h-8 mb-2" style={{ color: 'var(--wv-text-muted)' }} />
+              <p className="text-sm font-medium" style={{ color: 'var(--wv-text-secondary)' }}>Drop your CAS statement here</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--wv-text-muted)' }}>PDF or CSV · CAMS or KFintech</p>
             </>
           )}
           <input
@@ -341,13 +341,13 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
         )}
 
         {/* Info box */}
-        <div className="p-3 rounded-xl text-xs space-y-1" style={{ backgroundColor: '#F7F5F0', color: '#6B7280' }}>
+        <div className="p-3 rounded-xl text-xs space-y-1" style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-secondary)' }}>
           <p>
             Upload your CAMS or KFintech CAS statement (PDF or CSV) — download it from{' '}
-            <a href="https://www.mfcentral.com" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: '#1B2A4A' }}>mfcentral.com</a>{' '}
+            <a href="https://www.mfcentral.com" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--wv-text)' }}>mfcentral.com</a>{' '}
             for free.
           </p>
-          <p className="text-[10px]" style={{ color: '#9CA3AF' }}>PDF parsing coming soon — use the text/CSV export for now.</p>
+          <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>PDF parsing coming soon — use the text/CSV export for now.</p>
         </div>
 
         {/* Template download */}
@@ -371,11 +371,11 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
         {/* Header row */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>
+            <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>
               {funds.length} fund{funds.length !== 1 ? 's' : ''} found
-              {fileName && <span className="font-normal ml-1" style={{ color: '#9CA3AF' }}>in {fileName}</span>}
+              {fileName && <span className="font-normal ml-1" style={{ color: 'var(--wv-text-muted)' }}>in {fileName}</span>}
             </p>
-            <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>
               {readyCount} matched · {funds.length - readyCount} need review
             </p>
           </div>
@@ -384,7 +384,7 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
               type="button"
               onClick={() => { setStep(1); setFunds([]); setSelected(new Set()); setParseError(null); setFileName(null); }}
               className="flex items-center gap-1.5 text-xs"
-              style={{ color: '#6B7280' }}
+              style={{ color: 'var(--wv-text-secondary)' }}
             >
               <RefreshCw className="w-3 h-3" />
               Upload different file
@@ -393,11 +393,11 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
         </div>
 
         {/* Fund table */}
-        <div className="rounded-xl border overflow-hidden" style={{ borderColor: '#E8E5DD' }}>
+        <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--wv-border)' }}>
           {/* Table header */}
           <div
             className="grid gap-3 px-3 py-2 text-[10px] font-bold uppercase tracking-widest"
-            style={{ gridTemplateColumns: '1.5rem 1fr 6rem 5rem 6rem 6rem 7rem', backgroundColor: '#F7F5F0', color: '#9CA3AF' }}
+            style={{ gridTemplateColumns: '1.5rem 1fr 6rem 5rem 6rem 6rem 7rem', backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-muted)' }}
           >
             <input
               type="checkbox"
@@ -430,7 +430,7 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
 
                 {/* Fund name + match */}
                 <div className="min-w-0">
-                  <p className="font-medium truncate text-[11px]" style={{ color: '#1A1A2E' }} title={fund.rawName}>
+                  <p className="font-medium truncate text-[11px]" style={{ color: 'var(--wv-text)' }} title={fund.rawName}>
                     {fund.rawName}
                   </p>
                   {fund.matchedSchemeName && fund.matchedSchemeName !== fund.rawName ? (
@@ -453,12 +453,12 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
                             autoFocus
                           />
                           {fund.isSearching && (
-                            <Loader2 className="absolute right-2 top-1.5 w-3 h-3 animate-spin" style={{ color: '#9CA3AF' }} />
+                            <Loader2 className="absolute right-2 top-1.5 w-3 h-3 animate-spin" style={{ color: 'var(--wv-text-muted)' }} />
                           )}
                           {fund.searchResults && fund.searchResults.length > 0 && (
                             <div
                               className="absolute z-30 top-full mt-1 left-0 right-0 rounded-lg border bg-white shadow-lg overflow-y-auto"
-                              style={{ borderColor: '#E8E5DD', maxHeight: '12rem' }}
+                              style={{ borderColor: 'var(--wv-border)', maxHeight: '12rem' }}
                             >
                               {fund.searchResults.slice(0, 6).map(r => (
                                 <button
@@ -476,7 +476,7 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
                           <button
                             type="button"
                             className="mt-1 text-[10px]"
-                            style={{ color: '#9CA3AF' }}
+                            style={{ color: 'var(--wv-text-muted)' }}
                             onClick={() => setFunds(prev => prev.map(f => f.id !== fund.id ? f : { ...f, showSearch: false }))}
                           >
                             Cancel
@@ -499,15 +499,15 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
                 </div>
 
                 {/* Folio */}
-                <p className="text-[10px] pt-0.5" style={{ color: '#9CA3AF' }}>{fund.folio || '—'}</p>
+                <p className="text-[10px] pt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{fund.folio || '—'}</p>
 
                 {/* Units */}
-                <p className="text-[11px] pt-0.5 font-mono" style={{ color: '#1A1A2E' }}>
+                <p className="text-[11px] pt-0.5 font-mono" style={{ color: 'var(--wv-text)' }}>
                   {fund.totalUnits.toFixed(3)}
                 </p>
 
                 {/* Invested */}
-                <p className="text-[11px] pt-0.5" style={{ color: '#1A1A2E' }}>
+                <p className="text-[11px] pt-0.5" style={{ color: 'var(--wv-text)' }}>
                   {formatLargeINR(fund.investedAmount)}
                 </p>
 
@@ -525,11 +525,11 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
 
         {/* Assign metadata */}
         <div className="wv-card p-4 space-y-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>Assign to</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--wv-text-muted)' }}>Assign to</p>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-[10px]" style={{ color: '#6B7280' }}>Family Member</Label>
+              <Label className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
               <Select value={assignMember} onValueChange={setAssignMember}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
@@ -541,7 +541,7 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[10px]" style={{ color: '#6B7280' }}>Portfolio</Label>
+              <Label className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio</Label>
               <Select value={portfolio} onValueChange={setPortfolio}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
@@ -556,7 +556,7 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[10px]" style={{ color: '#6B7280' }}>Distributor / Platform</Label>
+            <Label className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Distributor / Platform</Label>
             <BrokerSelector
               familyId={familyId}
               selectedBrokerId={brokerId}
@@ -570,7 +570,7 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
           onClick={handleImport}
           disabled={selectedCount === 0 || isImporting}
           className="w-full h-10 text-sm font-semibold text-white"
-          style={{ backgroundColor: selectedCount > 0 ? '#C9A84C' : '#E8E5DD' }}
+          style={{ backgroundColor: selectedCount > 0 ? '#C9A84C' : 'var(--wv-border)' }}
         >
           {isImporting ? (
             <span className="flex items-center gap-2">
@@ -603,7 +603,7 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
               : <X className="w-6 h-6" style={{ color: '#DC2626' }} />
             }
           </div>
-          <p className="text-sm font-semibold" style={{ color: '#1A1A2E' }}>
+          <p className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>
             {success
               ? `Successfully imported ${importResult.imported} fund${importResult.imported !== 1 ? 's' : ''}`
               : 'Import failed'
@@ -612,11 +612,11 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
           {success && (
             <div className="mt-3 grid grid-cols-2 gap-3 text-left">
               <div className="p-3 rounded-lg" style={{ backgroundColor: 'white' }}>
-                <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Total Invested</p>
-                <p className="text-sm font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(importResult.totalInvested)}</p>
+                <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Total Invested</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(importResult.totalInvested)}</p>
               </div>
               <div className="p-3 rounded-lg" style={{ backgroundColor: 'white' }}>
-                <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Current Value</p>
+                <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
                 <p className="text-sm font-semibold" style={{ color: '#059669' }}>{formatLargeINR(importResult.totalCurrentValue)}</p>
               </div>
             </div>

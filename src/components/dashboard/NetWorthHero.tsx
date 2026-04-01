@@ -40,7 +40,7 @@ export function NetWorthHero({ snapshot }: Props) {
               Add your investments and assets to see your real net worth, returns, and financial health.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Link href="/add-assets/mutual-funds" className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold" style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>
+              <Link href="/add-assets/mutual-funds" className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold" style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}>
                 <PlusCircle className="w-4 h-4" />
                 Add Mutual Fund
               </Link>
@@ -58,10 +58,10 @@ export function NetWorthHero({ snapshot }: Props) {
 
         <div className="flex flex-col gap-4">
           <div className="wv-card p-5 flex-1 flex items-center justify-center">
-            <p className="text-xs text-center" style={{ color: '#9CA3AF' }}>Monthly growth appears<br />once you add assets</p>
+            <p className="text-xs text-center" style={{ color: 'var(--wv-text-muted)' }}>Monthly growth appears<br />once you add assets</p>
           </div>
           <div className="wv-card p-5 flex-1 flex items-center justify-center">
-            <p className="text-xs text-center" style={{ color: '#9CA3AF' }}>XIRR calculated<br />from your transactions</p>
+            <p className="text-xs text-center" style={{ color: 'var(--wv-text-muted)' }}>XIRR calculated<br />from your transactions</p>
           </div>
         </div>
       </div>
@@ -119,7 +119,7 @@ export function NetWorthHero({ snapshot }: Props) {
       <div className="flex flex-col gap-4">
         <div className="wv-card p-5 flex-1">
           <div className="flex items-start justify-between mb-3">
-            <p className="text-[10px] uppercase tracking-wider font-medium" style={{ color: '#9CA3AF' }}>Unrealised P&L</p>
+            <p className="text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--wv-text-muted)' }}>Unrealised P&L</p>
             <span
               className="flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-full"
               style={{
@@ -134,23 +134,23 @@ export function NetWorthHero({ snapshot }: Props) {
           <p className="font-display text-2xl font-semibold" style={{ color: totalGain >= 0 ? '#059669' : '#DC2626' }}>
             {totalGain >= 0 ? '+' : ''}{formatLargeINR(totalGain)}
           </p>
-          <p className="text-[11px] mt-1" style={{ color: '#9CA3AF' }}>vs {formatLargeINR(totalInvested)} invested</p>
+          <p className="text-[11px] mt-1" style={{ color: 'var(--wv-text-muted)' }}>vs {formatLargeINR(totalInvested)} invested</p>
         </div>
 
         <div className="wv-card p-5 flex-1">
           <div className="flex items-start justify-between mb-3">
-            <p className="text-[10px] uppercase tracking-wider font-medium" style={{ color: '#9CA3AF' }}>Portfolio XIRR</p>
+            <p className="text-[10px] uppercase tracking-wider font-medium" style={{ color: 'var(--wv-text-muted)' }}>Portfolio XIRR</p>
             {overallXirr > 0 && <XirrBadge xirr={overallXirr} />}
           </div>
           {overallXirr > 0 ? (
             <>
               <p className="font-display text-2xl font-semibold" style={{ color: '#059669' }}>{overallXirr.toFixed(1)}%</p>
-              <p className="text-[11px] mt-1" style={{ color: '#9CA3AF' }}>Annualised since inception</p>
+              <p className="text-[11px] mt-1" style={{ color: 'var(--wv-text-muted)' }}>Annualised since inception</p>
             </>
           ) : (
             <>
-              <p className="font-display text-2xl font-semibold" style={{ color: '#9CA3AF' }}>—</p>
-              <p className="text-[11px] mt-1" style={{ color: '#9CA3AF' }}>Add transactions to calculate</p>
+              <p className="font-display text-2xl font-semibold" style={{ color: 'var(--wv-text-muted)' }}>—</p>
+              <p className="text-[11px] mt-1" style={{ color: 'var(--wv-text-muted)' }}>Add transactions to calculate</p>
             </>
           )}
         </div>

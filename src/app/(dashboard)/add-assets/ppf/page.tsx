@@ -161,7 +161,7 @@ export default function Page() {
         {/* Family member selector */}
         {members.length > 1 && (
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
             <Select value={member} onValueChange={setMember}>
               <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -174,7 +174,7 @@ export default function Page() {
         {/* Account details */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>PPF Account Number</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>PPF Account Number</Label>
             <Input
               placeholder="e.g. 1234567890"
               value={accountNumber}
@@ -183,7 +183,7 @@ export default function Page() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Bank / Post Office Name</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Bank / Post Office Name</Label>
             <Input
               placeholder="e.g. SBI, Post Office"
               value={bankName}
@@ -192,7 +192,7 @@ export default function Page() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Account Opening Date *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Account Opening Date *</Label>
             <Input
               type="date"
               required
@@ -202,7 +202,7 @@ export default function Page() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Current Balance (&#8377;) *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Current Balance (&#8377;) *</Label>
             <Input
               type="number"
               required
@@ -217,7 +217,7 @@ export default function Page() {
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs" style={{ color: '#6B7280' }}>Current FY Contribution (&#8377;)</Label>
+          <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Current FY Contribution (&#8377;)</Label>
           <Input
             type="number"
             min="0"
@@ -230,7 +230,7 @@ export default function Page() {
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs" style={{ color: '#6B7280' }}>Notes (optional)</Label>
+          <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes (optional)</Label>
           <Input
             placeholder="Add any notes..."
             value={notes}
@@ -242,21 +242,21 @@ export default function Page() {
         {/* Auto-calculated summary */}
         {openingDate && (
           <div className="rounded-xl p-4 space-y-2"
-            style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
+            style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
             <div className="flex items-center gap-2 mb-2">
               <Calculator className="w-4 h-4" style={{ color: '#C9A84C' }} />
-              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-secondary)' }}>
                 Auto-calculated Summary
               </span>
             </div>
             <div className="grid grid-cols-2 gap-y-2 gap-x-6 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Interest Rate</span>
-                <span className="font-medium" style={{ color: '#1B2A4A' }}>{PPF_INTEREST_RATE}% p.a.</span>
+                <span className="font-medium" style={{ color: 'var(--wv-text)' }}>{PPF_INTEREST_RATE}% p.a.</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Maturity Date</span>
-                <span className="font-medium" style={{ color: '#1B2A4A' }}>
+                <span className="font-medium" style={{ color: 'var(--wv-text)' }}>
                   {maturityDate ? maturityDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '--'}
                 </span>
               </div>

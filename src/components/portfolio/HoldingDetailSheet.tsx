@@ -83,7 +83,7 @@ const CAT_COLORS: Record<string, { bg: string; text: string }> = {
   'Sectoral/Thematic':  { bg: 'rgba(234,88,12,0.12)',   text: '#C2410C' },
   Arbitrage:            { bg: 'rgba(46,139,139,0.10)',  text: '#2E8B8B' },
 };
-function _catStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: '#F3F4F6', text: '#6B7280' }; }
+function _catStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: 'var(--wv-border)', text: '#6B7280' }; }
 
 const ALL_CATEGORIES = [
   'Equity', 'Debt', 'Hybrid', 'ELSS', 'Index/ETF', 'Liquid', 'Gilt',
@@ -345,7 +345,7 @@ function RedemptionForm({
               className="px-2.5 py-1 rounded-md text-[10px] font-medium transition-all"
               style={mode === m
                 ? { backgroundColor: '#DC2626', color: 'white' }
-                : { color: '#6B7280' }}>
+                : { color: 'var(--wv-text-secondary)' }}>
               {m === 'units' ? 'By Units' : 'By Amount'}
             </button>
           ))}
@@ -359,7 +359,7 @@ function RedemptionForm({
 
         {/* Units */}
         <div className="space-y-1">
-          <Label className="text-[10px] flex items-center gap-1" style={{ color: '#6B7280' }}>
+          <Label className="text-[10px] flex items-center gap-1" style={{ color: 'var(--wv-text-secondary)' }}>
             Units to Redeem
             {derivedField === 'units' && (
               <span className="font-semibold text-[9px]" style={{ color: '#059669' }}>AUTO</span>
@@ -384,9 +384,9 @@ function RedemptionForm({
 
         {/* Sell NAV */}
         <div className="space-y-1">
-          <Label className="text-[10px] flex items-center gap-1" style={{ color: '#6B7280' }}>
+          <Label className="text-[10px] flex items-center gap-1" style={{ color: 'var(--wv-text-secondary)' }}>
             Sell NAV (₹)
-            {navFetching && <Loader2 className="w-2.5 h-2.5 animate-spin" style={{ color: '#9CA3AF' }} />}
+            {navFetching && <Loader2 className="w-2.5 h-2.5 animate-spin" style={{ color: 'var(--wv-text-muted)' }} />}
           </Label>
           <Input value={sellNav} onChange={e => handleNavChange(e.target.value)}
             type="number" step="0.0001"
@@ -398,7 +398,7 @@ function RedemptionForm({
 
         {/* Amount */}
         <div className="space-y-1">
-          <Label className="text-[10px] flex items-center gap-1" style={{ color: '#6B7280' }}>
+          <Label className="text-[10px] flex items-center gap-1" style={{ color: 'var(--wv-text-secondary)' }}>
             {mode === 'amount' ? 'Amount Received (₹)' : 'Gross Amount (₹)'}
             {derivedField === 'amount' && (
               <span className="font-semibold text-[9px]" style={{ color: '#059669' }}>AUTO</span>
@@ -418,12 +418,12 @@ function RedemptionForm({
       {/* Date + Reason */}
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
-          <Label className="text-[10px]" style={{ color: '#6B7280' }}>Redemption Date</Label>
+          <Label className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Redemption Date</Label>
           <Input value={sellDate} onChange={e => setSellDate(e.target.value)}
             type="date" className="h-8 text-xs" max={new Date().toISOString().split('T')[0]} />
         </div>
         <div className="space-y-1">
-          <Label className="text-[10px]" style={{ color: '#6B7280' }}>Reason (optional)</Label>
+          <Label className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Reason (optional)</Label>
           <Input value={reason} onChange={e => setReason(e.target.value)}
             placeholder="e.g. Goal completion" className="h-8 text-xs" />
         </div>
@@ -432,33 +432,33 @@ function RedemptionForm({
       {/* Charges & P&L breakdown */}
       {u > 0 && n > 0 && (
         <div className="rounded-lg p-3 space-y-1.5"
-          style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
+          style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
           <div className="flex justify-between text-[11px]">
-            <span style={{ color: '#6B7280' }}>Gross redemption value</span>
-            <span className="font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(redeemValue)}</span>
+            <span style={{ color: 'var(--wv-text-secondary)' }}>Gross redemption value</span>
+            <span className="font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(redeemValue)}</span>
           </div>
           <div className="flex justify-between text-[11px]">
-            <span style={{ color: '#6B7280' }}>STT (0.001%)</span>
+            <span style={{ color: 'var(--wv-text-secondary)' }}>STT (0.001%)</span>
             <span style={{ color: '#DC2626' }}>−₹{stt.toFixed(2)}</span>
           </div>
           {exitLoad > 0 && (
             <div className="flex justify-between text-[11px]">
-              <span style={{ color: '#6B7280' }}>Exit load (1% on units &lt;1yr)</span>
+              <span style={{ color: 'var(--wv-text-secondary)' }}>Exit load (1% on units &lt;1yr)</span>
               <span style={{ color: '#DC2626' }}>−{formatLargeINR(exitLoad)}</span>
             </div>
           )}
-          <div className="flex justify-between text-[11px] border-t pt-1.5" style={{ borderColor: '#E8E5DD' }}>
-            <span className="font-semibold" style={{ color: '#6B7280' }}>Net proceeds</span>
+          <div className="flex justify-between text-[11px] border-t pt-1.5" style={{ borderColor: 'var(--wv-border)' }}>
+            <span className="font-semibold" style={{ color: 'var(--wv-text-secondary)' }}>Net proceeds</span>
             <span className="font-bold" style={{ color: '#059669' }}>{formatLargeINR(netProceeds)}</span>
           </div>
           {pnl && (
             <>
-              <div className="border-t pt-1.5" style={{ borderColor: '#E8E5DD' }}>
-                <p className="text-[10px] font-semibold mb-1" style={{ color: '#9CA3AF' }}>TAX ESTIMATE (informational)</p>
+              <div className="border-t pt-1.5" style={{ borderColor: 'var(--wv-border)' }}>
+                <p className="text-[10px] font-semibold mb-1" style={{ color: 'var(--wv-text-muted)' }}>TAX ESTIMATE (informational)</p>
               </div>
               {pnl.stcg !== 0 && (
                 <div className="flex justify-between text-[11px]">
-                  <span style={{ color: '#6B7280' }}>STCG (&lt;1yr, 20%)</span>
+                  <span style={{ color: 'var(--wv-text-secondary)' }}>STCG (&lt;1yr, 20%)</span>
                   <span style={{ color: pnl.stcg >= 0 ? '#DC2626' : '#059669' }}>
                     {pnl.stcg >= 0 ? '+' : ''}{formatLargeINR(pnl.stcg)} → tax ~{formatLargeINR(Math.max(0, pnl.stcg * 0.2))}
                   </span>
@@ -466,7 +466,7 @@ function RedemptionForm({
               )}
               {pnl.ltcg !== 0 && (
                 <div className="flex justify-between text-[11px]">
-                  <span style={{ color: '#6B7280' }}>LTCG (&gt;1yr, 12.5% above ₹1.25L)</span>
+                  <span style={{ color: 'var(--wv-text-secondary)' }}>LTCG (&gt;1yr, 12.5% above ₹1.25L)</span>
                   <span style={{ color: pnl.ltcg >= 0 ? '#DC2626' : '#059669' }}>
                     {pnl.ltcg >= 0 ? '+' : ''}{formatLargeINR(pnl.ltcg)} → tax ~{formatLargeINR(Math.max(0, (pnl.ltcg - 125000) * 0.125))}
                   </span>
@@ -489,7 +489,7 @@ function RedemptionForm({
           {editingTxn ? 'Save Changes' : 'Confirm Redemption'}
         </Button>
         <Button variant="outline" onClick={onCancel} className="h-8 text-xs"
-          style={{ borderColor: '#E8E5DD', color: '#6B7280' }}>Cancel</Button>
+          style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}>Cancel</Button>
       </div>
     </div>
   );
@@ -564,7 +564,7 @@ function DividendForm({
             className="flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-colors"
             style={divType === t
               ? { backgroundColor: '#059669', color: 'white' }
-              : { backgroundColor: '#F7F5F0', color: '#6B7280', border: '1px solid #E8E5DD' }}>
+              : { backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-secondary)', border: '1px solid var(--wv-border)' }}>
             {t === 'payout' ? 'IDCW Payout' : 'IDCW Reinvestment'}
           </button>
         ))}
@@ -572,24 +572,24 @@ function DividendForm({
 
       <div className={`grid gap-2 ${divType === 'reinvest' ? 'grid-cols-2' : 'grid-cols-2'}`}>
         <div className="space-y-1">
-          <Label className="text-[10px]" style={{ color: '#6B7280' }}>Dividend Amount (₹)</Label>
+          <Label className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Dividend Amount (₹)</Label>
           <Input value={amount} onChange={e => setAmount(e.target.value)}
             type="number" step="0.01" placeholder="Total dividend received" className="h-8 text-xs" />
         </div>
         <div className="space-y-1">
-          <Label className="text-[10px]" style={{ color: '#6B7280' }}>Date</Label>
+          <Label className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Date</Label>
           <Input value={divDate} onChange={e => setDivDate(e.target.value)}
             type="date" className="h-8 text-xs" max={new Date().toISOString().split('T')[0]} />
         </div>
         {divType === 'reinvest' && (
           <>
             <div className="space-y-1">
-              <Label className="text-[10px]" style={{ color: '#6B7280' }}>Units Reinvested</Label>
+              <Label className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Units Reinvested</Label>
               <Input value={units} onChange={e => setUnits(e.target.value)}
                 type="number" step="0.0001" className="h-8 text-xs" />
             </div>
             <div className="space-y-1">
-              <Label className="text-[10px]" style={{ color: '#6B7280' }}>NAV at Reinvestment (₹)</Label>
+              <Label className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>NAV at Reinvestment (₹)</Label>
               <Input value={nav} onChange={e => setNav(e.target.value)}
                 type="number" step="0.0001" className="h-8 text-xs" />
             </div>
@@ -603,7 +603,7 @@ function DividendForm({
           {saving && <Loader2 className="w-3 h-3 animate-spin mr-1" />}Save Dividend
         </Button>
         <Button variant="outline" onClick={onCancel} className="h-8 text-xs"
-          style={{ borderColor: '#E8E5DD', color: '#6B7280' }}>Cancel</Button>
+          style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}>Cancel</Button>
       </div>
     </div>
   );
@@ -1025,17 +1025,17 @@ export function HoldingDetailSheet({
         <div className="flex-1 overflow-y-auto" style={{ display: view === 'edit-transactions' ? 'none' : undefined }}>
 
           {/* ── Fund Summary ── */}
-          <div className="px-6 py-4 border-b" style={{ borderColor: '#E8E5DD' }}>
+          <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--wv-border)' }}>
             <div className="flex items-center gap-3 mb-3 flex-wrap">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
-                style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
-                <BarChart3 className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
-                <span className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>
+                style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+                <BarChart3 className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />
+                <span className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>
                   {h.currentNav
                     ? `₹${h.currentNav.toFixed(4)}`
-                    : <Loader2 className="w-3 h-3 animate-spin inline" style={{ color: '#9CA3AF' }} />}
+                    : <Loader2 className="w-3 h-3 animate-spin inline" style={{ color: 'var(--wv-text-muted)' }} />}
                 </span>
-                {h.navDate && <span className="text-[10px]" style={{ color: '#9CA3AF' }}>NAV · {h.navDate}</span>}
+                {h.navDate && <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>NAV · {h.navDate}</span>}
               </div>
               {h.gainLoss != null && (
                 <span className="text-xs font-semibold"
@@ -1051,8 +1051,8 @@ export function HoldingDetailSheet({
 
             <div className="grid grid-cols-5 gap-2">
               {statTiles.map(({ label, value, color }) => (
-                <div key={label} className="p-2.5 rounded-xl" style={{ backgroundColor: '#F7F5F0' }}>
-                  <p className="text-[9px] uppercase tracking-wider mb-1" style={{ color: '#9CA3AF' }}>{label}</p>
+                <div key={label} className="p-2.5 rounded-xl" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+                  <p className="text-[9px] uppercase tracking-wider mb-1" style={{ color: 'var(--wv-text-muted)' }}>{label}</p>
                   <p className="text-[11px] font-semibold leading-tight" style={{ color: color ?? '#1A1A2E' }}>{value}</p>
                 </div>
               ))}
@@ -1061,9 +1061,9 @@ export function HoldingDetailSheet({
 
           {/* ── SIP Summary Cards ── */}
           {isSIP && sipList.length > 0 && (
-            <div className="px-6 py-4 border-b" style={{ borderColor: '#E8E5DD' }}>
+            <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--wv-border)' }}>
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--wv-text-muted)' }}>
                   SIPs ({sipList.filter(s => s.status !== 'inactive').length} active
                   {sipList.some(s => s.status === 'inactive') ? ` / ${sipList.length} total` : ''})
                 </p>
@@ -1074,13 +1074,13 @@ export function HoldingDetailSheet({
                     className="flex items-center gap-1 text-[10px] font-medium px-2.5 py-1 rounded-lg transition-colors"
                     style={{ backgroundColor: isConsolidated ? '#FEF3C7' : '#F7F5F0',
                              color: isConsolidated ? '#B45309' : '#9CA3AF',
-                             border: `1px solid ${isConsolidated ? '#FDE68A' : '#E8E5DD'}` }}>
+                             border: `1px solid ${isConsolidated ? '#FDE68A' : 'var(--wv-border)'}` }}>
                     <RefreshCw className="w-3 h-3" />
                     {isConsolidated ? 'Expand SIP History' : 'Recalculate Transactions'}
                   </button>
                 )}
                 {recalcState === 'loading' && (
-                  <span className="flex items-center gap-1 text-[10px]" style={{ color: '#9CA3AF' }}>
+                  <span className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                     <Loader2 className="w-3 h-3 animate-spin" />Fetching NAV history…
                   </span>
                 )}
@@ -1105,7 +1105,7 @@ export function HoldingDetailSheet({
                           Confirm
                         </button>
                         <button onClick={() => { setRecalcState('idle'); setRecalcData(null); }}
-                          className="px-3 py-1 rounded-lg text-[11px]" style={{ color: '#6B7280' }}>
+                          className="px-3 py-1 rounded-lg text-[11px]" style={{ color: 'var(--wv-text-secondary)' }}>
                           Cancel
                         </button>
                       </div>
@@ -1114,7 +1114,7 @@ export function HoldingDetailSheet({
                 </div>
               )}
               {recalcState === 'saving' && (
-                <div className="mb-3 flex items-center gap-2 text-[11px]" style={{ color: '#9CA3AF' }}>
+                <div className="mb-3 flex items-center gap-2 text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />Saving {recalcData?.newCount} transactions…
                 </div>
               )}
@@ -1149,7 +1149,7 @@ export function HoldingDetailSheet({
                       key={i}
                       className="p-3 rounded-xl border transition-all"
                       style={{
-                        borderColor: isFiltered ? 'rgba(201,168,76,0.5)' : isInactive ? 'rgba(220,38,38,0.2)' : '#E8E5DD',
+                        borderColor: isFiltered ? 'rgba(201,168,76,0.5)' : isInactive ? 'rgba(220,38,38,0.2)' : 'var(--wv-border)',
                         backgroundColor: isFiltered ? 'rgba(201,168,76,0.08)' : isInactive ? 'rgba(220,38,38,0.02)' : 'rgba(27,42,74,0.01)',
                         boxShadow: isFiltered ? '0 0 0 2px rgba(201,168,76,0.2)' : 'none',
                       }}
@@ -1202,7 +1202,7 @@ export function HoldingDetailSheet({
                             <button
                               onClick={() => { setSipToggleIdx(null); setSipToggleErr(''); }}
                               className="h-7 px-2 rounded text-[11px] flex-shrink-0"
-                              style={{ color: '#6B7280' }}>
+                              style={{ color: 'var(--wv-text-secondary)' }}>
                               ✕
                             </button>
                           </div>
@@ -1211,31 +1211,31 @@ export function HoldingDetailSheet({
 
                       <div className="grid grid-cols-3 gap-2 text-[10px]">
                         <div>
-                          <p style={{ color: '#9CA3AF' }}>Started</p>
-                          <p className="font-semibold mt-0.5" style={{ color: '#1A1A2E' }}>{fmtDate(sip.start_date)}</p>
+                          <p style={{ color: 'var(--wv-text-muted)' }}>Started</p>
+                          <p className="font-semibold mt-0.5" style={{ color: 'var(--wv-text)' }}>{fmtDate(sip.start_date)}</p>
                         </div>
                         {isInactive && sip.stop_date ? (
                           <div>
-                            <p style={{ color: '#9CA3AF' }}>Stopped</p>
+                            <p style={{ color: 'var(--wv-text-muted)' }}>Stopped</p>
                             <p className="font-semibold mt-0.5" style={{ color: '#DC2626' }}>{fmtDate(sip.stop_date)}</p>
                           </div>
                         ) : (
                           <div>
-                            <p style={{ color: '#9CA3AF' }}>Installments</p>
-                            <p className="font-semibold mt-0.5" style={{ color: '#1A1A2E' }}>{grpCount}</p>
+                            <p style={{ color: 'var(--wv-text-muted)' }}>Installments</p>
+                            <p className="font-semibold mt-0.5" style={{ color: 'var(--wv-text)' }}>{grpCount}</p>
                           </div>
                         )}
                         <div>
-                          <p style={{ color: '#9CA3AF' }}>Units</p>
-                          <p className="font-semibold mt-0.5" style={{ color: '#1A1A2E' }}>{grpUnits.toFixed(4)}</p>
+                          <p style={{ color: 'var(--wv-text-muted)' }}>Units</p>
+                          <p className="font-semibold mt-0.5" style={{ color: 'var(--wv-text)' }}>{grpUnits.toFixed(4)}</p>
                         </div>
                         <div>
-                          <p style={{ color: '#9CA3AF' }}>Invested</p>
-                          <p className="font-semibold mt-0.5" style={{ color: '#1A1A2E' }}>{formatLargeINR(grpInvested)}</p>
+                          <p style={{ color: 'var(--wv-text-muted)' }}>Invested</p>
+                          <p className="font-semibold mt-0.5" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(grpInvested)}</p>
                         </div>
                         <div>
-                          <p style={{ color: '#9CA3AF' }}>Avg NAV</p>
-                          <p className="font-semibold mt-0.5" style={{ color: '#1A1A2E' }}>₹{grpAvgNav.toFixed(4)}</p>
+                          <p style={{ color: 'var(--wv-text-muted)' }}>Avg NAV</p>
+                          <p className="font-semibold mt-0.5" style={{ color: 'var(--wv-text)' }}>₹{grpAvgNav.toFixed(4)}</p>
                         </div>
                       </div>
                     </div>
@@ -1246,14 +1246,14 @@ export function HoldingDetailSheet({
           )}
 
           {/* ── Transaction History ── */}
-          <div className="px-6 py-4 border-b" style={{ borderColor: '#E8E5DD' }}>
+          <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--wv-border)' }}>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--wv-text-muted)' }}>
                 Transaction History ({txnsFiltered.length} of {h.transactions.length})
               </p>
               {meta.import === 'cas' && (
                 <span className="text-[9px] px-2 py-0.5 rounded-full"
-                  style={{ backgroundColor: '#F7F5F0', color: '#9CA3AF' }}>CAS Import</span>
+                  style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-muted)' }}>CAS Import</span>
               )}
             </div>
 
@@ -1267,7 +1267,7 @@ export function HoldingDetailSheet({
                     style={{
                       backgroundColor: activeFilter === key ? '#1B2A4A' : '#F7F5F0',
                       color: activeFilter === key ? 'white' : '#6B7280',
-                      border: `1px solid ${activeFilter === key ? '#1B2A4A' : '#E8E5DD'}`,
+                      border: `1px solid ${activeFilter === key ? '#1B2A4A' : 'var(--wv-border)'}`,
                     }}>
                     {label}
                   </button>
@@ -1276,31 +1276,31 @@ export function HoldingDetailSheet({
             )}
 
             {h.transactions.length === 0 ? (
-              <p className="text-xs py-4 text-center" style={{ color: '#9CA3AF' }}>No transactions recorded yet</p>
+              <p className="text-xs py-4 text-center" style={{ color: 'var(--wv-text-muted)' }}>No transactions recorded yet</p>
             ) : txnsFiltered.length === 0 ? (
-              <p className="text-xs py-4 text-center" style={{ color: '#9CA3AF' }}>No transactions match this filter</p>
+              <p className="text-xs py-4 text-center" style={{ color: 'var(--wv-text-muted)' }}>No transactions match this filter</p>
             ) : (
               <>
-                <div className="rounded-xl border overflow-hidden" style={{ borderColor: '#E8E5DD' }}>
+                <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--wv-border)' }}>
                   <div className="overflow-x-auto">
                     <table className="w-full" style={{ fontSize: 11 }}>
                       <thead>
-                        <tr style={{ backgroundColor: '#F7F5F0', borderBottom: '1px solid #E8E5DD' }}>
+                        <tr style={{ backgroundColor: 'var(--wv-surface-2)', borderBottom: '1px solid var(--wv-border)' }}>
                           {['Date', 'Type', 'Amount (₹)', 'NAV (₹)', 'Units', 'Stamp Duty', 'Running Units'].map(col => (
                             <th key={col} className="px-3 py-2 text-left font-semibold whitespace-nowrap"
-                              style={{ color: '#6B7280' }}>{col}</th>
+                              style={{ color: 'var(--wv-text-secondary)' }}>{col}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {txnsVisible.map(t => {
-                          const cfg    = TXN_CONFIG[t.type] ?? { label: t.type, bg: '#F3F4F6', text: '#6B7280', sign: 1 };
+                          const cfg    = TXN_CONFIG[t.type] ?? { label: t.type, bg: 'var(--wv-border)', text: '#6B7280', sign: 1 };
                           const isBuy  = cfg.sign > 0;
                           const amount = Number(t.quantity) * Number(t.price);
                           const label  = txnLabel(t);
                           return (
                             <tr key={t.id} style={{ borderBottom: '1px solid #F7F5F0' }}>
-                              <td className="px-3 py-2 whitespace-nowrap" style={{ color: '#6B7280' }}>
+                              <td className="px-3 py-2 whitespace-nowrap" style={{ color: 'var(--wv-text-secondary)' }}>
                                 {fmtDate(t.date)}
                               </td>
                               <td className="px-3 py-2">
@@ -1321,17 +1321,17 @@ export function HoldingDetailSheet({
                                 style={{ color: isBuy ? '#059669' : '#DC2626' }}>
                                 {isBuy ? '+' : '−'}{formatLargeINR(amount)}
                               </td>
-                              <td className="px-3 py-2 whitespace-nowrap" style={{ color: '#6B7280' }}>
+                              <td className="px-3 py-2 whitespace-nowrap" style={{ color: 'var(--wv-text-secondary)' }}>
                                 {Number(t.price).toFixed(4)}
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap font-medium"
                                 style={{ color: isBuy ? '#059669' : '#DC2626' }}>
                                 {isBuy ? '+' : '−'}{Number(t.quantity).toFixed(4)}
                               </td>
-                              <td className="px-3 py-2 whitespace-nowrap" style={{ color: '#9CA3AF' }}>
+                              <td className="px-3 py-2 whitespace-nowrap" style={{ color: 'var(--wv-text-muted)' }}>
                                 {Number(t.fees) > 0 ? `₹${Number(t.fees).toFixed(2)}` : '—'}
                               </td>
-                              <td className="px-3 py-2 whitespace-nowrap font-semibold" style={{ color: '#1A1A2E' }}>
+                              <td className="px-3 py-2 whitespace-nowrap font-semibold" style={{ color: 'var(--wv-text)' }}>
                                 {(runningMap[t.id] ?? 0).toFixed(4)}
                               </td>
                             </tr>
@@ -1343,24 +1343,24 @@ export function HoldingDetailSheet({
 
                   {/* Summary footer */}
                   <div className="px-4 py-2.5 flex items-center gap-5 flex-wrap"
-                    style={{ backgroundColor: '#F7F5F0', borderTop: '1px solid #E8E5DD' }}>
-                    <span className="text-[10px]" style={{ color: '#6B7280' }}>
-                      Buy txns: <strong style={{ color: '#1A1A2E' }}>{buyTxns.length}</strong>
+                    style={{ backgroundColor: 'var(--wv-surface-2)', borderTop: '1px solid var(--wv-border)' }}>
+                    <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
+                      Buy txns: <strong style={{ color: 'var(--wv-text)' }}>{buyTxns.length}</strong>
                     </span>
-                    <span className="text-[10px]" style={{ color: '#6B7280' }}>
-                      Total invested: <strong style={{ color: '#1A1A2E' }}>{formatLargeINR(totalBuyAmt)}</strong>
+                    <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
+                      Total invested: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalBuyAmt)}</strong>
                     </span>
-                    <span className="text-[10px]" style={{ color: '#6B7280' }}>
-                      Units accumulated: <strong style={{ color: '#1A1A2E' }}>{totalBuyUnits.toFixed(4)}</strong>
+                    <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
+                      Units accumulated: <strong style={{ color: 'var(--wv-text)' }}>{totalBuyUnits.toFixed(4)}</strong>
                     </span>
                     {sellTxns.length > 0 && (
-                      <span className="text-[10px]" style={{ color: '#6B7280' }}>
+                      <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
                         Redeemed: <strong style={{ color: '#DC2626' }}>{formatLargeINR(totalSellAmt)}</strong>
                       </span>
                     )}
                     {totalStampDuty > 0 && (
-                      <span className="text-[10px]" style={{ color: '#6B7280' }}>
-                        Stamp duty: <strong style={{ color: '#9CA3AF' }}>₹{totalStampDuty.toFixed(2)}</strong>
+                      <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
+                        Stamp duty: <strong style={{ color: 'var(--wv-text-muted)' }}>₹{totalStampDuty.toFixed(2)}</strong>
                       </span>
                     )}
                   </div>
@@ -1371,14 +1371,14 @@ export function HoldingDetailSheet({
                   <button
                     onClick={() => setVisibleCount(v => v + 20)}
                     className="w-full mt-3 py-2 rounded-xl text-xs font-medium transition-colors"
-                    style={{ backgroundColor: '#F7F5F0', color: '#6B7280', border: '1px solid #E8E5DD' }}>
+                    style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-secondary)', border: '1px solid var(--wv-border)' }}>
                     Load more ({txnsFiltered.length - visibleCount} remaining)
                   </button>
                 )}
 
                 {/* Note for old consolidated holdings */}
                 {isConsolidated && recalcState !== 'done' && (
-                  <p className="text-[10px] mt-2 px-1" style={{ color: '#9CA3AF' }}>
+                  <p className="text-[10px] mt-2 px-1" style={{ color: 'var(--wv-text-muted)' }}>
                     Showing consolidated SIP entry. Click &quot;Expand SIP History&quot; above to generate individual monthly rows.
                   </p>
                 )}
@@ -1388,17 +1388,17 @@ export function HoldingDetailSheet({
 
           {/* ── Holder Details (collapsible) ── */}
           {hasHolderData && (
-            <div className="border-b" style={{ borderColor: '#E8E5DD' }}>
+            <div className="border-b" style={{ borderColor: 'var(--wv-border)' }}>
               <button
                 onClick={() => setShowHolder(!showHolder)}
                 className="w-full flex items-center justify-between px-6 py-3 text-left hover:bg-gray-50 transition-colors"
               >
-                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--wv-text-muted)' }}>
                   Holder &amp; Contact Details
                 </p>
                 {showHolder
-                  ? <ChevronUp className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
-                  : <ChevronDown className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />}
+                  ? <ChevronUp className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />
+                  : <ChevronDown className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />}
               </button>
               {showHolder && (
                 <div className="px-6 pb-4 space-y-1.5">
@@ -1416,8 +1416,8 @@ export function HoldingDetailSheet({
                     .map(([label, value]) => (
                       <div key={label} className="flex items-center justify-between py-1.5 border-b"
                         style={{ borderColor: '#F7F5F0' }}>
-                        <span className="text-[10px]" style={{ color: '#9CA3AF' }}>{label}</span>
-                        <span className="text-[11px] font-medium" style={{ color: '#1A1A2E' }}>{value}</span>
+                        <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{label}</span>
+                        <span className="text-[11px] font-medium" style={{ color: 'var(--wv-text)' }}>{value}</span>
                       </div>
                     ))}
                 </div>
@@ -1427,7 +1427,7 @@ export function HoldingDetailSheet({
 
           {/* ── Redemption form ── */}
           {showRedeem && (
-            <div className="px-6 py-4 border-b" style={{ borderColor: '#E8E5DD' }}>
+            <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--wv-border)' }}>
               <RedemptionForm
                 holdingId={h.id} symbol={h.symbol} maxUnits={Number(h.quantity)} currentNav={h.currentNav}
                 buyTxns={h.transactions.filter(t => t.type === 'buy' || t.type === 'sip')}
@@ -1445,7 +1445,7 @@ export function HoldingDetailSheet({
 
           {/* ── Dividend form ── */}
           {showDividend && (
-            <div className="px-6 py-4 border-b" style={{ borderColor: '#E8E5DD' }}>
+            <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--wv-border)' }}>
               <DividendForm
                 holdingId={h.id}
                 onSuccess={() => { setShowDividend(false); setDividendDone(true); onHoldingChanged(); }}
@@ -1464,11 +1464,11 @@ export function HoldingDetailSheet({
         {/* ── Edit Transactions view ───────────────────────────────────────────── */}
         {view === 'edit-transactions' && (
           <div className="flex-1 overflow-y-auto">
-            <div className="px-6 py-4 border-b" style={{ borderColor: '#E8E5DD' }}>
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#9CA3AF' }}>
+            <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--wv-border)' }}>
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--wv-text-muted)' }}>
                 Edit Transactions ({h.transactions.length} total)
               </p>
-              <p className="text-[11px]" style={{ color: '#6B7280' }}>
+              <p className="text-[11px]" style={{ color: 'var(--wv-text-secondary)' }}>
                 Pencil edits a single transaction · Trash deletes it permanently
               </p>
               {txnDeleteError && (
@@ -1502,11 +1502,11 @@ export function HoldingDetailSheet({
               )}
 
               {(h.transactions ?? []).length === 0 ? (
-                <p className="px-6 py-8 text-xs text-center" style={{ color: '#9CA3AF' }}>No transactions found</p>
+                <p className="px-6 py-8 text-xs text-center" style={{ color: 'var(--wv-text-muted)' }}>No transactions found</p>
               ) : [...(h.transactions ?? [])]
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                 .map(t => {
-                  const cfg        = TXN_CONFIG[t.type] ?? { label: t.type, bg: '#F3F4F6', text: '#6B7280', sign: 1 };
+                  const cfg        = TXN_CONFIG[t.type] ?? { label: t.type, bg: 'var(--wv-border)', text: '#6B7280', sign: 1 };
                   const amt        = Number(t.quantity) * Number(t.price);
                   const lbl        = txnLabel(t);
                   const isConfirming  = txnDeleteConfirmId === t.id;
@@ -1530,14 +1530,14 @@ export function HoldingDetailSheet({
                               {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Delete'}
                             </Button>
                             <Button variant="outline" onClick={() => setTxnDeleteConfirmId(null)} disabled={isDeleting}
-                              className="h-7 px-3 text-[11px]" style={{ borderColor: '#E8E5DD', color: '#6B7280' }}>
+                              className="h-7 px-3 text-[11px]" style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}>
                               Cancel
                             </Button>
                           </div>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] flex-shrink-0 w-24" style={{ color: '#6B7280' }}>
+                          <span className="text-[11px] flex-shrink-0 w-24" style={{ color: 'var(--wv-text-secondary)' }}>
                             {fmtDate(t.date)}
                           </span>
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap flex-shrink-0"
@@ -1556,19 +1556,19 @@ export function HoldingDetailSheet({
                                 <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold"
                                   style={t.metadata?.is_nfo === true
                                     ? { backgroundColor: 'rgba(37,99,235,0.15)', color: '#2563EB' }
-                                    : { backgroundColor: '#F3F4F6', color: '#D1D5DB', border: '1px dashed #E5E7EB' }}>
+                                    : { backgroundColor: 'var(--wv-border)', color: '#D1D5DB', border: '1px dashed #E5E7EB' }}>
                                   NFO
                                 </span>
                               )}
                             </button>
                           )}
-                          <span className="text-[11px] font-semibold flex-1 text-right" style={{ color: '#1A1A2E' }}>
+                          <span className="text-[11px] font-semibold flex-1 text-right" style={{ color: 'var(--wv-text)' }}>
                             {formatLargeINR(amt)}
                           </span>
-                          <span className="text-[11px] flex-shrink-0 w-20 text-right" style={{ color: '#9CA3AF' }}>
+                          <span className="text-[11px] flex-shrink-0 w-20 text-right" style={{ color: 'var(--wv-text-muted)' }}>
                             ₹{Number(t.price).toFixed(4)}
                           </span>
-                          <span className="text-[11px] flex-shrink-0 w-16 text-right" style={{ color: '#6B7280' }}>
+                          <span className="text-[11px] flex-shrink-0 w-16 text-right" style={{ color: 'var(--wv-text-secondary)' }}>
                             {Number(t.quantity).toFixed(4)}
                           </span>
                           <button
@@ -1608,10 +1608,10 @@ export function HoldingDetailSheet({
 
         {/* ── Action footer ────────────────────────────────────────────────────── */}
         <div className="flex-shrink-0 px-6 py-4 border-t space-y-2"
-          style={{ borderColor: '#E8E5DD', backgroundColor: '#FAFAF8' }}>
+          style={{ borderColor: 'var(--wv-border)', backgroundColor: '#FAFAF8' }}>
           {view === 'edit-transactions' ? (
             <Button variant="outline" onClick={() => setView('detail')} className="w-full h-9 text-[11px]"
-              style={{ borderColor: '#E8E5DD', color: '#6B7280' }}>
+              style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}>
               ← Back to Overview
             </Button>
           ) : (
@@ -1632,7 +1632,7 @@ export function HoldingDetailSheet({
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <Button variant="outline" onClick={() => { setRedeemDone(false); setDividendDone(false); setShowRedeem(!showRedeem); if (showDividend) setShowDividend(false); }}
-                  className="h-9 text-[11px]" style={{ borderColor: '#E8E5DD', color: '#6B7280' }}>
+                  className="h-9 text-[11px]" style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}>
                   {showRedeem ? 'Cancel' : 'Redeem'}
                 </Button>
                 <Button variant="outline" onClick={() => { setDividendDone(false); setRedeemDone(false); setShowDividend(!showDividend); if (showRedeem) setShowRedeem(false); }}
@@ -1641,7 +1641,7 @@ export function HoldingDetailSheet({
                 </Button>
                 <Button variant="outline"
                   onClick={() => setView('edit-transactions')}
-                  className="h-9 text-[11px]" style={{ borderColor: '#E8E5DD', color: '#6B7280' }}>
+                  className="h-9 text-[11px]" style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}>
                   <Edit className="w-3 h-3 mr-1" />Edit
                 </Button>
               </div>

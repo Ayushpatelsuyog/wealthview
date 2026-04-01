@@ -358,13 +358,13 @@ export default function PortfolioPage() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1B2A4A' }} />
+        <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--wv-text)' }} />
       </div>
     );
   }
 
   return (
-    <div className="p-6" style={{ backgroundColor: '#F7F5F0', minHeight: '100%' }}>
+    <div className="p-6" style={{ backgroundColor: 'var(--wv-surface-2)', minHeight: '100%' }}>
       {/* ─── Header ─────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-5">
         <div>
@@ -378,7 +378,7 @@ export default function PortfolioPage() {
           onClick={handleRefresh}
           disabled={navLoading || stockPriceLoading || globalStockLoading}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-          style={{ backgroundColor: '#F7F5F0', color: '#6B7280', border: '1px solid #E8E5DD' }}
+          style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-secondary)', border: '1px solid var(--wv-border)' }}
         >
           <RefreshCw className={`w-3.5 h-3.5 ${navLoading || stockPriceLoading ? 'animate-spin' : ''}`} />
           {navLoading || stockPriceLoading || globalStockLoading ? 'Refreshing…' : 'Refresh'}
@@ -397,17 +397,17 @@ export default function PortfolioPage() {
 
       {/* ─── Summary Cards ──────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="rounded-xl p-4 shadow-sm border border-gray-100">
           <p className="text-xs text-gray-500 mb-1">Total Net Worth</p>
           {navLoading || stockPriceLoading
             ? <div className="h-6 w-24 rounded animate-pulse bg-gray-100 mt-1" />
-            : <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(stats.netWorth)}</p>}
+            : <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(stats.netWorth)}</p>}
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="rounded-xl p-4 shadow-sm border border-gray-100">
           <p className="text-xs text-gray-500 mb-1">Total Invested</p>
           <p className="text-lg font-bold text-gray-800">{formatLargeINR(stats.invested)}</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="rounded-xl p-4 shadow-sm border border-gray-100">
           <p className="text-xs text-gray-500 mb-1">Total P&amp;L</p>
           {navLoading || stockPriceLoading
             ? <div className="h-6 w-24 rounded animate-pulse bg-gray-100 mt-1" />
@@ -420,7 +420,7 @@ export default function PortfolioPage() {
                 </p>
               </div>}
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="rounded-xl p-4 shadow-sm border border-gray-100">
           <p className="text-xs text-gray-500 mb-1">Overall P&amp;L %</p>
           {navLoading || stockPriceLoading
             ? <div className="h-6 w-20 rounded animate-pulse bg-gray-100 mt-1" />
@@ -434,7 +434,7 @@ export default function PortfolioPage() {
       </div>
 
       {/* ─── Asset Class Table ───────────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr style={{ backgroundColor: '#1B2A4A' }}>
@@ -524,7 +524,7 @@ export default function PortfolioPage() {
 
           {/* Totals Row */}
           <tfoot>
-            <tr className="border-t-2 border-gray-200" style={{ backgroundColor: '#F7F5F0' }}>
+            <tr className="border-t-2 border-gray-200" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
               <td className="px-4 py-3 font-bold text-gray-900">Total</td>
               <td className="px-3 py-3 text-right font-bold text-gray-900">{totalHoldings}</td>
               <td className="px-3 py-3 text-right font-bold text-gray-900">{formatLargeINR(totalInvested)}</td>

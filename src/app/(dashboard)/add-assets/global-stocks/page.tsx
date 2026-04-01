@@ -345,6 +345,8 @@ function GlobalStocksFormContent() {
   useEffect(() => {
     if (!selectedFamily) return;
     setFamilyId(selectedFamily);
+    setPortfolioName('');
+    setBrokerId(null);
     const targetFamily = selectedFamily;
     (async () => {
       console.log('Fetching members for family:', targetFamily);
@@ -627,6 +629,7 @@ function GlobalStocksFormContent() {
         portfolioName:   portfolioName,
         brokerId,
         memberId:        member,
+        familyId:        familyId || undefined,
         currentPrice:    stockPrice?.price ?? null,
         currentFxRate:   fxRate?.rate ?? null,
       };
@@ -780,15 +783,15 @@ function GlobalStocksFormContent() {
           <Globe className="w-5 h-5" style={{ color: '#2563eb' }} />
         </div>
         <div>
-          <h1 className="font-display text-xl font-semibold" style={{ color: '#1A1A2E' }}>{isEditMode ? 'Edit Transaction' : 'Add Global Stocks'}</h1>
-          <p className="text-xs" style={{ color: '#9CA3AF' }}>{isEditMode ? 'Update the details of this transaction' : 'Track international equity & ETF holdings across all exchanges'}</p>
+          <h1 className="font-display text-xl font-semibold" style={{ color: 'var(--wv-text)' }}>{isEditMode ? 'Edit Transaction' : 'Add Global Stocks'}</h1>
+          <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>{isEditMode ? 'Update the details of this transaction' : 'Track international equity & ETF holdings across all exchanges'}</p>
         </div>
       </div>
 
       {toast && <ToastBanner toast={toast} onClose={() => setToast(null)} />}
 
       <Tabs defaultValue="manual">
-        <TabsList className="mb-5 w-full" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
+        <TabsList className="mb-5 w-full" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
           <TabsTrigger value="manual" className="flex-1 gap-1.5 text-xs data-[state=active]:bg-white">
             <Globe className="w-3.5 h-3.5" />Manual Entry
           </TabsTrigger>
@@ -805,14 +808,14 @@ function GlobalStocksFormContent() {
 
           {/* Step 1 — Portfolio & Broker */}
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
               Step 1 &mdash; Portfolio &amp; Distributor
             </p>
 
             {/* Family selector */}
             {families.length > 1 && (
               <div className="space-y-1.5 mb-4">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family</Label>
                 <div className="flex flex-wrap gap-2">
                   {families.map(f => (
                     <button key={f.id}
@@ -821,7 +824,7 @@ function GlobalStocksFormContent() {
                       style={{
                         backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
                         color: selectedFamily === f.id ? 'white' : '#6B7280',
-                        borderColor: selectedFamily === f.id ? '#1B2A4A' : '#E8E5DD',
+                        borderColor: selectedFamily === f.id ? '#1B2A4A' : 'var(--wv-border)',
                       }}>
                       {f.name}
                     </button>
@@ -833,7 +836,7 @@ function GlobalStocksFormContent() {
             {/* Family member */}
             {members.length > 1 && (
               <div className="space-y-1.5 mb-4">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
                 <Select value={member} onValueChange={setMember}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -845,7 +848,7 @@ function GlobalStocksFormContent() {
 
             {/* Portfolio */}
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio</Label>
               <PortfolioSelector
                 familyId={familyId}
                 memberId={member}
@@ -857,7 +860,7 @@ function GlobalStocksFormContent() {
 
             {/* Broker */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Distributor / Broker</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Distributor / Broker</Label>
               <BrokerSelector
                 familyId={familyId}
                 selectedBrokerId={brokerId}
@@ -869,13 +872,13 @@ function GlobalStocksFormContent() {
 
           {/* Step 2 — Stock/ETF Search */}
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
               Step 2 &mdash; Search Stock / ETF
             </p>
 
             <div className="relative">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#9CA3AF' }} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--wv-text-muted)' }} />
                 <Input
                   value={query}
                   onChange={e => { if (!isEditMode && !preloadHoldingId) { setQuery(e.target.value); setSelectedStock(null); setStockPrice(null); setFxRate(null); } }}
@@ -885,8 +888,8 @@ function GlobalStocksFormContent() {
                   readOnly={!!(isEditMode || preloadHoldingId)}
                 />
                 {searching
-                  ? <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin" style={{ color: '#9CA3AF' }} />
-                  : <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#9CA3AF' }} />
+                  ? <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin" style={{ color: 'var(--wv-text-muted)' }} />
+                  : <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--wv-text-muted)' }} />
                 }
               </div>
 
@@ -895,7 +898,7 @@ function GlobalStocksFormContent() {
                 <>
                   <div className="fixed inset-0" style={{ zIndex: 9990 }} onClick={() => setShowDrop(false)} />
                   <div className="absolute top-full mt-1 left-0 right-0 rounded-xl border bg-white max-h-72 overflow-y-auto"
-                    style={{ borderColor: '#E8E5DD', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+                    style={{ borderColor: 'var(--wv-border)', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
                     {results.map((s) => (
                       <button key={`${s.symbol}-${s.exchange}`}
                         className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[#F7F5F0] text-left border-b last:border-0 transition-colors"
@@ -907,13 +910,13 @@ function GlobalStocksFormContent() {
                             {s.symbol.slice(0, 2)}
                           </div>
                           <div>
-                            <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>{s.symbol}</p>
-                            <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{s.companyName}</p>
+                            <p className="text-xs font-bold" style={{ color: 'var(--wv-text)' }}>{s.symbol}</p>
+                            <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{s.companyName}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-[10px] font-medium" style={{ color: '#6B7280' }}>{s.exchange}</p>
-                          <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                          <p className="text-[10px] font-medium" style={{ color: 'var(--wv-text-secondary)' }}>{s.exchange}</p>
+                          <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                             {countryFlag(s.country)} {s.country} &middot; {s.currency}
                           </p>
                         </div>
@@ -935,14 +938,14 @@ function GlobalStocksFormContent() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-bold" style={{ color: '#1A1A2E' }}>{selectedStock.companyName}</p>
+                    <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{selectedStock.companyName}</p>
                     <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
                       style={{ backgroundColor: 'rgba(37,99,235,0.1)', color: '#2563eb' }}>
                       {countryFlag(selectedStock.country)} {selectedStock.country}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                    <span className="text-[10px]" style={{ color: '#6B7280' }}>
+                    <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
                       {selectedStock.symbol} &middot; {selectedStock.exchange} &middot; {selectedStock.currency}
                     </span>
                   </div>
@@ -951,11 +954,11 @@ function GlobalStocksFormContent() {
                   {priceLoading ? (
                     <div className="flex items-center gap-1 mt-1">
                       <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#C9A84C' }} />
-                      <span className="text-[10px]" style={{ color: '#9CA3AF' }}>Fetching price...</span>
+                      <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Fetching price...</span>
                     </div>
                   ) : stockPrice ? (
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
-                      <span className="text-sm font-bold" style={{ color: '#1A1A2E' }}>
+                      <span className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>
                         {cSymbol}{stockPrice.price.toLocaleString('en-US', { maximumFractionDigits: 2 })}
                       </span>
                       <span className="text-xs font-medium flex items-center gap-0.5"
@@ -966,7 +969,7 @@ function GlobalStocksFormContent() {
                         {stockPrice.changePct >= 0 ? '+' : ''}{stockPrice.changePct.toFixed(2)}%
                       </span>
                       {fxRate && (
-                        <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                        <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                           ({fmtINR(stockPrice.price * fxRate.rate)} @ {fmtINR(fxRate.rate)}/{stockCurrency})
                         </span>
                       )}
@@ -977,11 +980,11 @@ function GlobalStocksFormContent() {
                   {fxLoading ? (
                     <div className="flex items-center gap-1 mt-0.5">
                       <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#C9A84C' }} />
-                      <span className="text-[10px]" style={{ color: '#9CA3AF' }}>Fetching FX rate...</span>
+                      <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Fetching FX rate...</span>
                     </div>
                   ) : fxRate ? (
                     <div className="flex items-center gap-1 mt-0.5">
-                      <span className="text-[10px] font-medium" style={{ color: '#6B7280' }}>
+                      <span className="text-[10px] font-medium" style={{ color: 'var(--wv-text-secondary)' }}>
                         FX: {fmtINR(fxRate.rate)} per {stockCurrency}
                       </span>
                     </div>
@@ -990,7 +993,7 @@ function GlobalStocksFormContent() {
                 {!isEditMode && (
                   <button className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-100"
                     onClick={() => { setSelectedStock(null); setQuery(''); setStockPrice(null); setFxRate(null); setFxRateValue(''); }}>
-                    <X className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
+                    <X className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />
                   </button>
                 )}
               </div>
@@ -1006,7 +1009,7 @@ function GlobalStocksFormContent() {
               const customText = isOtherMode && sectorOverride !== '__other__' ? sectorOverride : '';
               return (
                 <div className="mt-3 space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                     Sector {selectedStock.sector && <AutoTag label="from search" />}
                   </Label>
                   <select
@@ -1016,7 +1019,7 @@ function GlobalStocksFormContent() {
                       setSectorOverride(v === 'Other' ? '__other__' : v);
                     }}
                     className="h-9 text-xs rounded-lg border px-2 w-full"
-                    style={{ borderColor: '#E8E5DD', color: '#1A1A2E', backgroundColor: 'white' }}>
+                    style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)', backgroundColor: 'white' }}>
                     <option value="">Select sector...</option>
                     {[...STANDARD_SECTORS, 'Other'].map(s => (
                       <option key={s} value={s}>{s}</option>
@@ -1038,7 +1041,7 @@ function GlobalStocksFormContent() {
           {/* Step 3 — Transaction Details */}
           {selectedStock && (
             <div className="wv-card p-5">
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
                 Step 3 &mdash; Transaction Details
               </p>
 
@@ -1051,7 +1054,7 @@ function GlobalStocksFormContent() {
                     style={{
                       backgroundColor: txnType === t.key ? '#1B2A4A' : 'transparent',
                       color:           txnType === t.key ? 'white'   : '#6B7280',
-                      borderColor:     txnType === t.key ? '#1B2A4A' : '#E8E5DD',
+                      borderColor:     txnType === t.key ? '#1B2A4A' : 'var(--wv-border)',
                     }}>
                     {t.label}
                   </button>
@@ -1064,7 +1067,7 @@ function GlobalStocksFormContent() {
                   {/* Date */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Date</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Date</Label>
                       <Input
                         type="date" value={date} onChange={e => setDate(e.target.value)}
                         className="h-9 text-xs"
@@ -1072,7 +1075,7 @@ function GlobalStocksFormContent() {
                       <FieldError msg={errors.date} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                         Quantity (shares)
                       </Label>
                       <Input
@@ -1087,7 +1090,7 @@ function GlobalStocksFormContent() {
                   {/* Price & Currency */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                         {txnType === 'sell' ? 'Sell' : 'Buy'} Price ({cSymbol})
                         {priceLoaded && <AutoTag label="auto-fetched" />}
                       </Label>
@@ -1099,7 +1102,7 @@ function GlobalStocksFormContent() {
                       <FieldError msg={errors.price} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Currency</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Currency</Label>
                       <Input
                         value={`${stockCurrency} (${cSymbol})`}
                         readOnly
@@ -1110,9 +1113,9 @@ function GlobalStocksFormContent() {
 
                   {/* Brokerage / Charges — before FX rate so it's included in Invested INR */}
                   <div className="pt-3 border-t space-y-2.5" style={{ borderColor: '#F0EDE6' }}>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#9CA3AF' }}>Charges</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--wv-text-muted)' }}>Charges</p>
                     <div className="flex items-center gap-2">
-                      <Label className="text-xs w-44 flex-shrink-0" style={{ color: '#6B7280' }}>Brokerage / Charges ({cSymbol})</Label>
+                      <Label className="text-xs w-44 flex-shrink-0" style={{ color: 'var(--wv-text-secondary)' }}>Brokerage / Charges ({cSymbol})</Label>
                       <Input
                         type="number" step="0.01" min="0"
                         value={brokerage} onChange={e => setBrokerage(e.target.value)}
@@ -1123,7 +1126,7 @@ function GlobalStocksFormContent() {
 
                   {/* FX Rate */}
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                       FX Rate ({stockCurrency} to INR)
                       {fxRateLoaded && <AutoTag label="auto-fetched" />}
                     </Label>
@@ -1146,14 +1149,14 @@ function GlobalStocksFormContent() {
                   {qty > 0 && px > 0 && fx > 0 && (
                     <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.08)' }}>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium" style={{ color: '#6B7280' }}>
+                        <span className="text-xs font-medium" style={{ color: 'var(--wv-text-secondary)' }}>
                           {txnType === 'buy' ? 'Total Invested' : 'Sale Value'} in INR
                         </span>
-                        <span className="text-xs font-bold" style={{ color: '#1A1A2E' }}>
+                        <span className="text-xs font-bold" style={{ color: 'var(--wv-text)' }}>
                           {formatLargeINR(valueINR)}
                         </span>
                       </div>
-                      <p className="text-[10px] mt-0.5 text-right" style={{ color: '#9CA3AF' }}>
+                      <p className="text-[10px] mt-0.5 text-right" style={{ color: 'var(--wv-text-muted)' }}>
                         ({cSymbol}{valueLocal.toFixed(2)}{brokerageNum > 0 ? ` + ${cSymbol}${brokerageNum.toFixed(2)} charges` : ''}) &times; ₹{fx.toFixed(4)}/{stockCurrency} = ₹{valueINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                       </p>
                     </div>
@@ -1161,13 +1164,13 @@ function GlobalStocksFormContent() {
 
                   {/* Notes */}
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Notes (optional)</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes (optional)</Label>
                     <textarea
                       value={notes}
                       onChange={e => setNotes(e.target.value)}
                       placeholder="Any additional notes about this transaction..."
                       className="w-full rounded-lg border px-3 py-2 text-xs min-h-[60px] resize-y focus:outline-none focus:ring-2 focus:ring-offset-0"
-                      style={{ borderColor: '#E8E5DD', color: '#1A1A2E' }}
+                      style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }}
                     />
                   </div>
                 </div>
@@ -1178,12 +1181,12 @@ function GlobalStocksFormContent() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Ex-Dividend Date</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Ex-Dividend Date</Label>
                       <Input type="date" value={exDate} onChange={e => setExDate(e.target.value)} className="h-9 text-xs" />
                       <FieldError msg={errors.exDate} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Payment Date</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Payment Date</Label>
                       <Input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="h-9 text-xs" />
                       <FieldError msg={errors.payDate} />
                     </div>
@@ -1191,7 +1194,7 @@ function GlobalStocksFormContent() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Dividend per Share ({cSymbol})</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Dividend per Share ({cSymbol})</Label>
                       <Input
                         type="number" step="0.01" min="0.01"
                         value={divPerShare} onChange={e => setDivPerShare(e.target.value)}
@@ -1200,7 +1203,7 @@ function GlobalStocksFormContent() {
                       <FieldError msg={errors.divPerShare} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                         Withholding Tax (%)
                       </Label>
                       <Input
@@ -1208,7 +1211,7 @@ function GlobalStocksFormContent() {
                         value={withholdingTax} onChange={e => setWithholdingTax(e.target.value)}
                         placeholder="25" className="h-9 text-xs"
                       />
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                         Default: {DEFAULT_WITHHOLDING_TAX[stockCurrency] ?? 25}% for {stockCurrency} stocks
                       </p>
                     </div>
@@ -1216,7 +1219,7 @@ function GlobalStocksFormContent() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                         Quantity (shares held)
                       </Label>
                       <Input
@@ -1226,7 +1229,7 @@ function GlobalStocksFormContent() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                         FX Rate on Payment Date ({stockCurrency} to INR)
                         {divFxRateLoaded && <AutoTag label="auto-fetched" />}
                       </Label>
@@ -1244,13 +1247,13 @@ function GlobalStocksFormContent() {
                   {divPS > 0 && qty > 0 && (
                     <div className="p-3 rounded-xl space-y-1.5" style={{ backgroundColor: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.15)' }}>
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px]" style={{ color: '#6B7280' }}>Gross Dividend</span>
-                        <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                        <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Gross Dividend</span>
+                        <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                           {qty} &times; {cSymbol}{divPS.toFixed(2)} = {fmtLocal(grossDiv)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px]" style={{ color: '#6B7280' }}>Withholding Tax ({divTaxPct}%)</span>
+                        <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Withholding Tax ({divTaxPct}%)</span>
                         <span className="text-xs font-medium" style={{ color: '#DC2626' }}>
                           &minus;{fmtLocal(grossDiv * divTaxPct / 100)}
                         </span>
@@ -1260,7 +1263,7 @@ function GlobalStocksFormContent() {
                         <span className="text-xs font-bold" style={{ color: '#059669' }}>
                           {fmtLocal(netDivLocal)}
                           {divFx > 0 && (
-                            <span className="ml-1 text-[10px] font-normal" style={{ color: '#6B7280' }}>
+                            <span className="ml-1 text-[10px] font-normal" style={{ color: 'var(--wv-text-secondary)' }}>
                               ({fmtINR(netDivINR)})
                             </span>
                           )}
@@ -1271,13 +1274,13 @@ function GlobalStocksFormContent() {
 
                   {/* Notes */}
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Notes (optional)</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes (optional)</Label>
                     <textarea
                       value={notes}
                       onChange={e => setNotes(e.target.value)}
                       placeholder="Any additional notes about this dividend..."
                       className="w-full rounded-lg border px-3 py-2 text-xs min-h-[60px] resize-y focus:outline-none focus:ring-2 focus:ring-offset-0"
-                      style={{ borderColor: '#E8E5DD', color: '#1A1A2E' }}
+                      style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }}
                     />
                   </div>
                 </div>
@@ -1288,22 +1291,22 @@ function GlobalStocksFormContent() {
                 <div className="mt-4 p-3 rounded-xl grid grid-cols-3 gap-3"
                   style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.08)' }}>
                   <div>
-                    <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                    <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                       {txnType === 'buy' ? 'Invested' : 'Sale Value'}
                     </p>
-                    <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>
+                    <p className="text-xs font-bold" style={{ color: 'var(--wv-text)' }}>
                       {fmtLocal(valueLocal)} ({formatLargeINR(valueINR)})
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px]" style={{ color: '#9CA3AF' }}>FX Rate</p>
-                    <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>
+                    <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>FX Rate</p>
+                    <p className="text-xs font-bold" style={{ color: 'var(--wv-text)' }}>
                       {fmtINR(fx)}/{stockCurrency}
                     </p>
                   </div>
                   {stockPrice && (
                     <div>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>vs CMP</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>vs CMP</p>
                       {(() => {
                         const diff = txnType === 'buy' ? stockPrice.price - px : px - stockPrice.price;
                         const diffPct = px > 0 ? (diff / px) * 100 : 0;
@@ -1323,9 +1326,9 @@ function GlobalStocksFormContent() {
           {/* Holder info */}
           {selectedStock && (
             <div className="px-4 py-3 rounded-xl flex items-center gap-2 text-xs"
-              style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
-              <User className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#9CA3AF' }} />
-              <span style={{ color: '#6B7280' }}>Holder &amp; account details are managed per distributor.</span>
+              style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+              <User className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--wv-text-muted)' }} />
+              <span style={{ color: 'var(--wv-text-secondary)' }}>Holder &amp; account details are managed per distributor.</span>
               <button
                 type="button"
                 onClick={() => router.push('/settings?tab=distributors')}
@@ -1340,7 +1343,7 @@ function GlobalStocksFormContent() {
           {selectedStock && (
             <div className="flex gap-3">
               <Button onClick={() => handleSave(false)} disabled={saving} className="flex-1 h-10 text-xs font-semibold"
-                style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>
+                style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}>
                 {saving
                   ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />{isEditMode ? 'Updating...' : 'Saving...'}</>
                   : isEditMode ? 'Update Transaction' : `Save ${txnType.charAt(0).toUpperCase() + txnType.slice(1)}`}
@@ -1351,7 +1354,7 @@ function GlobalStocksFormContent() {
                   Save &amp; Add Another
                 </Button>
               )}
-              <Button variant="outline" className="h-10 text-xs px-4" style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
+              <Button variant="outline" className="h-10 text-xs px-4" style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}
                 onClick={() => router.back()}>
                 Cancel
               </Button>
@@ -1362,14 +1365,14 @@ function GlobalStocksFormContent() {
         {/* ── Tab 2: CSV Import ───────────────────────────────────────────────── */}
         <TabsContent value="import">
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
               CSV Import
             </p>
             <div className="grid grid-cols-2 gap-3 mb-5">
               {['Vested CSV Export', 'IBKR Activity Statement', 'Charles Schwab CSV', 'INDmoney Export', 'Groww US Stocks CSV', 'Custom CSV'].map(fmt => (
-                <div key={fmt} className="p-3 rounded-xl border flex items-center gap-2" style={{ borderColor: '#E8E5DD' }}>
+                <div key={fmt} className="p-3 rounded-xl border flex items-center gap-2" style={{ borderColor: 'var(--wv-border)' }}>
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#C9A84C' }} />
-                  <span className="text-xs" style={{ color: '#6B7280' }}>{fmt}</span>
+                  <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{fmt}</span>
                 </div>
               ))}
             </div>
@@ -1377,16 +1380,16 @@ function GlobalStocksFormContent() {
               style={{ borderColor: 'rgba(201,168,76,0.3)', backgroundColor: 'rgba(201,168,76,0.04)' }}>
               <Building2 className="w-8 h-8" style={{ color: '#C9A84C' }} />
               <p className="text-sm font-semibold" style={{ color: '#C9A84C' }}>Coming Soon</p>
-              <p className="text-xs text-center" style={{ color: '#9CA3AF' }}>
+              <p className="text-xs text-center" style={{ color: 'var(--wv-text-muted)' }}>
                 Support for Vested CSV, IBKR Activity Statement, Schwab CSV.<br />
                 Upload your broker export and we&apos;ll auto-map all your transactions.
               </p>
             </div>
             <label className="flex flex-col items-center justify-center w-full h-32 rounded-xl border-2 border-dashed cursor-not-allowed opacity-50"
-              style={{ borderColor: '#E8E5DD' }}>
-              <Upload className="w-7 h-7 mb-2" style={{ color: '#9CA3AF' }} />
-              <p className="text-sm font-medium" style={{ color: '#6B7280' }}>Upload statement</p>
-              <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>.xlsx, .csv, .pdf</p>
+              style={{ borderColor: 'var(--wv-border)' }}>
+              <Upload className="w-7 h-7 mb-2" style={{ color: 'var(--wv-text-muted)' }} />
+              <p className="text-sm font-medium" style={{ color: 'var(--wv-text-secondary)' }}>Upload statement</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--wv-text-muted)' }}>.xlsx, .csv, .pdf</p>
             </label>
           </div>
         </TabsContent>
@@ -1394,7 +1397,7 @@ function GlobalStocksFormContent() {
         {/* ── Tab 3: Broker Sync ─────────────────────────────────────────────── */}
         <TabsContent value="sync">
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
               Broker API Sync
             </p>
             <div className="grid grid-cols-2 gap-3">
@@ -1404,7 +1407,7 @@ function GlobalStocksFormContent() {
                 { name: 'IBKR',         color: '#DC2626', letter: 'IB', status: 'Soon' },
                 { name: 'Charles Schwab', color: '#0072CE', letter: 'CS', status: 'Soon' },
               ].map(api => (
-                <div key={api.name} className="p-4 rounded-xl border" style={{ borderColor: '#E8E5DD' }}>
+                <div key={api.name} className="p-4 rounded-xl border" style={{ borderColor: 'var(--wv-border)' }}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
                       style={{ backgroundColor: api.color }}>
@@ -1415,9 +1418,9 @@ function GlobalStocksFormContent() {
                       Coming Soon
                     </span>
                   </div>
-                  <p className="text-xs font-semibold mb-3" style={{ color: '#1A1A2E' }}>{api.name}</p>
+                  <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>{api.name}</p>
                   <Button disabled className="w-full h-7 text-[11px]"
-                    style={{ backgroundColor: '#F7F5F0', color: '#9CA3AF' }}>
+                    style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-muted)' }}>
                     Connect
                   </Button>
                 </div>

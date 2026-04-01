@@ -34,6 +34,7 @@ interface ImportRequest {
   funds: ImportFund[];
   sourceFilename?: string;
   sourceType?: string;
+  familyId?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .single();
 
-  let familyId: string = profile?.family_id;
+  let familyId: string = body.familyId || profile?.family_id;
   if (!familyId) {
     const { data: newFamily, error: famErr } = await supabase
       .from('families')

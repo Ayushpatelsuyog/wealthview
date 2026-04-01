@@ -36,22 +36,22 @@ export function CashFlows({ snapshot }: Props) {
     <div className="wv-card p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="section-heading text-sm flex-1">Cash Flows</h3>
-        <span className="text-xs ml-4" style={{ color: '#9CA3AF' }}>Next 90 days</span>
+        <span className="text-xs ml-4" style={{ color: 'var(--wv-text-muted)' }}>Next 90 days</span>
       </div>
 
       {!hasRealData || cashFlows.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-6 gap-3">
-          <p className="text-xs text-center" style={{ color: '#9CA3AF' }}>
+          <p className="text-xs text-center" style={{ color: 'var(--wv-text-muted)' }}>
             No upcoming cash flows
           </p>
           <p className="text-[11px] text-center" style={{ color: '#D1D5DB' }}>
             Add FDs, insurance policies, or SIPs to track upcoming inflows &amp; outflows
           </p>
           <div className="flex gap-2">
-            <Link href="/add-assets/fixed-deposits" className="text-xs font-medium px-3 py-1.5 rounded-lg" style={{ backgroundColor: '#F7F5F0', color: '#6B7280' }}>
+            <Link href="/add-assets/fixed-deposits" className="text-xs font-medium px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-secondary)' }}>
               Add FD
             </Link>
-            <Link href="/add-assets/insurance" className="text-xs font-medium px-3 py-1.5 rounded-lg" style={{ backgroundColor: '#F7F5F0', color: '#6B7280' }}>
+            <Link href="/add-assets/insurance" className="text-xs font-medium px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-secondary)' }}>
               Add Insurance
             </Link>
           </div>
@@ -62,7 +62,7 @@ export function CashFlows({ snapshot }: Props) {
             {cashFlows.map((f, i) => {
               const isInflow = f.amount >= 0;
               return (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: '#F7F5F0' }}>
+                <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
                   <div
                     className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: isInflow ? 'rgba(5,150,105,0.1)' : 'rgba(220,38,38,0.1)' }}
@@ -74,12 +74,12 @@ export function CashFlows({ snapshot }: Props) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-medium truncate" style={{ color: '#1A1A2E' }}>{f.description}</p>
-                      <span className="text-[9px] px-1 py-0.5 rounded flex-shrink-0" style={{ backgroundColor: '#E8E5DD', color: '#6B7280' }}>
+                      <p className="text-xs font-medium truncate" style={{ color: 'var(--wv-text)' }}>{f.description}</p>
+                      <span className="text-[9px] px-1 py-0.5 rounded flex-shrink-0" style={{ backgroundColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}>
                         {typeLabels[f.type] ?? f.type}
                       </span>
                     </div>
-                    <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{fmtDate(f.date)}</p>
+                    <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{fmtDate(f.date)}</p>
                   </div>
                   <span
                     className="text-xs font-bold flex-shrink-0"
@@ -92,8 +92,8 @@ export function CashFlows({ snapshot }: Props) {
             })}
           </div>
 
-          <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid #E8E5DD' }}>
-            <span className="text-xs font-medium" style={{ color: '#6B7280' }}>Net Cash Flow</span>
+          <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--wv-border)' }}>
+            <span className="text-xs font-medium" style={{ color: 'var(--wv-text-secondary)' }}>Net Cash Flow</span>
             <span className="text-sm font-bold" style={{ color: net >= 0 ? '#059669' : '#DC2626' }}>
               {net >= 0 ? '+' : ''}{fmtAmount(net)}
             </span>

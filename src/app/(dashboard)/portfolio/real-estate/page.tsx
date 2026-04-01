@@ -90,7 +90,7 @@ function SummaryCard({
 }) {
   return (
     <div className="wv-card p-4">
-      <p className="text-[10px] uppercase tracking-wide mb-1" style={{ color: '#9CA3AF' }}>{label}</p>
+      <p className="text-[10px] uppercase tracking-wide mb-1" style={{ color: 'var(--wv-text-muted)' }}>{label}</p>
       <p className="text-lg font-bold" style={{ color: color ?? '#1B2A4A' }}>{value}</p>
     </div>
   );
@@ -328,14 +328,14 @@ export default function RealEstatePortfolioPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-            <Building className="w-5 h-5" style={{ color: '#1B2A4A' }} />
+            style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+            <Building className="w-5 h-5" style={{ color: 'var(--wv-text)' }} />
           </div>
           <div>
-            <h1 className="font-display text-xl font-semibold" style={{ color: '#1A1A2E' }}>
+            <h1 className="font-display text-xl font-semibold" style={{ color: 'var(--wv-text)' }}>
               Real Estate Portfolio
             </h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>
               Track your properties and real estate investments
             </p>
           </div>
@@ -360,8 +360,8 @@ export default function RealEstatePortfolioPage() {
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1B2A4A' }} />
-          <span className="ml-2 text-sm" style={{ color: '#6B7280' }}>Loading properties...</span>
+          <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--wv-text)' }} />
+          <span className="ml-2 text-sm" style={{ color: 'var(--wv-text-secondary)' }}>Loading properties...</span>
         </div>
       )}
 
@@ -379,10 +379,10 @@ export default function RealEstatePortfolioPage() {
       {!loading && !error && filtered.length === 0 && (
         <div className="wv-card p-12 text-center">
           <Building className="w-12 h-12 mx-auto mb-4" style={{ color: '#C9A84C' }} />
-          <h3 className="text-lg font-semibold mb-2" style={{ color: '#1B2A4A' }}>
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--wv-text)' }}>
             No Properties Yet
           </h3>
-          <p className="text-sm mb-6" style={{ color: '#9CA3AF' }}>
+          <p className="text-sm mb-6" style={{ color: 'var(--wv-text-muted)' }}>
             Add your first property to start tracking your real estate portfolio.
           </p>
           <Button
@@ -419,10 +419,10 @@ export default function RealEstatePortfolioPage() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr style={{ backgroundColor: '#F7F5F0', borderBottom: '1px solid #E8E5DD' }}>
+                  <tr style={{ backgroundColor: 'var(--wv-surface-2)', borderBottom: '1px solid var(--wv-border)' }}>
                     {['Property', 'Type', 'City', 'Purchase Price', 'Current Value', 'Appreciation', 'Loan', 'Actions'].map(col => (
                       <th key={col} className="text-left px-4 py-3 text-[10px] uppercase tracking-wide font-semibold"
-                        style={{ color: '#9CA3AF' }}>
+                        style={{ color: 'var(--wv-text-muted)' }}>
                         {col}
                       </th>
                     ))}
@@ -434,18 +434,18 @@ export default function RealEstatePortfolioPage() {
                       key={row.id}
                       onClick={() => setDetailId(row.id)}
                       className="cursor-pointer transition-colors hover:bg-gray-50"
-                      style={{ borderBottom: '1px solid #F3F4F6' }}
+                      style={{ borderBottom: '1px solid var(--wv-border)' }}
                     >
                       <td className="px-4 py-3">
-                        <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{row.propertyName}</p>
-                        {row.memberName && <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{row.memberName}</p>}
+                        <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{row.propertyName}</p>
+                        {row.memberName && <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{row.memberName}</p>}
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#4B5563' }}>{row.propertyType}</td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#4B5563' }}>{row.city || '--'}</td>
-                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{row.propertyType}</td>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{row.city || '--'}</td>
+                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>
                         {formatLargeINR(row.purchasePrice)}
                       </td>
-                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>
+                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>
                         {formatLargeINR(row.currentValue)}
                       </td>
                       <td className="px-4 py-3">
@@ -456,7 +456,7 @@ export default function RealEstatePortfolioPage() {
                           {row.appreciationPercent >= 0 ? '+' : ''}{row.appreciationPercent.toFixed(2)}%
                         </p>
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#4B5563' }}>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                         {row.hasLoan ? formatLargeINR(row.loanOutstanding) : '--'}
                       </td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
@@ -487,7 +487,7 @@ export default function RealEstatePortfolioPage() {
             </div>
 
             {/* Mobile card layout */}
-            <div className="md:hidden divide-y" style={{ borderColor: '#F3F4F6' }}>
+            <div className="md:hidden divide-y" style={{ borderColor: 'var(--wv-border)' }}>
               {filtered.map(row => (
                 <div
                   key={row.id}
@@ -496,8 +496,8 @@ export default function RealEstatePortfolioPage() {
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: '#1A1A2E' }}>{row.propertyName}</p>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>{row.propertyName}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                         {row.propertyType} {row.city ? `· ${row.city}` : ''} {row.memberName ? `· ${row.memberName}` : ''}
                       </p>
                     </div>
@@ -512,22 +512,22 @@ export default function RealEstatePortfolioPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Purchase Price</p>
-                      <p className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(row.purchasePrice)}</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Purchase Price</p>
+                      <p className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(row.purchasePrice)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Current Value</p>
-                      <p className="text-xs font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>{formatLargeINR(row.currentValue)}</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
+                      <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(row.currentValue)}</p>
                     </div>
                     {row.hasLoan && (
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Loan Outstanding</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Loan Outstanding</p>
                         <p className="text-xs font-medium tabular-nums" style={{ color: '#DC2626' }}>{formatLargeINR(row.loanOutstanding)}</p>
                       </div>
                     )}
                     {row.hasRental && (
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Rent/Month</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Rent/Month</p>
                         <p className="text-xs font-medium tabular-nums" style={{ color: '#059669' }}>{formatLargeINR(row.monthlyRent)}</p>
                       </div>
                     )}
@@ -542,8 +542,8 @@ export default function RealEstatePortfolioPage() {
       {/* ── Inline Value Update Modal ──────────────────────────────────────────── */}
       {editValueId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => { setEditValueId(null); setEditValueAmount(''); }}>
-          <div className="bg-white rounded-xl p-6 w-80 shadow-xl" onClick={e => e.stopPropagation()}>
-            <p className="text-sm font-semibold mb-3" style={{ color: '#1B2A4A' }}>Update Property Value</p>
+          <div className="rounded-xl p-6 w-80 shadow-xl" onClick={e => e.stopPropagation()}>
+            <p className="text-sm font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Update Property Value</p>
             <Input
               type="number"
               value={editValueAmount}
@@ -583,7 +583,7 @@ export default function RealEstatePortfolioPage() {
       <Sheet open={!!detailId} onOpenChange={(open) => { if (!open) setDetailId(null); }}>
         <SheetContent className="overflow-y-auto sm:max-w-lg">
           <SheetHeader>
-            <SheetTitle style={{ color: '#1B2A4A' }}>
+            <SheetTitle style={{ color: 'var(--wv-text)' }}>
               {detailAsset?.propertyName ?? 'Property Details'}
             </SheetTitle>
             <SheetDescription>
@@ -594,8 +594,8 @@ export default function RealEstatePortfolioPage() {
           {detailAsset && (
             <div className="mt-6 space-y-6">
               {/* Property Information */}
-              <div className="rounded-xl p-4" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Property Information</p>
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Property Information</p>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'Property Name', value: detailAsset.propertyName },
@@ -609,20 +609,20 @@ export default function RealEstatePortfolioPage() {
                     { label: 'Member', value: detailAsset.memberName || '--' },
                   ].map(item => (
                     <div key={item.label}>
-                      <p className="text-[10px] uppercase tracking-wide" style={{ color: '#9CA3AF' }}>{item.label}</p>
-                      <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{item.value}</p>
+                      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</p>
+                      <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{item.value}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Valuation */}
-              <div className="rounded-xl p-4" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Valuation</p>
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Valuation</p>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Purchase Price</span>
-                    <span className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(detailAsset.purchasePrice)}</span>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Purchase Price</span>
+                    <span className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(detailAsset.purchasePrice)}</span>
                   </div>
                   {(() => {
                     const meta = detailAsset.rawAsset.metadata ?? {};
@@ -632,21 +632,21 @@ export default function RealEstatePortfolioPage() {
                     if (regCharges > 0) items.push({ label: 'Registration Charges', value: formatLargeINR(regCharges) });
                     if (stampDuty > 0) items.push({ label: 'Stamp Duty', value: formatLargeINR(stampDuty) });
                     return items.map(item => (
-                      <div key={item.label} className="flex justify-between" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 8 }}>
-                        <span className="text-xs" style={{ color: '#4B5563' }}>{item.label}</span>
-                        <span className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{item.value}</span>
+                      <div key={item.label} className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                        <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{item.label}</span>
+                        <span className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{item.value}</span>
                       </div>
                     ));
                   })()}
-                  <div className="flex justify-between" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 8 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Total Cost</span>
-                    <span className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(detailAsset.totalCost)}</span>
+                  <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Total Cost</span>
+                    <span className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(detailAsset.totalCost)}</span>
                   </div>
-                  <div className="flex justify-between" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 8 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Current Value</span>
-                    <span className="text-xs font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>{formatLargeINR(detailAsset.currentValue)}</span>
+                  <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Current Value</span>
+                    <span className="text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(detailAsset.currentValue)}</span>
                   </div>
-                  <div className="flex justify-between" style={{ borderTop: '1px solid #E8E5DD', paddingTop: 8 }}>
+                  <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
                     <span className="text-xs font-semibold" style={{ color: detailAsset.appreciation >= 0 ? '#059669' : '#DC2626' }}>Appreciation</span>
                     <span className="text-xs font-bold tabular-nums" style={{ color: detailAsset.appreciation >= 0 ? '#059669' : '#DC2626' }}>
                       {detailAsset.appreciation >= 0 ? '+' : ''}{formatLargeINR(detailAsset.appreciation)} ({detailAsset.appreciationPercent >= 0 ? '+' : ''}{detailAsset.appreciationPercent.toFixed(2)}%)
@@ -657,13 +657,13 @@ export default function RealEstatePortfolioPage() {
 
               {/* Loan Details */}
               {detailAsset.hasLoan && (
-                <div className="rounded-xl p-4" style={{ border: '1px solid #E8E5DD' }}>
-                  <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Loan Details</p>
+                <div className="rounded-xl p-4" style={{ border: '1px solid var(--wv-border)' }}>
+                  <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Loan Details</p>
                   <div className="space-y-2">
                     {detailAsset.loanBank && (
                       <div className="flex justify-between">
-                        <span className="text-xs" style={{ color: '#4B5563' }}>Bank / Lender</span>
-                        <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{detailAsset.loanBank}</span>
+                        <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Bank / Lender</span>
+                        <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{detailAsset.loanBank}</span>
                       </div>
                     )}
                     {(() => {
@@ -671,26 +671,26 @@ export default function RealEstatePortfolioPage() {
                       const loanAmount = Number(loanMeta.amount ?? 0);
                       if (loanAmount <= 0) return null;
                       return (
-                        <div className="flex justify-between" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 8 }}>
-                          <span className="text-xs" style={{ color: '#4B5563' }}>Loan Amount</span>
-                          <span className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(loanAmount)}</span>
+                        <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                          <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Loan Amount</span>
+                          <span className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(loanAmount)}</span>
                         </div>
                       );
                     })()}
                     {detailAsset.loanRate > 0 && (
-                      <div className="flex justify-between" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 8 }}>
-                        <span className="text-xs" style={{ color: '#4B5563' }}>Interest Rate</span>
-                        <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{detailAsset.loanRate.toFixed(2)}%</span>
+                      <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                        <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Interest Rate</span>
+                        <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{detailAsset.loanRate.toFixed(2)}%</span>
                       </div>
                     )}
                     {detailAsset.emi > 0 && (
-                      <div className="flex justify-between" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 8 }}>
-                        <span className="text-xs" style={{ color: '#4B5563' }}>EMI</span>
-                        <span className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(detailAsset.emi)}/mo</span>
+                      <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                        <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>EMI</span>
+                        <span className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(detailAsset.emi)}/mo</span>
                       </div>
                     )}
-                    <div className="flex justify-between" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 8 }}>
-                      <span className="text-xs" style={{ color: '#4B5563' }}>Outstanding Balance</span>
+                    <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                      <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Outstanding Balance</span>
                       <span className="text-xs font-semibold tabular-nums" style={{ color: '#DC2626' }}>{formatLargeINR(detailAsset.loanOutstanding)}</span>
                     </div>
                   </div>
@@ -699,22 +699,22 @@ export default function RealEstatePortfolioPage() {
 
               {/* Rental Details */}
               {detailAsset.hasRental && (
-                <div className="rounded-xl p-4" style={{ border: '1px solid #E8E5DD' }}>
-                  <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Rental Details</p>
+                <div className="rounded-xl p-4" style={{ border: '1px solid var(--wv-border)' }}>
+                  <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Rental Details</p>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-xs" style={{ color: '#4B5563' }}>Monthly Rent</span>
+                      <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Monthly Rent</span>
                       <span className="text-xs font-medium tabular-nums" style={{ color: '#059669' }}>{formatLargeINR(detailAsset.monthlyRent)}/mo</span>
                     </div>
                     {detailAsset.tenantName && (
-                      <div className="flex justify-between" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 8 }}>
-                        <span className="text-xs" style={{ color: '#4B5563' }}>Tenant</span>
-                        <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{detailAsset.tenantName}</span>
+                      <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                        <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Tenant</span>
+                        <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{detailAsset.tenantName}</span>
                       </div>
                     )}
                     {detailAsset.rentalYield > 0 && (
-                      <div className="flex justify-between" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 8 }}>
-                        <span className="text-xs" style={{ color: '#4B5563' }}>Rental Yield</span>
+                      <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                        <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Rental Yield</span>
                         <span className="text-xs font-medium" style={{ color: '#059669' }}>{detailAsset.rentalYield.toFixed(2)}%</span>
                       </div>
                     )}
@@ -724,18 +724,18 @@ export default function RealEstatePortfolioPage() {
 
               {/* Notes */}
               {detailAsset.notes && (
-                <div className="rounded-xl p-4" style={{ border: '1px solid #E8E5DD' }}>
-                  <p className="text-xs font-semibold mb-2" style={{ color: '#1B2A4A' }}>Notes</p>
-                  <p className="text-xs" style={{ color: '#4B5563' }}>{detailAsset.notes}</p>
+                <div className="rounded-xl p-4" style={{ border: '1px solid var(--wv-border)' }}>
+                  <p className="text-xs font-semibold mb-2" style={{ color: 'var(--wv-text)' }}>Notes</p>
+                  <p className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{detailAsset.notes}</p>
                 </div>
               )}
 
               {/* Update Value */}
-              <div className="rounded-xl p-4" style={{ border: '1px solid #E8E5DD' }}>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Update Value</p>
+              <div className="rounded-xl p-4" style={{ border: '1px solid var(--wv-border)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Update Value</p>
                 <div className="flex items-end gap-2">
                   <div className="flex-1">
-                    <p className="text-[10px] mb-1" style={{ color: '#9CA3AF' }}>Enter latest market value</p>
+                    <p className="text-[10px] mb-1" style={{ color: 'var(--wv-text-muted)' }}>Enter latest market value</p>
                     <Input
                       type="number"
                       value={editValueId === detailAsset.id ? editValueAmount : ''}
@@ -768,7 +768,7 @@ export default function RealEstatePortfolioPage() {
                   onClick={() => router.push(`/add-assets/real-estate?edit=${detailAsset.id}`)}
                   variant="outline"
                   className="flex-1 text-xs h-9"
-                  style={{ borderColor: '#E8E5DD', color: '#1B2A4A' }}
+                  style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }}
                 >
                   <Pencil className="w-3 h-3 mr-1.5" />Edit
                 </Button>

@@ -71,11 +71,11 @@ export function AssetAllocationChart({ snapshot }: Props) {
         <div className="flex flex-col items-center justify-center py-8 gap-3">
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: '#F7F5F0', border: '2px dashed #E8E5DD' }}
+            style={{ backgroundColor: 'var(--wv-surface-2)', border: '2px dashed var(--wv-border)' }}
           >
-            <div className="w-10 h-10 rounded-full" style={{ backgroundColor: '#E8E5DD' }} />
+            <div className="w-10 h-10 rounded-full" style={{ backgroundColor: 'var(--wv-border)' }} />
           </div>
-          <p className="text-xs text-center" style={{ color: '#9CA3AF' }}>
+          <p className="text-xs text-center" style={{ color: 'var(--wv-text-muted)' }}>
             Add investments to see your asset allocation
           </p>
           <Link
@@ -107,7 +107,7 @@ export function AssetAllocationChart({ snapshot }: Props) {
                 </Pie>
                 <Tooltip
                   formatter={(value) => [`${Number(value).toFixed(1)}%`, '']}
-                  contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid #E8E5DD' }}
+                  contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid var(--wv-border)' }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -119,11 +119,11 @@ export function AssetAllocationChart({ snapshot }: Props) {
               <div key={item.key} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-                  <span className="text-[11px]" style={{ color: '#6B7280' }}>{item.name}</span>
+                  <span className="text-[11px]" style={{ color: 'var(--wv-text-secondary)' }}>{item.name}</span>
                 </div>
                 <div className="flex items-center gap-2.5">
-                  <span className="text-[11px]" style={{ color: '#9CA3AF' }}>{item.value.toFixed(1)}%</span>
-                  <span className="text-[11px] font-semibold w-16 text-right" style={{ color: '#1A1A2E' }}>
+                  <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>{item.value.toFixed(1)}%</span>
+                  <span className="text-[11px] font-semibold w-16 text-right" style={{ color: 'var(--wv-text)' }}>
                     {formatLargeINR(item.amount)}
                   </span>
                 </div>

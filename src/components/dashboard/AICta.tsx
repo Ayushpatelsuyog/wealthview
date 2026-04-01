@@ -28,7 +28,7 @@ export function AICta() {
       </div>
       <button
         className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold flex-shrink-0 relative z-10 transition-opacity hover:opacity-90"
-        style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}
+        style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}
       >
         Analyse portfolio
         <ArrowRight className="w-4 h-4" />

@@ -86,7 +86,7 @@ function statusColors(status: string): { bg: string; color: string } {
     case 'estimated': return { bg: 'rgba(37,99,235,0.12)', color: '#2563EB' };
     case 'received': return { bg: 'rgba(5,150,105,0.12)', color: '#059669' };
     case 'pending': return { bg: 'rgba(217,119,6,0.12)', color: '#D97706' };
-    default: return { bg: 'rgba(156,163,175,0.15)', color: '#6B7280' };
+    default: return { bg: 'rgba(156,163,175,0.15)', color: 'var(--wv-text-secondary)' };
   }
 }
 
@@ -221,8 +221,8 @@ export default function GratuityPortfolioPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1B2A4A' }} />
-        <span className="ml-2 text-sm" style={{ color: '#6B7280' }}>Loading gratuity data...</span>
+        <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--wv-text)' }} />
+        <span className="ml-2 text-sm" style={{ color: 'var(--wv-text-secondary)' }}>Loading gratuity data...</span>
       </div>
     );
   }
@@ -246,8 +246,8 @@ export default function GratuityPortfolioPage() {
             <PiggyBank className="w-5 h-5" style={{ color: '#7c3aed' }} />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: '#1B2A4A' }}>Gratuity Portfolio</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Employment gratuity estimates and received amounts</p>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--wv-text)' }}>Gratuity Portfolio</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Employment gratuity estimates and received amounts</p>
           </div>
         </div>
         <Button
@@ -270,30 +270,30 @@ export default function GratuityPortfolioPage() {
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <IndianRupee className="w-4 h-4" style={{ color: '#C9A84C' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Total Estimated</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Total Estimated</p>
           </div>
-          <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(summary.totalEstimated)}</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(summary.totalEstimated)}</p>
         </div>
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <IndianRupee className="w-4 h-4" style={{ color: '#059669' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Total Received</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Total Received</p>
           </div>
           <p className="text-lg font-bold" style={{ color: '#059669' }}>{formatLargeINR(summary.totalReceived)}</p>
         </div>
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <Briefcase className="w-4 h-4" style={{ color: '#C9A84C' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Active Employments</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Active Employments</p>
           </div>
-          <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{summary.activeCount}</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{summary.activeCount}</p>
         </div>
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <Clock className="w-4 h-4" style={{ color: '#C9A84C' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Avg Years of Service</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Avg Years of Service</p>
           </div>
-          <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{summary.avgYears} yrs</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{summary.avgYears} yrs</p>
         </div>
       </div>
 
@@ -301,8 +301,8 @@ export default function GratuityPortfolioPage() {
       {rows.length === 0 ? (
         <div className="wv-card p-12 text-center">
           <PiggyBank className="w-10 h-10 mx-auto mb-3" style={{ color: '#D1D5DB' }} />
-          <p className="text-sm font-medium" style={{ color: '#6B7280' }}>No gratuity entries found</p>
-          <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Add your first gratuity estimate to start tracking</p>
+          <p className="text-sm font-medium" style={{ color: 'var(--wv-text-secondary)' }}>No gratuity entries found</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--wv-text-muted)' }}>Add your first gratuity estimate to start tracking</p>
           <Button
             onClick={() => router.push('/add-assets/gratuity')}
             className="mt-4 text-white text-sm"
@@ -326,8 +326,8 @@ export default function GratuityPortfolioPage() {
                 {/* Card header */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate" style={{ color: '#1B2A4A' }}>{row.employer}</p>
-                    <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>{row.memberName}</p>
+                    <p className="font-semibold text-sm truncate" style={{ color: 'var(--wv-text)' }}>{row.employer}</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{row.memberName}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                     <span
@@ -351,15 +351,15 @@ export default function GratuityPortfolioPage() {
                 {/* Card body */}
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Years of Service</p>
-                    <p className="text-sm font-semibold mt-0.5" style={{ color: '#1B2A4A' }}>{row.yearsOfService} yrs</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Years of Service</p>
+                    <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--wv-text)' }}>{row.yearsOfService} yrs</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Basic + DA/mo</p>
-                    <p className="text-sm font-semibold mt-0.5" style={{ color: '#1B2A4A' }}>{formatLargeINR(row.basicSalary)}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Basic + DA/mo</p>
+                    <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(row.basicSalary)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>
+                    <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>
                       {row.status === 'received' ? 'Received' : 'Est. Gratuity'}
                     </p>
                     <p className="text-sm font-bold mt-0.5" style={{ color: row.status === 'received' ? '#059669' : '#1B2A4A' }}>
@@ -377,7 +377,7 @@ export default function GratuityPortfolioPage() {
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="right" className="overflow-y-auto w-full sm:max-w-md">
           <SheetHeader>
-            <SheetTitle style={{ color: '#1B2A4A' }}>Gratuity Details</SheetTitle>
+            <SheetTitle style={{ color: 'var(--wv-text)' }}>Gratuity Details</SheetTitle>
             <SheetDescription>
               {selectedAsset?.employer}
             </SheetDescription>
@@ -388,27 +388,27 @@ export default function GratuityPortfolioPage() {
               {/* Employment info grid */}
               <div className="wv-card p-4 grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Employer</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.employer}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Employer</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.employer}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Member</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.memberName}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Member</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.memberName}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Date of Joining</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{fmtDate(selectedAsset.joiningDate)}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Date of Joining</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{fmtDate(selectedAsset.joiningDate)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Years of Service</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.yearsOfService} yrs</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Years of Service</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.yearsOfService} yrs</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Basic + DA / month</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{formatCurrency(selectedAsset.basicSalary)}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Basic + DA / month</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{formatCurrency(selectedAsset.basicSalary)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Status</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Status</p>
                   <span
                     className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
                     style={{
@@ -420,7 +420,7 @@ export default function GratuityPortfolioPage() {
                   </span>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Eligibility</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Eligibility</p>
                   <span
                     className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
                     style={{
@@ -432,43 +432,43 @@ export default function GratuityPortfolioPage() {
                   </span>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Last Updated</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{fmtDate(selectedAsset.last_updated)}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Last Updated</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{fmtDate(selectedAsset.last_updated)}</p>
                 </div>
                 {selectedAsset.status === 'received' && (
                   <>
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Amount Received</p>
+                      <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Amount Received</p>
                       <p className="text-sm font-bold" style={{ color: '#059669' }}>{formatCurrency(selectedAsset.amountReceived)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Date Received</p>
-                      <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{fmtDate(selectedAsset.dateReceived)}</p>
+                      <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Date Received</p>
+                      <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{fmtDate(selectedAsset.dateReceived)}</p>
                     </div>
                   </>
                 )}
                 {selectedAsset.notes && (
                   <div className="col-span-2">
-                    <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Notes</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Notes</p>
                     <p className="text-sm" style={{ color: '#374151' }}>{selectedAsset.notes}</p>
                   </div>
                 )}
               </div>
 
               {/* Gratuity calculation breakdown */}
-              <div className="rounded-xl p-4 space-y-3" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
+              <div className="rounded-xl p-4 space-y-3" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
                 <div className="flex items-center gap-2">
                   <Calculator className="w-4 h-4" style={{ color: '#C9A84C' }} />
-                  <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
+                  <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-secondary)' }}>
                     Gratuity Calculation
                   </span>
                 </div>
 
-                <div className="text-xs rounded-lg p-3" style={{ backgroundColor: 'white', border: '1px solid #E8E5DD' }}>
-                  <p className="font-medium mb-1" style={{ color: '#1B2A4A' }}>Formula: (Basic + DA) x 15 x Years / 26</p>
-                  <p style={{ color: '#6B7280' }}>
+                <div className="text-xs rounded-lg p-3" style={{ backgroundColor: 'white', border: '1px solid var(--wv-border)' }}>
+                  <p className="font-medium mb-1" style={{ color: 'var(--wv-text)' }}>Formula: (Basic + DA) x 15 x Years / 26</p>
+                  <p style={{ color: 'var(--wv-text-secondary)' }}>
                     {formatCurrency(selectedAsset.basicSalary)} x 15 x {selectedAsset.yearsOfService} yrs / 26 ={' '}
-                    <span className="font-bold" style={{ color: '#1B2A4A' }}>
+                    <span className="font-bold" style={{ color: 'var(--wv-text)' }}>
                       {formatCurrency(Math.round(selectedAsset.estimatedGratuity))}
                     </span>
                   </p>
@@ -477,7 +477,7 @@ export default function GratuityPortfolioPage() {
                 <div className="grid grid-cols-2 gap-y-2 gap-x-6 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Estimated</span>
-                    <span className="font-bold" style={{ color: '#1B2A4A' }}>{formatCurrency(Math.round(selectedAsset.estimatedGratuity))}</span>
+                    <span className="font-bold" style={{ color: 'var(--wv-text)' }}>{formatCurrency(Math.round(selectedAsset.estimatedGratuity))}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Tax Exemption</span>

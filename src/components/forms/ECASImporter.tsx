@@ -82,7 +82,7 @@ const TXN_BADGE: Record<ECASTransactionType, { label: string; bg: string; color:
   switch_out:            { label: 'Switch Out',       bg: '#FFF7ED', color: '#EA580C' },
   dividend_payout:       { label: 'Dividend Payout',  bg: '#F0FDF4', color: '#16A34A' },
   dividend_reinvestment: { label: 'Dividend Reinv.',  bg: '#F0FDF4', color: '#16A34A' },
-  other:                 { label: 'Other',            bg: '#F3F4F6', color: '#6B7280' },
+  other:                 { label: 'Other',            bg: 'var(--wv-border)', color: 'var(--wv-text-secondary)' },
 };
 
 const CONFIDENCE_BADGE = {
@@ -395,24 +395,24 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
         />
         {file ? (
           <div className="flex items-center gap-3">
-            <FileText className="w-8 h-8" style={{ color: '#1B2A4A' }} />
+            <FileText className="w-8 h-8" style={{ color: 'var(--wv-text)' }} />
             <div>
-              <p className="font-semibold text-sm" style={{ color: '#1A1A2E' }}>{file.name}</p>
-              <p className="text-xs" style={{ color: '#9CA3AF' }}>{(file.size / 1024).toFixed(1)} KB</p>
+              <p className="font-semibold text-sm" style={{ color: 'var(--wv-text)' }}>{file.name}</p>
+              <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>{(file.size / 1024).toFixed(1)} KB</p>
             </div>
             <button
               onClick={e => { e.stopPropagation(); setFile(null); setIsPDF(false); }}
               className="p-1 rounded hover:bg-gray-100"
             >
-              <X className="w-4 h-4" style={{ color: '#9CA3AF' }} />
+              <X className="w-4 h-4" style={{ color: 'var(--wv-text-muted)' }} />
             </button>
           </div>
         ) : (
           <>
-            <Upload className="w-8 h-8" style={{ color: '#9CA3AF' }} />
+            <Upload className="w-8 h-8" style={{ color: 'var(--wv-text-muted)' }} />
             <div className="text-center">
-              <p className="font-medium text-sm" style={{ color: '#1A1A2E' }}>Drop your eCAS statement here</p>
-              <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>PDF, CSV, or Excel • Click to browse</p>
+              <p className="font-medium text-sm" style={{ color: 'var(--wv-text)' }}>Drop your eCAS statement here</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>PDF, CSV, or Excel • Click to browse</p>
             </div>
           </>
         )}
@@ -422,7 +422,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
       {isPDF && (
         <div className="space-y-1">
           <Label className="text-xs font-medium" style={{ color: '#374151' }}>
-            PDF Password <span style={{ color: '#9CA3AF' }}>(usually your PAN number)</span>
+            PDF Password <span style={{ color: 'var(--wv-text-muted)' }}>(usually your PAN number)</span>
           </Label>
           <Input
             value={password}
@@ -463,10 +463,10 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
       {/* Summary bar */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm font-semibold" style={{ color: '#1A1A2E' }}>
+          <span className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>
             {parsedData.totalFunds} fund{parsedData.totalFunds !== 1 ? 's' : ''} found
           </span>
-          <span className="text-xs" style={{ color: '#9CA3AF' }}>
+          <span className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>
             {parsedData.funds.reduce((s, f) => s + f.transactions.length, 0)} transactions
           </span>
           {readyCount > 0 && <MatchPill label={`${readyCount} matched`} color="#059669" bg="rgba(5,150,105,0.1)" />}
@@ -474,8 +474,8 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
           {noneCount > 0 && <MatchPill label={`${noneCount} not found`} color="#DC2626" bg="#FEE2E2" />}
         </div>
         <div className="flex gap-2">
-          <button onClick={selectAll}   className="text-xs underline" style={{ color: '#1B2A4A' }}>Select all</button>
-          <button onClick={deselectAll} className="text-xs underline" style={{ color: '#6B7280' }}>Deselect all</button>
+          <button onClick={selectAll}   className="text-xs underline" style={{ color: 'var(--wv-text)' }}>Select all</button>
+          <button onClick={deselectAll} className="text-xs underline" style={{ color: 'var(--wv-text-secondary)' }}>Deselect all</button>
         </div>
       </div>
 
@@ -487,7 +487,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
       )}
 
       {/* Fund list */}
-      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E8E5DD' }}>
+      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--wv-border)' }}>
         {parsedData.funds.map((fund, fi) => {
           const isSelected = selectedFunds.has(fi);
           const isExpanded = expandedFunds.has(fi);
@@ -498,7 +498,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
           const search     = fundSearches.get(fi);
 
           return (
-            <div key={fi} style={{ borderBottom: fi < parsedData.funds.length - 1 ? '1px solid #E8E5DD' : undefined }}>
+            <div key={fi} style={{ borderBottom: fi < parsedData.funds.length - 1 ? '1px solid var(--wv-border)' : undefined }}>
               {/* Fund row */}
               <div
                 className="flex items-start gap-3 p-3 hover:bg-[#FAFAF8] transition-colors"
@@ -519,17 +519,17 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
                 {/* Fund info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start gap-2 flex-wrap">
-                    <p className="text-xs font-semibold leading-snug" style={{ color: '#1A1A2E' }}>{fund.schemeName}</p>
+                    <p className="text-xs font-semibold leading-snug" style={{ color: 'var(--wv-text)' }}>{fund.schemeName}</p>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ backgroundColor: badge.bg, color: badge.color }}>
                       {badge.label}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                    {fund.fundHouse && <span className="text-[11px]" style={{ color: '#9CA3AF' }}>{fund.fundHouse}</span>}
-                    {fund.folioNumber && <span className="text-[11px]" style={{ color: '#9CA3AF' }}>Folio: {fund.folioNumber}</span>}
-                    <span className="text-[11px]" style={{ color: '#9CA3AF' }}>{fund.summary.transactionCount} txns</span>
-                    <span className="text-[11px]" style={{ color: '#9CA3AF' }}>{fund.summary.totalUnits.toFixed(4)} units</span>
-                    <span className="text-[11px] font-medium" style={{ color: '#1A1A2E' }}>{formatLargeINR(fund.summary.totalInvested)} invested</span>
+                    {fund.fundHouse && <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>{fund.fundHouse}</span>}
+                    {fund.folioNumber && <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>Folio: {fund.folioNumber}</span>}
+                    <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>{fund.summary.transactionCount} txns</span>
+                    <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>{fund.summary.totalUnits.toFixed(4)} units</span>
+                    <span className="text-[11px] font-medium" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(fund.summary.totalInvested)} invested</span>
                   </div>
 
                   {/* Matched scheme name */}
@@ -544,7 +544,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
                     <div className="mt-2">
                       <div className="flex items-center gap-2">
                         <div className="relative flex-1">
-                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3" style={{ color: '#9CA3AF' }} />
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3" style={{ color: 'var(--wv-text-muted)' }} />
                           <input
                             className="w-full text-[11px] rounded-md pl-6 pr-3 py-1.5 border"
                             style={{ borderColor: '#E5E7EB', outline: 'none' }}
@@ -553,7 +553,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
                             onChange={e => searchFund(fi, e.target.value)}
                           />
                         </div>
-                        {search?.searching && <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" style={{ color: '#9CA3AF' }} />}
+                        {search?.searching && <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" style={{ color: 'var(--wv-text-muted)' }} />}
                       </div>
                       {search && search.results.length > 0 && (
                         <div className="mt-1 rounded-md border overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
@@ -561,14 +561,14 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
                             <button
                               key={r.schemeCode}
                               className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-[#F7F5F0] transition-colors block"
-                              style={{ borderBottom: '1px solid #F3F4F6', color: '#1A1A2E' }}
+                              style={{ borderBottom: '1px solid var(--wv-border)', color: 'var(--wv-text)' }}
                               onClick={() => {
                                 setSchemeOverrides(prev => { const m = new Map(prev); m.set(fi, r); return m; });
                                 setFundSearches(prev => { const m = new Map(prev); m.delete(fi); return m; });
                               }}
                             >
                               <span className="font-medium">{r.schemeName}</span>
-                              <span className="ml-2" style={{ color: '#9CA3AF' }}>#{r.schemeCode}</span>
+                              <span className="ml-2" style={{ color: 'var(--wv-text-muted)' }}>#{r.schemeCode}</span>
                             </button>
                           ))}
                         </div>
@@ -581,7 +581,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
                 <button
                   onClick={() => toggleExpand(fi)}
                   className="flex items-center gap-1 text-[11px] flex-shrink-0 mt-0.5 px-2 py-1 rounded transition-colors hover:bg-gray-100"
-                  style={{ color: '#6B7280' }}
+                  style={{ color: 'var(--wv-text-secondary)' }}
                 >
                   {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                   {txSet.size}/{fund.transactions.length}
@@ -590,20 +590,20 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
 
               {/* Expanded transactions */}
               {isExpanded && (
-                <div style={{ backgroundColor: '#FAFAF8', borderTop: '1px solid #F3F4F6' }}>
+                <div style={{ backgroundColor: '#FAFAF8', borderTop: '1px solid var(--wv-border)' }}>
                   <div className="px-4 py-2 flex items-center justify-between">
-                    <span className="text-[11px] font-medium" style={{ color: '#6B7280' }}>Transactions</span>
+                    <span className="text-[11px] font-medium" style={{ color: 'var(--wv-text-secondary)' }}>Transactions</span>
                     <div className="flex gap-3">
-                      <button className="text-[11px] underline" style={{ color: '#1B2A4A' }} onClick={() => toggleAllTxns(fi, fund, true)}>Select all</button>
-                      <button className="text-[11px] underline" style={{ color: '#6B7280' }} onClick={() => toggleAllTxns(fi, fund, false)}>None</button>
+                      <button className="text-[11px] underline" style={{ color: 'var(--wv-text)' }} onClick={() => toggleAllTxns(fi, fund, true)}>Select all</button>
+                      <button className="text-[11px] underline" style={{ color: 'var(--wv-text-secondary)' }} onClick={() => toggleAllTxns(fi, fund, false)}>None</button>
                     </div>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-[11px]" style={{ minWidth: 560 }}>
                       <thead>
-                        <tr style={{ borderBottom: '1px solid #E8E5DD' }}>
+                        <tr style={{ borderBottom: '1px solid var(--wv-border)' }}>
                           {['', 'Date', 'Type', 'Amount', 'Units', 'NAV', 'Balance'].map(h => (
-                            <th key={h} className="px-3 py-1.5 text-left font-medium" style={{ color: '#9CA3AF' }}>{h}</th>
+                            <th key={h} className="px-3 py-1.5 text-left font-medium" style={{ color: 'var(--wv-text-muted)' }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -614,7 +614,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
                           return (
                             <tr
                               key={ti}
-                              style={{ borderBottom: '1px solid #F3F4F6', opacity: tSelected ? 1 : 0.4 }}
+                              style={{ borderBottom: '1px solid var(--wv-border)', opacity: tSelected ? 1 : 0.4 }}
                             >
                               <td className="px-3 py-1.5">
                                 <button
@@ -625,7 +625,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
                                   {tSelected && <Check className="w-2 h-2 text-white" />}
                                 </button>
                               </td>
-                              <td className="px-3 py-1.5 whitespace-nowrap" style={{ color: '#6B7280' }}>
+                              <td className="px-3 py-1.5 whitespace-nowrap" style={{ color: 'var(--wv-text-secondary)' }}>
                                 {txn.transactionDate}
                               </td>
                               <td className="px-3 py-1.5">
@@ -633,16 +633,16 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
                                   {tBadge.label}
                                 </span>
                               </td>
-                              <td className="px-3 py-1.5 whitespace-nowrap text-right font-medium" style={{ color: '#1A1A2E' }}>
+                              <td className="px-3 py-1.5 whitespace-nowrap text-right font-medium" style={{ color: 'var(--wv-text)' }}>
                                 {txn.amount > 0 ? `₹${txn.amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—'}
                               </td>
                               <td className="px-3 py-1.5 whitespace-nowrap text-right" style={{ color: txn.units < 0 ? '#DC2626' : '#6B7280' }}>
                                 {txn.units >= 0 ? '+' : ''}{txn.units.toFixed(4)}
                               </td>
-                              <td className="px-3 py-1.5 whitespace-nowrap text-right" style={{ color: '#6B7280' }}>
+                              <td className="px-3 py-1.5 whitespace-nowrap text-right" style={{ color: 'var(--wv-text-secondary)' }}>
                                 {txn.nav > 0 ? `₹${txn.nav.toFixed(4)}` : '—'}
                               </td>
-                              <td className="px-3 py-1.5 whitespace-nowrap text-right" style={{ color: '#9CA3AF' }}>
+                              <td className="px-3 py-1.5 whitespace-nowrap text-right" style={{ color: 'var(--wv-text-muted)' }}>
                                 {txn.unitBalance.toFixed(4)}
                               </td>
                             </tr>
@@ -660,7 +660,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
 
       {/* Nav */}
       <div className="flex items-center justify-between pt-2">
-        <button onClick={() => setStep(0)} className="flex items-center gap-1 text-sm" style={{ color: '#6B7280' }}>
+        <button onClick={() => setStep(0)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--wv-text-secondary)' }}>
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
         <Button
@@ -684,30 +684,30 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
       <StepIndicator steps={STEPS} current={2} />
 
       <div>
-        <p className="text-sm font-semibold mb-1" style={{ color: '#1A1A2E' }}>Assign metadata</p>
-        <p className="text-xs" style={{ color: '#9CA3AF' }}>Applied to all imported funds. You can change individual funds from the portfolio page later.</p>
+        <p className="text-sm font-semibold mb-1" style={{ color: 'var(--wv-text)' }}>Assign metadata</p>
+        <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Applied to all imported funds. You can change individual funds from the portfolio page later.</p>
       </div>
 
       {/* Summary card */}
-      <div className="rounded-xl p-4" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
+      <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
-            <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{selFundCount}</p>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Funds</p>
+            <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{selFundCount}</p>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Funds</p>
           </div>
           <div>
-            <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{selTxnCount}</p>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Transactions</p>
+            <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{selTxnCount}</p>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Transactions</p>
           </div>
           <div>
-            <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>
+            <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>
               {formatLargeINR(
                 parsedData?.funds
                   .filter((_, fi) => selectedFunds.has(fi))
                   .reduce((s, f) => s + f.summary.totalInvested, 0) ?? 0
               )}
             </p>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Invested</p>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Invested</p>
           </div>
         </div>
       </div>
@@ -718,7 +718,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
           <Label className="text-xs font-medium" style={{ color: '#374151' }}>Distributor / Platform</Label>
           <select
             className="w-full rounded-md border px-3 py-2 text-sm"
-            style={{ borderColor: '#E5E7EB', color: '#1A1A2E', backgroundColor: 'white' }}
+            style={{ borderColor: '#E5E7EB', color: 'var(--wv-text)', backgroundColor: 'white' }}
             value={globalBrokerId}
             onChange={e => setGlobalBrokerId(e.target.value)}
           >
@@ -732,7 +732,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
           <Label className="text-xs font-medium" style={{ color: '#374151' }}>Portfolio</Label>
           <select
             className="w-full rounded-md border px-3 py-2 text-sm"
-            style={{ borderColor: '#E5E7EB', color: '#1A1A2E', backgroundColor: 'white' }}
+            style={{ borderColor: '#E5E7EB', color: 'var(--wv-text)', backgroundColor: 'white' }}
             value={globalPortfolio}
             onChange={e => setGlobalPortfolio(e.target.value)}
           >
@@ -749,7 +749,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
             <Label className="text-xs font-medium" style={{ color: '#374151' }}>Family Member</Label>
             <select
               className="w-full rounded-md border px-3 py-2 text-sm"
-              style={{ borderColor: '#E5E7EB', color: '#1A1A2E', backgroundColor: 'white' }}
+              style={{ borderColor: '#E5E7EB', color: 'var(--wv-text)', backgroundColor: 'white' }}
               value={globalMemberId}
               onChange={e => setGlobalMemberId(e.target.value)}
             >
@@ -761,14 +761,14 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
 
       {/* Nav */}
       <div className="flex items-center justify-between pt-2">
-        <button onClick={() => setStep(1)} className="flex items-center gap-1 text-sm" style={{ color: '#6B7280' }}>
+        <button onClick={() => setStep(1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--wv-text-secondary)' }}>
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
         <Button
           disabled={importing}
           onClick={handleImport}
           className="h-10 px-6 text-sm font-semibold"
-          style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}
+          style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}
         >
           {importing
             ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Importing&hellip;</>
@@ -792,16 +792,16 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
         <p className="font-bold text-lg" style={{ color: '#059669' }}>Import Complete!</p>
         <div className="grid grid-cols-3 gap-4 pt-2">
           <div>
-            <p className="text-xl font-bold" style={{ color: '#1B2A4A' }}>{importResult.imported}</p>
-            <p className="text-xs" style={{ color: '#6B7280' }}>Funds imported</p>
+            <p className="text-xl font-bold" style={{ color: 'var(--wv-text)' }}>{importResult.imported}</p>
+            <p className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Funds imported</p>
           </div>
           <div>
-            <p className="text-xl font-bold" style={{ color: '#1B2A4A' }}>{importResult.txns}</p>
-            <p className="text-xs" style={{ color: '#6B7280' }}>Transactions</p>
+            <p className="text-xl font-bold" style={{ color: 'var(--wv-text)' }}>{importResult.txns}</p>
+            <p className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Transactions</p>
           </div>
           <div>
-            <p className="text-xl font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(importResult.invested)}</p>
-            <p className="text-xs" style={{ color: '#6B7280' }}>Total invested</p>
+            <p className="text-xl font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(importResult.invested)}</p>
+            <p className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Total invested</p>
           </div>
         </div>
       </div>

@@ -169,7 +169,7 @@ export function VerifyResults({ result, enteredData, autoCalculated }: VerifyRes
 
       {/* 1. Statement Details */}
       <div className="p-3 rounded-lg text-xs" style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.08)' }}>
-        <p className="font-semibold mb-2" style={{ color: '#1B2A4A' }}>Statement Details</p>
+        <p className="font-semibold mb-2" style={{ color: 'var(--wv-text)' }}>Statement Details</p>
         <div className="grid grid-cols-2 gap-x-6 gap-y-2">
           {[
             { label: 'Fund', value: result.matchedFund?.fundName, icon: '' },
@@ -183,8 +183,8 @@ export function VerifyResults({ result, enteredData, autoCalculated }: VerifyRes
             { label: 'Total', value: `${totalTxns} transactions, ${fundGroups.length} fund(s)`, icon: '' },
           ].filter(f => f.value).map(f => (
             <div key={f.label} className="min-w-0">
-              <p className="text-[9px] uppercase tracking-wider" style={{ color: '#9CA3AF' }}>{f.label}</p>
-              <p className="font-medium truncate" title={String(f.value)} style={{ color: '#1A1A2E' }}>
+              <p className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>{f.label}</p>
+              <p className="font-medium truncate" title={String(f.value)} style={{ color: 'var(--wv-text)' }}>
                 {f.value}{f.icon ? ` ${f.icon}` : ''}
               </p>
             </div>
@@ -206,7 +206,7 @@ export function VerifyResults({ result, enteredData, autoCalculated }: VerifyRes
       {hasApiMatch && compEntries.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold" style={{ color: '#1B2A4A' }}>Transaction Verification</p>
+            <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>Transaction Verification</p>
             <span className="text-[10px] px-2 py-0.5 rounded-full" style={{
               backgroundColor: mismatchCount === 0 ? 'rgba(5,150,105,0.1)' : 'rgba(201,168,76,0.1)',
               color: mismatchCount === 0 ? '#059669' : '#92620A',
@@ -216,19 +216,19 @@ export function VerifyResults({ result, enteredData, autoCalculated }: VerifyRes
           </div>
           <table className="w-full text-xs border rounded-lg overflow-hidden">
             <thead>
-              <tr style={{ backgroundColor: '#F7F5F0' }}>
-                <th className="text-left px-3 py-2 font-medium" style={{ color: '#6B7280' }}>Field</th>
-                <th className="text-right px-3 py-2 font-medium" style={{ color: '#6B7280' }}>Your Entry</th>
-                <th className="text-right px-3 py-2 font-medium" style={{ color: '#6B7280' }}>Statement</th>
-                <th className="text-center px-3 py-2 font-medium" style={{ color: '#6B7280' }}></th>
+              <tr style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+                <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--wv-text-secondary)' }}>Field</th>
+                <th className="text-right px-3 py-2 font-medium" style={{ color: 'var(--wv-text-secondary)' }}>Your Entry</th>
+                <th className="text-right px-3 py-2 font-medium" style={{ color: 'var(--wv-text-secondary)' }}>Statement</th>
+                <th className="text-center px-3 py-2 font-medium" style={{ color: 'var(--wv-text-secondary)' }}></th>
               </tr>
             </thead>
             <tbody>
               {compEntries.map(([key, val]: any) => (
                 <tr key={key} style={{ borderTop: '1px solid #F0EDE6', backgroundColor: val.match ? 'rgba(5,150,105,0.03)' : 'rgba(201,168,76,0.05)' }}>
-                  <td className="px-3 py-2 font-medium" style={{ color: '#1A1A2E' }}>{FIELD_LABELS[key] ?? key}</td>
-                  <td className="px-3 py-2 text-right" style={{ color: '#6B7280' }}>{fmtVal(val.entered)}</td>
-                  <td className="px-3 py-2 text-right font-medium" style={{ color: '#1A1A2E' }}>{fmtVal(val.statement)}</td>
+                  <td className="px-3 py-2 font-medium" style={{ color: 'var(--wv-text)' }}>{FIELD_LABELS[key] ?? key}</td>
+                  <td className="px-3 py-2 text-right" style={{ color: 'var(--wv-text-secondary)' }}>{fmtVal(val.entered)}</td>
+                  <td className="px-3 py-2 text-right font-medium" style={{ color: 'var(--wv-text)' }}>{fmtVal(val.statement)}</td>
                   <td className="px-3 py-2 text-center">{val.match ? '✅' : `⚠️`}</td>
                 </tr>
               ))}
@@ -253,7 +253,7 @@ export function VerifyResults({ result, enteredData, autoCalculated }: VerifyRes
       {/* 4. Fund Transactions */}
       {matchedFundGroup && (
         <div>
-          <p className="text-xs font-semibold mb-1" style={{ color: '#1B2A4A' }}>
+          <p className="text-xs font-semibold mb-1" style={{ color: 'var(--wv-text)' }}>
             {matchedFundGroup.fundName} ({allTxns.length} transactions)
             {matchedFundGroup.sipCancelled ? <span style={{ color: '#DC2626' }}> · SIP Cancelled</span> : null}
           </p>
@@ -261,12 +261,12 @@ export function VerifyResults({ result, enteredData, autoCalculated }: VerifyRes
             <table className="w-full text-xs">
               <thead>
                 <tr style={{ backgroundColor: '#FAFAF8' }}>
-                  <th className="px-2 py-1.5 text-left font-medium" style={{ color: '#9CA3AF' }}>Date</th>
-                  <th className="px-2 py-1.5 text-left font-medium" style={{ color: '#9CA3AF' }}>Type</th>
-                  <th className="px-2 py-1.5 text-right font-medium" style={{ color: '#9CA3AF' }}>Amount</th>
-                  <th className="px-2 py-1.5 text-right font-medium" style={{ color: '#9CA3AF' }}>NAV</th>
-                  <th className="px-2 py-1.5 text-right font-medium" style={{ color: '#9CA3AF' }}>Units</th>
-                  <th className="px-2 py-1.5 text-right font-medium" style={{ color: '#9CA3AF' }}>Bal</th>
+                  <th className="px-2 py-1.5 text-left font-medium" style={{ color: 'var(--wv-text-muted)' }}>Date</th>
+                  <th className="px-2 py-1.5 text-left font-medium" style={{ color: 'var(--wv-text-muted)' }}>Type</th>
+                  <th className="px-2 py-1.5 text-right font-medium" style={{ color: 'var(--wv-text-muted)' }}>Amount</th>
+                  <th className="px-2 py-1.5 text-right font-medium" style={{ color: 'var(--wv-text-muted)' }}>NAV</th>
+                  <th className="px-2 py-1.5 text-right font-medium" style={{ color: 'var(--wv-text-muted)' }}>Units</th>
+                  <th className="px-2 py-1.5 text-right font-medium" style={{ color: 'var(--wv-text-muted)' }}>Bal</th>
                 </tr>
               </thead>
               <tbody>
@@ -296,25 +296,25 @@ export function VerifyResults({ result, enteredData, autoCalculated }: VerifyRes
                       backgroundColor: rowBg,
                       fontWeight: isExactMatch ? 600 : undefined,
                     }}>
-                      <td className="px-2 py-1.5" style={{ color: '#1A1A2E' }}>
+                      <td className="px-2 py-1.5" style={{ color: 'var(--wv-text)' }}>
                         {txn.date ?? '—'}
                         {dateOk !== null ? (dateOk ? ' ✅' : ' ⚠️') : ''}
                         {isExactMatch && <span className="ml-1 text-[9px]" style={{ color: '#C9A84C' }}>← yours</span>}
                       </td>
-                      <td className="px-2 py-1.5" style={{ color: '#6B7280' }}>{txn.type ?? '—'}</td>
-                      <td className="px-2 py-1.5 text-right" style={{ color: '#1A1A2E' }}>
+                      <td className="px-2 py-1.5" style={{ color: 'var(--wv-text-secondary)' }}>{txn.type ?? '—'}</td>
+                      <td className="px-2 py-1.5 text-right" style={{ color: 'var(--wv-text)' }}>
                         {fmtAmt(txn)}
                         {amtMatches ? ' ✅' : (entAmt > 0 && txnGross > 0 ? ' ⚠️' : '')}
                       </td>
-                      <td className="px-2 py-1.5 text-right" style={{ color: '#6B7280' }}>
+                      <td className="px-2 py-1.5 text-right" style={{ color: 'var(--wv-text-secondary)' }}>
                         {txnNav > 0 ? txnNav.toFixed(4) : '—'}
                         {navOk !== null ? (navOk ? ' ✅' : ' ⚠️') : ''}
                       </td>
-                      <td className="px-2 py-1.5 text-right" style={{ color: '#6B7280' }}>
+                      <td className="px-2 py-1.5 text-right" style={{ color: 'var(--wv-text-secondary)' }}>
                         {txnUnits > 0 ? txnUnits.toFixed(4) : '—'}
                         {unitsOk !== null ? (unitsOk ? ' ✅' : ' ⚠️') : ''}
                       </td>
-                      <td className="px-2 py-1.5 text-right" style={{ color: '#9CA3AF', fontSize: 10 }}>
+                      <td className="px-2 py-1.5 text-right" style={{ color: 'var(--wv-text-muted)', fontSize: 10 }}>
                         {txnBal > 0 ? txnBal.toFixed(1) : '—'}
                         {balOk !== null ? (balOk ? ' ✅' : ' ⚠️') : ''}
                       </td>
@@ -330,22 +330,22 @@ export function VerifyResults({ result, enteredData, autoCalculated }: VerifyRes
       {/* 5. Other funds */}
       {otherFunds.map((group: any, gi: number) => (
         <div key={gi}>
-          <p className="text-xs font-semibold mb-1" style={{ color: '#1B2A4A' }}>{group.fundName} ({group.transactions?.length} txns)</p>
-          <div className="border rounded-lg overflow-hidden" style={{ borderColor: '#E8E5DD' }}>
+          <p className="text-xs font-semibold mb-1" style={{ color: 'var(--wv-text)' }}>{group.fundName} ({group.transactions?.length} txns)</p>
+          <div className="border rounded-lg overflow-hidden" style={{ borderColor: 'var(--wv-border)' }}>
             <table className="w-full text-xs">
               <thead><tr style={{ backgroundColor: '#FAFAF8' }}>
-                <th className="px-2 py-1.5 text-left font-medium" style={{ color: '#9CA3AF' }}>Date</th>
-                <th className="px-2 py-1.5 text-right font-medium" style={{ color: '#9CA3AF' }}>Amount</th>
-                <th className="px-2 py-1.5 text-right font-medium" style={{ color: '#9CA3AF' }}>NAV</th>
-                <th className="px-2 py-1.5 text-right font-medium" style={{ color: '#9CA3AF' }}>Units</th>
+                <th className="px-2 py-1.5 text-left font-medium" style={{ color: 'var(--wv-text-muted)' }}>Date</th>
+                <th className="px-2 py-1.5 text-right font-medium" style={{ color: 'var(--wv-text-muted)' }}>Amount</th>
+                <th className="px-2 py-1.5 text-right font-medium" style={{ color: 'var(--wv-text-muted)' }}>NAV</th>
+                <th className="px-2 py-1.5 text-right font-medium" style={{ color: 'var(--wv-text-muted)' }}>Units</th>
               </tr></thead>
               <tbody>
                 {(group.transactions ?? []).map((txn: any, ti: number) => (
                   <tr key={ti} style={{ borderTop: '1px solid #F0EDE6' }}>
-                    <td className="px-2 py-1.5" style={{ color: '#1A1A2E' }}>{txn.date ?? '—'}</td>
-                    <td className="px-2 py-1.5 text-right" style={{ color: '#1A1A2E' }}>{fmtAmt(txn)}</td>
-                    <td className="px-2 py-1.5 text-right" style={{ color: '#6B7280' }}>{Number(txn.nav) > 0 ? Number(txn.nav).toFixed(4) : '—'}</td>
-                    <td className="px-2 py-1.5 text-right" style={{ color: '#6B7280' }}>{Number(txn.units) > 0 ? Number(txn.units).toFixed(4) : '—'}</td>
+                    <td className="px-2 py-1.5" style={{ color: 'var(--wv-text)' }}>{txn.date ?? '—'}</td>
+                    <td className="px-2 py-1.5 text-right" style={{ color: 'var(--wv-text)' }}>{fmtAmt(txn)}</td>
+                    <td className="px-2 py-1.5 text-right" style={{ color: 'var(--wv-text-secondary)' }}>{Number(txn.nav) > 0 ? Number(txn.nav).toFixed(4) : '—'}</td>
+                    <td className="px-2 py-1.5 text-right" style={{ color: 'var(--wv-text-secondary)' }}>{Number(txn.units) > 0 ? Number(txn.units).toFixed(4) : '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -356,12 +356,12 @@ export function VerifyResults({ result, enteredData, autoCalculated }: VerifyRes
 
       {/* 6. Debug */}
       <details style={{ marginTop: 8 }}>
-        <summary className="text-[9px] cursor-pointer" style={{ color: '#9CA3AF' }}>Debug raw text ({Number(result.rawTextLength ?? 0).toLocaleString()} chars)</summary>
+        <summary className="text-[9px] cursor-pointer" style={{ color: 'var(--wv-text-muted)' }}>Debug raw text ({Number(result.rawTextLength ?? 0).toLocaleString()} chars)</summary>
         <pre style={{ marginTop: 4, padding: 8, borderRadius: 6, fontSize: 9, maxHeight: 200, overflow: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word', backgroundColor: '#1A1A2E', color: '#A0AEC0', fontFamily: 'monospace' }}>
           {result.rawText || 'No text'}
         </pre>
       </details>
-      <p className="text-[9px]" style={{ color: '#9CA3AF' }}>
+      <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>
         {totalTxns} txns / {fundGroups.length} fund(s) |
         Match: {hasMatch ? `✅ ${matchedTxn?.date ?? ''}` : (entDate || entAmt > 0 ? '❌' : '—')} |
         Folio: {acct.folioNumber || '—'} | PAN: {acct.pan || '—'}

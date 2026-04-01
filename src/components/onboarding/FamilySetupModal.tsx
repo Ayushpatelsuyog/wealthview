@@ -65,16 +65,16 @@ export function FamilySetupModal({ onComplete }: Props) {
               { icon: Users,     label: 'Family members' },
               { icon: Shield,    label: 'Secure & private' },
             ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex flex-col items-center gap-1.5 p-3 rounded-xl text-center" style={{ backgroundColor: '#F7F5F0' }}>
+              <div key={label} className="flex flex-col items-center gap-1.5 p-3 rounded-xl text-center" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
                 <Icon className="w-4 h-4" style={{ color: '#C9A84C' }} />
-                <span className="text-[11px] font-medium" style={{ color: '#6B7280' }}>{label}</span>
+                <span className="text-[11px] font-medium" style={{ color: 'var(--wv-text-secondary)' }}>{label}</span>
               </div>
             ))}
           </div>
 
           {/* Family name input */}
           <div className="space-y-2 mb-4">
-            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>
+            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>
               Family Name
             </label>
             <input
@@ -85,14 +85,14 @@ export function FamilySetupModal({ onComplete }: Props) {
               placeholder="e.g. Shah Family, The Mehtas"
               className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
               style={{
-                border: `1.5px solid ${error ? '#DC2626' : '#E8E5DD'}`,
-                backgroundColor: '#F7F5F0',
-                color: '#1A1A2E',
+                border: `1.5px solid ${error ? '#DC2626' : 'var(--wv-border)'}`,
+                backgroundColor: 'var(--wv-surface-2)',
+                color: 'var(--wv-text)',
               }}
               autoFocus
             />
             {error && <p className="text-xs" style={{ color: '#DC2626' }}>{error}</p>}
-            <p className="text-[11px]" style={{ color: '#9CA3AF' }}>
+            <p className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>
               You can rename this later in settings. Your data is private and never shared.
             </p>
           </div>
@@ -101,7 +101,7 @@ export function FamilySetupModal({ onComplete }: Props) {
             onClick={handleCreate}
             disabled={isLoading || !familyName.trim()}
             className="w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-opacity disabled:opacity-60"
-            style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}
+            style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}
           >
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {isLoading ? 'Setting up…' : 'Create Family & Continue'}

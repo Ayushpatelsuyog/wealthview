@@ -79,7 +79,7 @@ function statusStyle(status: string): { bg: string; text: string } {
     case 'Active':        return { bg: 'rgba(5,150,105,0.12)', text: '#059669' };
     case 'Expiring Soon': return { bg: 'rgba(217,119,6,0.12)', text: '#D97706' };
     case 'Expired':       return { bg: 'rgba(220,38,38,0.12)', text: '#DC2626' };
-    default:              return { bg: '#F3F4F6', text: '#6B7280' };
+    default:              return { bg: 'var(--wv-border)', text: '#6B7280' };
   }
 }
 
@@ -322,8 +322,8 @@ export default function InsurancePortfolioPage() {
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: '#1B2A4A' }}>Insurance</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Track all your insurance policies in one place</p>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--wv-text)' }}>Insurance</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Track all your insurance policies in one place</p>
           </div>
         </div>
         <Button
@@ -373,7 +373,7 @@ export default function InsurancePortfolioPage() {
       {loading && (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#C9A84C' }} />
-          <span className="ml-3 text-sm" style={{ color: '#9CA3AF' }}>Loading policies...</span>
+          <span className="ml-3 text-sm" style={{ color: 'var(--wv-text-muted)' }}>Loading policies...</span>
         </div>
       )}
 
@@ -381,8 +381,8 @@ export default function InsurancePortfolioPage() {
       {!loading && policies.length === 0 && (
         <div className="wv-card p-12 text-center">
           <Shield className="w-12 h-12 mx-auto mb-4" style={{ color: '#C9A84C' }} />
-          <h3 className="text-lg font-semibold mb-2" style={{ color: '#1B2A4A' }}>No Insurance Policies Yet</h3>
-          <p className="text-sm mb-6" style={{ color: '#9CA3AF' }}>Start tracking your insurance by adding your first policy.</p>
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--wv-text)' }}>No Insurance Policies Yet</h3>
+          <p className="text-sm mb-6" style={{ color: 'var(--wv-text-muted)' }}>Start tracking your insurance by adding your first policy.</p>
           <Button
             onClick={() => router.push('/add-assets/insurance')}
             className="gap-2"
@@ -397,7 +397,7 @@ export default function InsurancePortfolioPage() {
       {/* No results for filter */}
       {!loading && policies.length > 0 && filtered.length === 0 && (
         <div className="wv-card p-8 text-center">
-          <p className="text-sm" style={{ color: '#9CA3AF' }}>No policies found for this filter.</p>
+          <p className="text-sm" style={{ color: 'var(--wv-text-muted)' }}>No policies found for this filter.</p>
         </div>
       )}
 
@@ -408,29 +408,29 @@ export default function InsurancePortfolioPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="wv-card p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Shield className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
-                <p className="text-[10px] uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Total Coverage</p>
+                <Shield className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />
+                <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Total Coverage</p>
               </div>
-              <p className="font-display text-lg font-semibold" style={{ color: '#1B2A4A' }}>{formatLargeINR(totalCoverage)}</p>
+              <p className="font-display text-lg font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalCoverage)}</p>
             </div>
             <div className="wv-card p-4">
               <div className="flex items-center gap-2 mb-2">
-                <IndianRupee className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
-                <p className="text-[10px] uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Annual Premium</p>
+                <IndianRupee className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />
+                <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Annual Premium</p>
               </div>
               <p className="font-display text-lg font-semibold" style={{ color: '#DC2626' }}>-{formatLargeINR(annualPremiumOutflow)}</p>
             </div>
             <div className="wv-card p-4">
               <div className="flex items-center gap-2 mb-2">
-                <FileCheck className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
-                <p className="text-[10px] uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Active Policies</p>
+                <FileCheck className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />
+                <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Active Policies</p>
               </div>
-              <p className="font-display text-lg font-semibold" style={{ color: '#1B2A4A' }}>{activePolicies}</p>
+              <p className="font-display text-lg font-semibold" style={{ color: 'var(--wv-text)' }}>{activePolicies}</p>
             </div>
             <div className="wv-card p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Clock className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
-                <p className="text-[10px] uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Next Premium Due</p>
+                <Clock className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />
+                <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Next Premium Due</p>
               </div>
               <p className="font-display text-sm font-semibold" style={{ color: nextPremiumDue ? '#D97706' : '#1B2A4A' }}>
                 {nextPremiumDue ? formatDateShort(nextPremiumDue) : '--'}
@@ -444,9 +444,9 @@ export default function InsurancePortfolioPage() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #E8E5DD' }}>
+                  <tr style={{ borderBottom: '1px solid var(--wv-border)' }}>
                     {['Policy Name', 'Provider', 'Type', 'Cover Amount', 'Premium', 'Frequency', 'Next Due', 'Status'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap" style={{ color: '#9CA3AF' }}>
+                      <th key={h} className="px-4 py-3 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap" style={{ color: 'var(--wv-text-muted)' }}>
                         {h}
                       </th>
                     ))}
@@ -460,24 +460,24 @@ export default function InsurancePortfolioPage() {
                         key={policy.id}
                         onClick={() => openDetail(policy)}
                         className="cursor-pointer transition-colors hover:bg-gray-50"
-                        style={{ borderBottom: '1px solid #F3F4F6' }}
+                        style={{ borderBottom: '1px solid var(--wv-border)' }}
                       >
                         <td className="px-4 py-3">
-                          <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{policy.policy_name}</p>
-                          {policy.memberName && <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{policy.memberName}</p>}
+                          <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{policy.policy_name}</p>
+                          {policy.memberName && <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{policy.memberName}</p>}
                         </td>
-                        <td className="px-4 py-3 text-xs" style={{ color: '#4B5563' }}>{policy.provider}</td>
+                        <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{policy.provider}</td>
                         <td className="px-4 py-3">
                           <span
                             className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
-                            style={{ backgroundColor: 'rgba(27,42,74,0.08)', color: '#1B2A4A' }}
+                            style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text)' }}
                           >
                             {getCategoryLabel(policy.category)}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(policy.sum_assured)}</td>
-                        <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(policy.premium)}</td>
-                        <td className="px-4 py-3 text-xs" style={{ color: '#4B5563' }}>{policy.premium_frequency}</td>
+                        <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(policy.sum_assured)}</td>
+                        <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(policy.premium)}</td>
+                        <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{policy.premium_frequency}</td>
                         <td className="px-4 py-3 text-xs tabular-nums" style={{ color: policy.nextDue ? '#D97706' : '#4B5563' }}>
                           {policy.nextDueLabel}
                         </td>
@@ -497,7 +497,7 @@ export default function InsurancePortfolioPage() {
             </div>
 
             {/* Mobile card layout */}
-            <div className="md:hidden divide-y" style={{ borderColor: '#F3F4F6' }}>
+            <div className="md:hidden divide-y" style={{ borderColor: 'var(--wv-border)' }}>
               {filtered.map((policy) => {
                 const st = statusStyle(policy.status);
                 return (
@@ -508,15 +508,15 @@ export default function InsurancePortfolioPage() {
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <p className="text-sm font-semibold" style={{ color: '#1A1A2E' }}>{policy.policy_name}</p>
-                        <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                        <p className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>{policy.policy_name}</p>
+                        <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                           {policy.provider} {policy.memberName ? `· ${policy.memberName}` : ''}
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span
                           className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
-                          style={{ backgroundColor: 'rgba(27,42,74,0.08)', color: '#1B2A4A' }}
+                          style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text)' }}
                         >
                           {getCategoryLabel(policy.category)}
                         </span>
@@ -530,20 +530,20 @@ export default function InsurancePortfolioPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Cover</p>
-                        <p className="text-xs font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>{formatLargeINR(policy.sum_assured)}</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Cover</p>
+                        <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(policy.sum_assured)}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Premium</p>
-                        <p className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(policy.premium)} / {policy.premium_frequency}</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Premium</p>
+                        <p className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(policy.premium)} / {policy.premium_frequency}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Next Due</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Next Due</p>
                         <p className="text-xs tabular-nums" style={{ color: '#D97706' }}>{policy.nextDueLabel}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>End Date</p>
-                        <p className="text-xs tabular-nums" style={{ color: '#4B5563' }}>{formatDate(policy.maturity_date)}</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>End Date</p>
+                        <p className="text-xs tabular-nums" style={{ color: 'var(--wv-text-secondary)' }}>{formatDate(policy.maturity_date)}</p>
                       </div>
                     </div>
                   </div>
@@ -566,12 +566,12 @@ export default function InsurancePortfolioPage() {
                     <Shield className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold" style={{ color: '#1B2A4A' }}>{selectedPolicy.policy_name}</h2>
-                    <p className="text-xs" style={{ color: '#9CA3AF' }}>{selectedPolicy.provider}</p>
+                    <h2 className="text-base font-bold" style={{ color: 'var(--wv-text)' }}>{selectedPolicy.policy_name}</h2>
+                    <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>{selectedPolicy.provider}</p>
                   </div>
                 </div>
                 {selectedPolicy.memberName && (
-                  <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Held by: {selectedPolicy.memberName}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--wv-text-muted)' }}>Held by: {selectedPolicy.memberName}</p>
                 )}
               </div>
 
@@ -590,7 +590,7 @@ export default function InsurancePortfolioPage() {
                 })()}
                 <span
                   className="text-[11px] font-semibold px-3 py-1 rounded-full"
-                  style={{ backgroundColor: 'rgba(27,42,74,0.08)', color: '#1B2A4A' }}
+                  style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text)' }}
                 >
                   {getCategoryLabel(selectedPolicy.category)}
                 </span>
@@ -598,7 +598,7 @@ export default function InsurancePortfolioPage() {
 
               {/* Policy Details */}
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Policy Details</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Policy Details</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'Policy Number', value: selectedPolicy.policy_number || '--' },
@@ -611,8 +611,8 @@ export default function InsurancePortfolioPage() {
                     { label: 'End Date', value: formatDate(selectedPolicy.maturity_date) },
                   ].map((item) => (
                     <div key={item.label}>
-                      <p className="text-[10px] uppercase tracking-wider" style={{ color: '#9CA3AF' }}>{item.label}</p>
-                      <p className="text-sm font-medium" style={{ color: '#1A1A2E' }}>{item.value}</p>
+                      <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</p>
+                      <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{item.value}</p>
                     </div>
                   ))}
                 </div>
@@ -624,7 +624,7 @@ export default function InsurancePortfolioPage() {
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" style={{ color: '#D97706' }} />
-                      <span className="text-xs font-medium" style={{ color: '#4B5563' }}>Next Premium Due</span>
+                      <span className="text-xs font-medium" style={{ color: 'var(--wv-text-secondary)' }}>Next Premium Due</span>
                     </div>
                     <span className="text-sm font-semibold" style={{ color: '#D97706' }}>
                       {formatDateShort(selectedPolicy.nextDue)}
@@ -639,14 +639,14 @@ export default function InsurancePortfolioPage() {
                 if (items.length === 0) return null;
                 return (
                   <div className="space-y-3">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>
                       {getCategoryLabel(selectedPolicy.category)} Details
                     </h3>
                     <div className="space-y-2">
                       {items.map((item) => (
                         <div key={item.label} className="flex justify-between items-center p-2 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.03)' }}>
-                          <span className="text-xs" style={{ color: '#9CA3AF' }}>{item.label}</span>
-                          <span className="text-xs font-medium text-right max-w-[60%]" style={{ color: '#1A1A2E' }}>{item.value}</span>
+                          <span className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</span>
+                          <span className="text-xs font-medium text-right max-w-[60%]" style={{ color: 'var(--wv-text)' }}>{item.value}</span>
                         </div>
                       ))}
                     </div>
@@ -655,7 +655,7 @@ export default function InsurancePortfolioPage() {
               })()}
 
               {/* Actions */}
-              <div className="flex gap-3 pt-2" style={{ borderTop: '1px solid #E8E5DD' }}>
+              <div className="flex gap-3 pt-2" style={{ borderTop: '1px solid var(--wv-border)' }}>
                 <Button
                   onClick={() => handleDelete(selectedPolicy.id)}
                   variant="outline"

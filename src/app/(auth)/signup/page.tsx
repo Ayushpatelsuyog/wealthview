@@ -44,7 +44,7 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F7F5F0' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
         <div className="text-center max-w-md p-8">
           <div
             className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -52,7 +52,7 @@ export default function SignupPage() {
           >
             <TrendingUp className="w-8 h-8" style={{ color: '#C9A84C' }} />
           </div>
-          <h2 className="text-2xl font-bold mb-2" style={{ color: '#1B2A4A' }}>Check your email</h2>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--wv-text)' }}>Check your email</h2>
           <p className="text-gray-500">
             We&apos;ve sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.
           </p>
@@ -65,7 +65,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: '#F7F5F0' }}>
+    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
       {/* Left panel */}
       <div
         className="hidden lg:flex flex-col justify-between w-1/2 p-12"
@@ -113,15 +113,15 @@ export default function SignupPage() {
             >
               <TrendingUp className="w-6 h-6" style={{ color: '#C9A84C' }} />
             </div>
-            <span className="text-xl font-semibold" style={{ color: '#1B2A4A' }}>WealthView</span>
+            <span className="text-xl font-semibold" style={{ color: 'var(--wv-text)' }}>WealthView</span>
           </div>
 
-          <h1 className="text-3xl font-bold mb-2" style={{ color: '#1B2A4A' }}>Create your account</h1>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--wv-text)' }}>Create your account</h1>
           <p className="text-gray-500 mb-8">Start tracking your family&apos;s wealth</p>
 
           <form onSubmit={handleSignup} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="name" style={{ color: '#1B2A4A' }}>Full name</Label>
+              <Label htmlFor="name" style={{ color: 'var(--wv-text)' }}>Full name</Label>
               <Input
                 id="name"
                 type="text"
@@ -134,7 +134,7 @@ export default function SignupPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" style={{ color: '#1B2A4A' }}>Email address</Label>
+              <Label htmlFor="email" style={{ color: 'var(--wv-text)' }}>Email address</Label>
               <Input
                 id="email"
                 type="email"
@@ -147,7 +147,7 @@ export default function SignupPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" style={{ color: '#1B2A4A' }}>Password</Label>
+              <Label htmlFor="password" style={{ color: 'var(--wv-text)' }}>Password</Label>
               <div className="relative">
                 <Input
                   id="password"

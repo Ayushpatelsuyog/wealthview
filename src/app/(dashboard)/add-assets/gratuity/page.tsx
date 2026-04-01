@@ -175,7 +175,7 @@ export default function Page() {
         {/* Family member selector */}
         {members.length > 1 && (
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
             <Select value={member} onValueChange={setMember}>
               <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -188,7 +188,7 @@ export default function Page() {
         {/* Employment & Gratuity Details */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5 col-span-2">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Employer Name *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Employer Name *</Label>
             <Input
               placeholder="e.g. Tata Consultancy Services"
               required
@@ -198,7 +198,7 @@ export default function Page() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Date of Joining *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Date of Joining *</Label>
             <Input
               type="date"
               required
@@ -208,7 +208,7 @@ export default function Page() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Current Basic Salary + DA (&#8377;/month) *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Current Basic Salary + DA (&#8377;/month) *</Label>
             <Input
               type="number"
               required
@@ -221,10 +221,10 @@ export default function Page() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
               Years of Service
               {joiningDate && (
-                <span className="ml-1 font-normal" style={{ color: '#9CA3AF' }}>(auto: {autoYears} yrs)</span>
+                <span className="ml-1 font-normal" style={{ color: 'var(--wv-text-muted)' }}>(auto: {autoYears} yrs)</span>
               )}
             </Label>
             <Input
@@ -238,7 +238,7 @@ export default function Page() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Gratuity Status</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Gratuity Status</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as GratuityStatus)}>
               <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -254,7 +254,7 @@ export default function Page() {
         {status === 'received' && (
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Amount Received (&#8377;) *</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Amount Received (&#8377;) *</Label>
               <Input
                 type="number"
                 required
@@ -267,7 +267,7 @@ export default function Page() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Date Received</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Date Received</Label>
               <Input
                 type="date"
                 value={dateReceived}
@@ -280,7 +280,7 @@ export default function Page() {
 
         {/* Notes */}
         <div className="space-y-1.5">
-          <Label className="text-xs" style={{ color: '#6B7280' }}>Notes (optional)</Label>
+          <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes (optional)</Label>
           <Input
             placeholder="Add any notes..."
             value={notes}
@@ -292,17 +292,17 @@ export default function Page() {
         {/* Auto-calculated summary */}
         {joiningDate && salary > 0 && (
           <div className="rounded-xl p-4 space-y-3"
-            style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
+            style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
             <div className="flex items-center gap-2 mb-1">
               <Calculator className="w-4 h-4" style={{ color: '#C9A84C' }} />
-              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-secondary)' }}>
                 Gratuity Calculation
               </span>
             </div>
 
             {/* Eligibility */}
             <div className="flex items-center gap-2">
-              <span className="text-xs" style={{ color: '#6B7280' }}>Eligibility:</span>
+              <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Eligibility:</span>
               <span
                 className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
                 style={{
@@ -315,10 +315,10 @@ export default function Page() {
             </div>
 
             {/* Formula breakdown */}
-            <div className="text-xs rounded-lg p-3" style={{ backgroundColor: 'white', border: '1px solid #E8E5DD' }}>
-              <p className="font-medium mb-1" style={{ color: '#1B2A4A' }}>Formula: (Basic + DA) x 15 x Years / 26</p>
-              <p style={{ color: '#6B7280' }}>
-                {formatCurrency(salary)} x 15 x {yearsOfService} yrs / 26 = <span className="font-bold" style={{ color: '#1B2A4A' }}>{formatCurrency(Math.round(estimatedGratuity))}</span>
+            <div className="text-xs rounded-lg p-3" style={{ backgroundColor: 'white', border: '1px solid var(--wv-border)' }}>
+              <p className="font-medium mb-1" style={{ color: 'var(--wv-text)' }}>Formula: (Basic + DA) x 15 x Years / 26</p>
+              <p style={{ color: 'var(--wv-text-secondary)' }}>
+                {formatCurrency(salary)} x 15 x {yearsOfService} yrs / 26 = <span className="font-bold" style={{ color: 'var(--wv-text)' }}>{formatCurrency(Math.round(estimatedGratuity))}</span>
               </p>
             </div>
 
@@ -326,11 +326,11 @@ export default function Page() {
             <div className="grid grid-cols-2 gap-y-2 gap-x-6 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Estimated Gratuity</span>
-                <span className="font-bold" style={{ color: '#1B2A4A' }}>{formatCurrency(Math.round(estimatedGratuity))}</span>
+                <span className="font-bold" style={{ color: 'var(--wv-text)' }}>{formatCurrency(Math.round(estimatedGratuity))}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Years of Service</span>
-                <span className="font-medium" style={{ color: '#1B2A4A' }}>{yearsOfService} yrs</span>
+                <span className="font-medium" style={{ color: 'var(--wv-text)' }}>{yearsOfService} yrs</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Tax Exemption</span>
@@ -349,7 +349,7 @@ export default function Page() {
             </div>
 
             {status === 'received' && parseFloat(amountReceived) > 0 && (
-              <div className="flex justify-between text-sm pt-1" style={{ borderTop: '1px solid #E8E5DD' }}>
+              <div className="flex justify-between text-sm pt-1" style={{ borderTop: '1px solid var(--wv-border)' }}>
                 <span className="text-gray-500">Amount Received</span>
                 <span className="font-bold" style={{ color: '#059669' }}>{formatCurrency(parseFloat(amountReceived))}</span>
               </div>

@@ -12,7 +12,7 @@ const roleColors: Record<string, { bg: string; text: string }> = {
   admin:   { bg: 'rgba(27,42,74,0.08)',   text: '#1B2A4A' },
   member:  { bg: 'rgba(46,139,139,0.08)', text: '#2E8B8B' },
   advisor: { bg: '#F5EDD6',               text: '#C9A84C' },
-  guest:   { bg: '#F3F4F6',               text: '#6B7280' },
+  guest:   { bg: 'var(--wv-border)',               text: '#6B7280' },
 };
 
 const roleLabel: Record<string, string> = {
@@ -90,7 +90,7 @@ export function FamilyMembers({ snapshot }: Props) {
         <div>
           <h3 className="section-heading text-sm">Family Members</h3>
           {families.length > 1 && (
-            <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>{selectedFamilyName}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{selectedFamilyName}</p>
           )}
         </div>
         <button
@@ -105,7 +105,7 @@ export function FamilyMembers({ snapshot }: Props) {
 
       {displayMembers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 gap-3">
-          <p className="text-xs text-center" style={{ color: '#9CA3AF' }}>No family members yet</p>
+          <p className="text-xs text-center" style={{ color: 'var(--wv-text-muted)' }}>No family members yet</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
@@ -113,9 +113,9 @@ export function FamilyMembers({ snapshot }: Props) {
             <div
               key={m.id}
               className="p-3 rounded-xl border transition-all cursor-pointer"
-              style={{ borderColor: '#E8E5DD' }}
+              style={{ borderColor: 'var(--wv-border)' }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#C9A84C'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#E8E5DD'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--wv-border)'; }}
               onClick={() => {
                 // Navigate to portfolio filtered to this member
                 const memberFamilyId = selectedFamilyId || (families.length > 0 ? families[0].id : '');
@@ -133,17 +133,17 @@ export function FamilyMembers({ snapshot }: Props) {
                 </div>
                 <span
                   className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                  style={{ backgroundColor: roleColors[m.role]?.bg ?? '#F3F4F6', color: roleColors[m.role]?.text ?? '#6B7280' }}
+                  style={{ backgroundColor: roleColors[m.role]?.bg ?? 'var(--wv-border)', color: roleColors[m.role]?.text ?? '#6B7280' }}
                 >
                   {roleLabel[m.role] ?? m.role}
                 </span>
               </div>
-              <p className="text-xs font-semibold mb-0.5" style={{ color: '#1A1A2E' }}>{m.name}</p>
+              <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--wv-text)' }}>{m.name}</p>
               {m.role === 'advisor' ? (
-                <p className="font-display text-sm" style={{ color: '#9CA3AF' }}>View only</p>
+                <p className="font-display text-sm" style={{ color: 'var(--wv-text-muted)' }}>View only</p>
               ) : snapshot.hasRealData && m.netWorth > 0 ? (
                 <>
-                  <p className="font-display text-base font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(m.netWorth)}</p>
+                  <p className="font-display text-base font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(m.netWorth)}</p>
                   {m.todayChange !== 0 && (
                     <div className="flex items-center gap-1 mt-1">
                       <TrendingUp className="w-3 h-3" style={{ color: '#059669' }} />
@@ -154,7 +154,7 @@ export function FamilyMembers({ snapshot }: Props) {
                   )}
                 </>
               ) : (
-                <p className="text-xs" style={{ color: '#9CA3AF' }}>No assets yet</p>
+                <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>No assets yet</p>
               )}
               <p className="text-[9px] mt-1" style={{ color: '#C9A84C' }}>View Portfolio →</p>
             </div>
@@ -165,14 +165,14 @@ export function FamilyMembers({ snapshot }: Props) {
             <div
               onClick={() => router.push(manageUrl)}
               className="p-3 rounded-xl border border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors"
-              style={{ borderColor: '#E8E5DD' }}
+              style={{ borderColor: 'var(--wv-border)' }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#C9A84C'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#E8E5DD'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--wv-border)'; }}
             >
-              <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#F7F5F0' }}>
-                <UserPlus className="w-4 h-4" style={{ color: '#9CA3AF' }} />
+              <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+                <UserPlus className="w-4 h-4" style={{ color: 'var(--wv-text-muted)' }} />
               </div>
-              <p className="text-[11px] text-center" style={{ color: '#9CA3AF' }}>Add family member</p>
+              <p className="text-[11px] text-center" style={{ color: 'var(--wv-text-muted)' }}>Add family member</p>
             </div>
           )}
         </div>

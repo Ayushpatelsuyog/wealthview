@@ -290,6 +290,7 @@ function ForexFormContent() {
             notes: notes.trim() || undefined,
           },
           memberId: member,
+          familyId: selectedFamily || undefined,
           portfolioName: portfolioName.trim(),
         }),
       });
@@ -307,18 +308,18 @@ function ForexFormContent() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: '#F7F5F0' }}>
+    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
       <div className="max-w-2xl mx-auto space-y-5">
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-            <DollarSign className="w-5 h-5" style={{ color: '#1B2A4A' }} />
+            style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+            <DollarSign className="w-5 h-5" style={{ color: 'var(--wv-text)' }} />
           </div>
           <div>
-            <h1 className="text-lg font-bold" style={{ color: '#1B2A4A' }}>Add Forex</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Enter your foreign currency holding details</p>
+            <h1 className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>Add Forex</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Enter your foreign currency holding details</p>
           </div>
         </div>
 
@@ -332,8 +333,8 @@ function ForexFormContent() {
               style={{ backgroundColor: 'rgba(5,150,105,0.1)' }}>
               <Check className="w-6 h-6" style={{ color: '#059669' }} />
             </div>
-            <p className="text-sm font-semibold mb-1" style={{ color: '#1B2A4A' }}>Forex holding saved!</p>
-            <p className="text-xs mb-4" style={{ color: '#9CA3AF' }}>Your foreign currency holding has been recorded.</p>
+            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--wv-text)' }}>Forex holding saved!</p>
+            <p className="text-xs mb-4" style={{ color: 'var(--wv-text-muted)' }}>Your foreign currency holding has been recorded.</p>
             <div className="flex gap-3 justify-center">
               <Button
                 onClick={() => router.push('/portfolio/forex')}
@@ -346,7 +347,7 @@ function ForexFormContent() {
                 onClick={resetForm}
                 variant="outline"
                 className="text-xs h-9"
-                style={{ borderColor: '#E8E5DD', color: '#1B2A4A' }}
+                style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }}
               >
                 Add Another
               </Button>
@@ -358,14 +359,14 @@ function ForexFormContent() {
           <>
             {/* Step 1 — Family & Portfolio */}
             <div className="wv-card p-5">
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
                 Step 1 — Family &amp; Portfolio
               </p>
 
               {/* Family selector */}
               {families.length > 1 && (
                 <div className="space-y-1.5 mb-4">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family</Label>
                   <div className="flex flex-wrap gap-2">
                     {families.map(f => (
                       <button key={f.id}
@@ -374,7 +375,7 @@ function ForexFormContent() {
                         style={{
                           backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
                           color: selectedFamily === f.id ? 'white' : '#6B7280',
-                          borderColor: selectedFamily === f.id ? '#1B2A4A' : '#E8E5DD',
+                          borderColor: selectedFamily === f.id ? '#1B2A4A' : 'var(--wv-border)',
                         }}>
                         {f.name}
                       </button>
@@ -386,7 +387,7 @@ function ForexFormContent() {
               {/* Family member */}
               {members.length > 1 && (
                 <div className="space-y-1.5 mb-4">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
                   <Select value={member} onValueChange={setMember}>
                     <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -398,7 +399,7 @@ function ForexFormContent() {
 
               {/* Portfolio name */}
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio Name</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio Name</Label>
                 <Input
                   value={portfolioName}
                   onChange={e => setPortfolioName(e.target.value)}
@@ -411,7 +412,7 @@ function ForexFormContent() {
 
             {/* Step 2 — Forex Details */}
             <div className="wv-card p-5">
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
                 Step 2 — Forex Details
               </p>
 
@@ -419,7 +420,7 @@ function ForexFormContent() {
                 {/* Currency Pair + Platform */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Currency Pair <span style={{ color: '#DC2626' }}>*</span></Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Currency Pair <span style={{ color: '#DC2626' }}>*</span></Label>
                     <Select value={currencyPair} onValueChange={setCurrencyPair}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -429,7 +430,7 @@ function ForexFormContent() {
                     <FieldError msg={errors.currencyPair} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Platform / Broker</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Platform / Broker</Label>
                     <Select value={platform} onValueChange={setPlatform}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -442,7 +443,7 @@ function ForexFormContent() {
                 {/* Custom Currency Pair (shown when Other) */}
                 {currencyPair === 'other' && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Custom Currency Pair <span style={{ color: '#DC2626' }}>*</span></Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Custom Currency Pair <span style={{ color: '#DC2626' }}>*</span></Label>
                     <Input
                       value={customCurrencyPair}
                       onChange={e => setCustomCurrencyPair(e.target.value)}
@@ -454,7 +455,7 @@ function ForexFormContent() {
 
                 {/* Amount in Foreign Currency */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Amount in Foreign Currency <span style={{ color: '#DC2626' }}>*</span></Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Amount in Foreign Currency <span style={{ color: '#DC2626' }}>*</span></Label>
                   <Input
                     type="number"
                     value={amountForeign}
@@ -470,7 +471,7 @@ function ForexFormContent() {
                 {/* Exchange Rate at Purchase + Purchase Date */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Exchange Rate at Purchase <span style={{ color: '#DC2626' }}>*</span></Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Exchange Rate at Purchase <span style={{ color: '#DC2626' }}>*</span></Label>
                     <Input
                       type="number"
                       value={exchangeRatePurchase}
@@ -483,7 +484,7 @@ function ForexFormContent() {
                     <FieldError msg={errors.exchangeRatePurchase} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Purchase Date <span style={{ color: '#DC2626' }}>*</span></Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Purchase Date <span style={{ color: '#DC2626' }}>*</span></Label>
                     <Input
                       type="date"
                       value={purchaseDate}
@@ -496,7 +497,7 @@ function ForexFormContent() {
 
                 {/* Current Exchange Rate */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Current Exchange Rate <span className="text-gray-400">(optional)</span></Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Current Exchange Rate <span className="text-gray-400">(optional)</span></Label>
                   <Input
                     type="number"
                     value={exchangeRateCurrent}
@@ -510,7 +511,7 @@ function ForexFormContent() {
 
                 {/* Purpose */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Purpose</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Purpose</Label>
                   <Select value={purpose} onValueChange={setPurpose}>
                     <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -521,7 +522,7 @@ function ForexFormContent() {
 
                 {/* Notes */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Notes <span className="text-gray-400">(optional)</span></Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes <span className="text-gray-400">(optional)</span></Label>
                   <Input
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
@@ -540,25 +541,25 @@ function ForexFormContent() {
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                    <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Foreign Amt</p>
-                    <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>
+                    <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Foreign Amt</p>
+                    <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>
                       {amountNum.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(201,168,76,0.08)' }}>
-                    <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>INR at Purchase</p>
+                    <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>INR at Purchase</p>
                     <p className="text-sm font-bold" style={{ color: '#C9A84C' }}>{formatLargeINR(inrValuePurchase)}</p>
                   </div>
                   {inrValueCurrent > 0 && (
                     <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(5,150,105,0.06)' }}>
-                      <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Current INR Value</p>
+                      <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Current INR Value</p>
                       <p className="text-sm font-bold" style={{ color: '#059669' }}>{formatLargeINR(inrValueCurrent)}</p>
                     </div>
                   )}
                   {inrValueCurrent > 0 && (
                     <div className="text-center p-3 rounded-lg"
                       style={{ backgroundColor: pnl >= 0 ? 'rgba(5,150,105,0.06)' : 'rgba(220,38,38,0.06)' }}>
-                      <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>P&amp;L</p>
+                      <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>P&amp;L</p>
                       <p className="text-sm font-bold" style={{ color: pnl >= 0 ? '#059669' : '#DC2626' }}>
                         {pnl >= 0 ? '+' : ''}{formatLargeINR(pnl)}
                         <span className="text-[10px] ml-1">({pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%)</span>

@@ -239,6 +239,7 @@ function PMSFormContent() {
             notes: notes.trim() || undefined,
           },
           memberId: member,
+          familyId: selectedFamily || undefined,
           portfolioName: portfolioName.trim(),
         }),
       });
@@ -256,18 +257,18 @@ function PMSFormContent() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: '#F7F5F0' }}>
+    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
       <div className="max-w-2xl mx-auto space-y-5">
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-            <Layers className="w-5 h-5" style={{ color: '#1B2A4A' }} />
+            style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+            <Layers className="w-5 h-5" style={{ color: 'var(--wv-text)' }} />
           </div>
           <div>
-            <h1 className="text-lg font-bold" style={{ color: '#1B2A4A' }}>Add PMS</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Enter your Portfolio Management Service details</p>
+            <h1 className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>Add PMS</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Enter your Portfolio Management Service details</p>
           </div>
         </div>
 
@@ -276,14 +277,14 @@ function PMSFormContent() {
 
         {/* Step 1 — Family & Portfolio */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 1 — Family &amp; Portfolio
           </p>
 
           {/* Family selector */}
           {families.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family</Label>
               <div className="flex flex-wrap gap-2">
                 {families.map(f => (
                   <button key={f.id}
@@ -292,7 +293,7 @@ function PMSFormContent() {
                     style={{
                       backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
                       color: selectedFamily === f.id ? 'white' : '#6B7280',
-                      borderColor: selectedFamily === f.id ? '#1B2A4A' : '#E8E5DD',
+                      borderColor: selectedFamily === f.id ? '#1B2A4A' : 'var(--wv-border)',
                     }}>
                     {f.name}
                   </button>
@@ -304,7 +305,7 @@ function PMSFormContent() {
           {/* Family member */}
           {members.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
               <Select value={member} onValueChange={setMember}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -316,7 +317,7 @@ function PMSFormContent() {
 
           {/* Portfolio name */}
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio Name</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio Name</Label>
             <Input
               value={portfolioName}
               onChange={e => setPortfolioName(e.target.value)}
@@ -329,14 +330,14 @@ function PMSFormContent() {
 
         {/* Step 2 — PMS Details */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 2 — PMS Details
           </p>
 
           <div className="space-y-4">
             {/* Provider Name */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>PMS Provider Name <span style={{ color: '#DC2626' }}>*</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>PMS Provider Name <span style={{ color: '#DC2626' }}>*</span></Label>
               <Input
                 value={providerName}
                 onChange={e => setProviderName(e.target.value)}
@@ -348,7 +349,7 @@ function PMSFormContent() {
 
             {/* Strategy Name */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Strategy Name <span style={{ color: '#DC2626' }}>*</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Strategy Name <span style={{ color: '#DC2626' }}>*</span></Label>
               <Input
                 value={strategyName}
                 onChange={e => setStrategyName(e.target.value)}
@@ -360,7 +361,7 @@ function PMSFormContent() {
 
             {/* Account Number */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Account Number <span className="text-gray-400">(optional)</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Account Number <span className="text-gray-400">(optional)</span></Label>
               <Input
                 value={accountNumber}
                 onChange={e => setAccountNumber(e.target.value)}
@@ -372,7 +373,7 @@ function PMSFormContent() {
             {/* Row: Investment Amount + Investment Date */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Investment Amount (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Investment Amount (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={investmentAmount}
@@ -385,7 +386,7 @@ function PMSFormContent() {
                 <FieldError msg={errors.investmentAmount} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Investment Date <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Investment Date <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="date"
                   value={investmentDate}
@@ -398,7 +399,7 @@ function PMSFormContent() {
 
             {/* Current Value */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Current Value (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Current Value (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
               <Input
                 type="number"
                 value={currentValue}
@@ -414,7 +415,7 @@ function PMSFormContent() {
             {/* Row: Management Fee + Performance Fee */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Management Fee (%)</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Management Fee (%)</Label>
                 <Input
                   type="number"
                   value={managementFee}
@@ -427,7 +428,7 @@ function PMSFormContent() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Performance Fee (%)</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Performance Fee (%)</Label>
                 <Input
                   type="number"
                   value={performanceFee}
@@ -444,7 +445,7 @@ function PMSFormContent() {
             {/* Row: Hurdle Rate + Benchmark */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Hurdle Rate (%)</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Hurdle Rate (%)</Label>
                 <Input
                   type="number"
                   value={hurdleRate}
@@ -457,7 +458,7 @@ function PMSFormContent() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Benchmark</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Benchmark</Label>
                 <Select value={benchmark} onValueChange={setBenchmark}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -469,7 +470,7 @@ function PMSFormContent() {
 
             {/* Notes */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Notes <span className="text-gray-400">(optional)</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes <span className="text-gray-400">(optional)</span></Label>
               <Input
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
@@ -488,21 +489,21 @@ function PMSFormContent() {
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Investment</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(investedNum)}</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Investment</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(investedNum)}</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Current Value</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(currentNum)}</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(currentNum)}</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: pnl >= 0 ? 'rgba(5,150,105,0.06)' : 'rgba(220,38,38,0.06)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>P&amp;L</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>P&amp;L</p>
                 <p className="text-sm font-bold" style={{ color: pnl >= 0 ? '#059669' : '#DC2626' }}>
                   {pnl >= 0 ? '+' : ''}{formatLargeINR(pnl)}
                 </p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(201,168,76,0.08)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Return %</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Return %</p>
                 <p className="text-sm font-bold" style={{ color: returnPct >= 0 ? '#059669' : '#DC2626' }}>
                   {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%
                 </p>

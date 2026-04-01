@@ -101,7 +101,7 @@ const CAT_COLORS: Record<string, { bg: string; text: string }> = {
   Arbitrage:            { bg: 'rgba(46,139,139,0.08)',  text: '#2E8B8B' },
 };
 
-function getCatStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: '#F3F4F6', text: '#6B7280' }; }
+function getCatStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: 'var(--wv-border)', text: '#6B7280' }; }
 
 // Refine AMFI API category using fund name keywords
 // Order matters: more specific checks before generic fallbacks
@@ -265,12 +265,12 @@ function HolderSection({
   }
 
   return (
-    <div className="mt-4 border rounded-xl" style={{ borderColor: '#E8E5DD' }}>
+    <div className="mt-4 border rounded-xl" style={{ borderColor: 'var(--wv-border)' }}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between px-4 py-3 text-xs font-medium hover:bg-gray-50 transition-colors"
-        style={{ color: '#6B7280' }}
+        style={{ color: 'var(--wv-text-secondary)' }}
       >
         <span className="flex items-center gap-2">
           <User className="w-3.5 h-3.5" />
@@ -282,35 +282,35 @@ function HolderSection({
         {open ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
       </button>
       {open && (
-        <div className="px-4 pb-4 border-t" style={{ borderColor: '#E8E5DD' }}>
+        <div className="px-4 pb-4 border-t" style={{ borderColor: 'var(--wv-border)' }}>
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div className="space-y-1">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>First Holder Name</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>First Holder Name</Label>
               <Input value={holder.firstHolder || memberName} onChange={set('firstHolder')}
                 placeholder={memberName || 'Full legal name'} className="h-9 text-xs" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Second Holder (optional)</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Second Holder (optional)</Label>
               <Input value={holder.secondHolder} onChange={set('secondHolder')}
                 placeholder="Joint holder" className="h-9 text-xs" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Nominee Name</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Nominee Name</Label>
               <Input value={holder.nominee} onChange={set('nominee')}
                 placeholder="Nominee" className="h-9 text-xs" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Mobile</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Mobile</Label>
               <Input value={holder.mobile} onChange={set('mobile')}
                 placeholder="+91 9876543210" type="tel" className="h-9 text-xs" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Email</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Email</Label>
               <Input value={holder.email} onChange={set('email')}
                 placeholder="email@example.com" type="email" className="h-9 text-xs" />
             </div>
             <div className="space-y-1 col-span-2">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Bank Name</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Bank Name</Label>
               <Select value={selectBankValue} onValueChange={handleBankSelect}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select bank" /></SelectTrigger>
                 <SelectContent>
@@ -334,7 +334,7 @@ function HolderSection({
               )}
             </div>
             <div className="space-y-1">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Last 4 Digits</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Last 4 Digits</Label>
               <Input
                 value={holder.bankLast4}
                 onChange={(e) => onChange({ ...holder, bankLast4: e.target.value.replace(/\D/g, '').slice(0, 4) })}
@@ -431,7 +431,7 @@ function SipBlockCard({
 
   return (
     <div className="relative rounded-xl border p-4 space-y-3"
-      style={{ borderColor: '#E8E5DD', backgroundColor: 'rgba(27,42,74,0.01)' }}>
+      style={{ borderColor: 'var(--wv-border)', backgroundColor: 'rgba(27,42,74,0.01)' }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#C9A84C' }}>
@@ -447,7 +447,7 @@ function SipBlockCard({
       {/* Inputs row 1 */}
       <div className="grid grid-cols-3 gap-3">
         <div className="space-y-1">
-          <Label className="text-xs" style={{ color: '#6B7280' }}>SIP Amount (₹)</Label>
+          <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>SIP Amount (₹)</Label>
           <Input
             value={block.sipAmount}
             onChange={(e) => { update({ sipAmount: e.target.value, errors: { ...block.errors, sipAmount: '' } }); triggerCalc({ sipAmount: e.target.value }); }}
@@ -457,14 +457,14 @@ function SipBlockCard({
           <FieldError msg={block.errors.sipAmount} />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs" style={{ color: '#6B7280' }}>Monthly SIP Date</Label>
+          <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Monthly SIP Date</Label>
           <Select value={block.sipDate} onValueChange={(v) => triggerCalc({ sipDate: v })}>
             <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>{SIP_DATES.map((d) => <SelectItem key={d} value={d} className="text-xs">{d} of month</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="space-y-1">
-          <Label className="text-xs" style={{ color: '#6B7280' }}>SIP Start Date</Label>
+          <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>SIP Start Date</Label>
           <Input type="date" value={block.sipStart}
             onChange={(e) => triggerCalc({ sipStart: e.target.value })}
             className="h-9 text-xs"
@@ -477,7 +477,7 @@ function SipBlockCard({
 
       {/* SIP Status — Active / Stopped */}
       <div className="space-y-2">
-        <Label className="text-xs" style={{ color: '#6B7280' }}>SIP Status</Label>
+        <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>SIP Status</Label>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -485,7 +485,7 @@ function SipBlockCard({
             className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
             style={block.sipStatus === 'active'
               ? { backgroundColor: 'rgba(5,150,105,0.12)', color: '#059669', border: '1px solid rgba(5,150,105,0.3)' }
-              : { backgroundColor: '#F7F5F0', color: '#9CA3AF', border: '1px solid #E8E5DD' }}
+              : { backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-muted)', border: '1px solid var(--wv-border)' }}
           >
             Active
           </button>
@@ -494,8 +494,8 @@ function SipBlockCard({
             onClick={() => update({ sipStatus: 'inactive' })}
             className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
             style={block.sipStatus === 'inactive'
-              ? { backgroundColor: 'rgba(107,114,128,0.12)', color: '#6B7280', border: '1px solid rgba(107,114,128,0.3)' }
-              : { backgroundColor: '#F7F5F0', color: '#9CA3AF', border: '1px solid #E8E5DD' }}
+              ? { backgroundColor: 'rgba(107,114,128,0.12)', color: 'var(--wv-text-secondary)', border: '1px solid rgba(107,114,128,0.3)' }
+              : { backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-muted)', border: '1px solid var(--wv-border)' }}
           >
             Stopped
           </button>
@@ -510,7 +510,7 @@ function SipBlockCard({
       {/* Stop Date — only when Stopped */}
       {block.sipStatus === 'inactive' && (
         <div className="space-y-1">
-          <Label className="text-xs" style={{ color: '#6B7280' }}>Stop Date</Label>
+          <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Stop Date</Label>
           <Input type="date" value={block.sipStop}
             onChange={(e) => triggerCalc({ sipStop: e.target.value })}
             className="h-9 text-xs"
@@ -520,7 +520,7 @@ function SipBlockCard({
           />
           <FieldError msg={block.errors.sipStop} />
           {block.sipStop && block.sipStart && (
-            <p className="text-[10px]" style={{ color: '#6B7280' }}>
+            <p className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
               Installments calculated from {block.sipStart} to {block.sipStop}
             </p>
           )}
@@ -529,7 +529,7 @@ function SipBlockCard({
 
       {/* Auto-calc status */}
       {block.isCalculating && (
-        <div className="flex items-center gap-2 text-xs" style={{ color: '#9CA3AF' }}>
+        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--wv-text-muted)' }}>
           <Loader2 className="w-3 h-3 animate-spin" />Calculating from NAV history…
         </div>
       )}
@@ -537,7 +537,7 @@ function SipBlockCard({
       {/* Installment summary line */}
       {!block.isCalculating && block.installments !== null && block.installments > 0 && (
         <div className="px-3 py-2 rounded-lg text-xs font-medium"
-          style={{ backgroundColor: 'rgba(27,42,74,0.04)', color: '#1B2A4A' }}>
+          style={{ backgroundColor: 'rgba(27,42,74,0.04)', color: 'var(--wv-text)' }}>
           {block.installments} installments
           {block.sipStart && (
             <> from <strong>{block.sipStart}</strong></>
@@ -563,13 +563,13 @@ function SipBlockCard({
         <div className="grid grid-cols-3 gap-3">
           {/* Installments */}
           <div className="space-y-1">
-            <Label className="text-xs flex items-center gap-1" style={{ color: '#6B7280' }}>
+            <Label className="text-xs flex items-center gap-1" style={{ color: 'var(--wv-text-secondary)' }}>
               Instalments
               {!block.overrideInstallments && block.installments !== null && <AutoTag label="auto" />}
               {!block.overrideInstallments && block.installments !== null && (
                 <button type="button" onClick={() => update({ overrideInstallments: true, manualInstallments: block.installments?.toString() ?? '' })}
                   className="ml-auto p-0.5 rounded hover:bg-gray-100 transition-colors" title="Edit manually">
-                  <Pencil className="w-2.5 h-2.5" style={{ color: '#9CA3AF' }} />
+                  <Pencil className="w-2.5 h-2.5" style={{ color: 'var(--wv-text-muted)' }} />
                 </button>
               )}
             </Label>
@@ -585,7 +585,7 @@ function SipBlockCard({
             />
             {block.overrideInstallments && block.installments !== null && (
               <div className="flex items-center justify-between">
-                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Auto was: {block.installments}</p>
+                <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Auto was: {block.installments}</p>
                 <button type="button" onClick={() => update({ overrideInstallments: false, manualInstallments: '' })}
                   className="text-[9px] flex items-center gap-0.5" style={{ color: '#C9A84C' }}>
                   <RotateCcw className="w-2 h-2" />Reset
@@ -596,13 +596,13 @@ function SipBlockCard({
 
           {/* Total Units */}
           <div className="space-y-1">
-            <Label className="text-xs flex items-center gap-1" style={{ color: '#6B7280' }}>
+            <Label className="text-xs flex items-center gap-1" style={{ color: 'var(--wv-text-secondary)' }}>
               Total Units
               {!block.overrideUnits && block.totalUnits !== null && <AutoTag label="auto" />}
               {!block.overrideUnits && block.totalUnits !== null && (
                 <button type="button" onClick={() => update({ overrideUnits: true, manualTotalUnits: block.totalUnits?.toFixed(4) ?? '' })}
                   className="ml-auto p-0.5 rounded hover:bg-gray-100 transition-colors" title="Edit manually">
-                  <Pencil className="w-2.5 h-2.5" style={{ color: '#9CA3AF' }} />
+                  <Pencil className="w-2.5 h-2.5" style={{ color: 'var(--wv-text-muted)' }} />
                 </button>
               )}
             </Label>
@@ -618,7 +618,7 @@ function SipBlockCard({
             />
             {block.overrideUnits && block.totalUnits !== null && (
               <div className="flex items-center justify-between">
-                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Auto was: {block.totalUnits.toFixed(4)}</p>
+                <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Auto was: {block.totalUnits.toFixed(4)}</p>
                 <button type="button" onClick={() => update({ overrideUnits: false, manualTotalUnits: '' })}
                   className="text-[9px] flex items-center gap-0.5" style={{ color: '#C9A84C' }}>
                   <RotateCcw className="w-2 h-2" />Reset
@@ -629,13 +629,13 @@ function SipBlockCard({
 
           {/* Avg NAV */}
           <div className="space-y-1">
-            <Label className="text-xs flex items-center gap-1" style={{ color: '#6B7280' }}>
+            <Label className="text-xs flex items-center gap-1" style={{ color: 'var(--wv-text-secondary)' }}>
               Avg NAV
               {!block.overrideAvgNav && block.avgNav !== null && <AutoTag label="auto" />}
               {!block.overrideAvgNav && block.avgNav !== null && (
                 <button type="button" onClick={() => update({ overrideAvgNav: true, manualAvgNav: block.avgNav?.toFixed(4) ?? '' })}
                   className="ml-auto p-0.5 rounded hover:bg-gray-100 transition-colors" title="Edit manually">
-                  <Pencil className="w-2.5 h-2.5" style={{ color: '#9CA3AF' }} />
+                  <Pencil className="w-2.5 h-2.5" style={{ color: 'var(--wv-text-muted)' }} />
                 </button>
               )}
             </Label>
@@ -651,7 +651,7 @@ function SipBlockCard({
             />
             {block.overrideAvgNav && block.avgNav !== null && (
               <div className="flex items-center justify-between">
-                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Auto was: ₹{block.avgNav.toFixed(4)}</p>
+                <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Auto was: ₹{block.avgNav.toFixed(4)}</p>
                 <button type="button" onClick={() => update({ overrideAvgNav: false, manualAvgNav: '' })}
                   className="text-[9px] flex items-center gap-0.5" style={{ color: '#C9A84C' }}>
                   <RotateCcw className="w-2 h-2" />Reset
@@ -664,19 +664,19 @@ function SipBlockCard({
 
       {/* Mini summary */}
       {hasResult && !block.isCalculating && (
-        <div className="grid grid-cols-4 gap-2 pt-2 border-t" style={{ borderColor: '#E8E5DD' }}>
+        <div className="grid grid-cols-4 gap-2 pt-2 border-t" style={{ borderColor: 'var(--wv-border)' }}>
           <div>
-            <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Invested</p>
-            <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(effectiveInvested)}</p>
+            <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Invested</p>
+            <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(effectiveInvested)}</p>
           </div>
           {block.currentValue !== null && !anyOverride && (
             <>
               <div>
-                <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Current</p>
-                <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(block.currentValue)}</p>
+                <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Current</p>
+                <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(block.currentValue)}</p>
               </div>
               <div>
-                <p className="text-[10px]" style={{ color: '#9CA3AF' }}>P&L</p>
+                <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>P&L</p>
                 <p className="text-xs font-semibold flex items-center gap-0.5"
                   style={{ color: (block.pnl ?? 0) >= 0 ? '#059669' : '#DC2626' }}>
                   {(block.pnl ?? 0) >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -684,7 +684,7 @@ function SipBlockCard({
                 </p>
               </div>
               <div>
-                <p className="text-[10px]" style={{ color: '#9CA3AF' }}>XIRR</p>
+                <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>XIRR</p>
                 <p className="text-xs font-semibold" style={{ color: (block.xirr ?? 0) >= 0 ? '#059669' : '#DC2626' }}>
                   {block.xirr !== null ? `${(block.xirr * 100).toFixed(1)}%` : '—'}
                 </p>
@@ -701,22 +701,22 @@ function SipBlockCard({
             type="button"
             onClick={() => update({ showBreakdown: !block.showBreakdown })}
             className="flex items-center gap-1 text-[11px]"
-            style={{ color: '#6B7280' }}
+            style={{ color: 'var(--wv-text-secondary)' }}
           >
             <ChevronRight className={`w-3 h-3 transition-transform ${block.showBreakdown ? 'rotate-90' : ''}`} />
             View SIP installment details ({block.breakdown.length} months)
           </button>
           {block.showBreakdown && (
-            <div className="mt-2 rounded-lg border overflow-auto max-h-48" style={{ borderColor: '#E8E5DD' }}>
+            <div className="mt-2 rounded-lg border overflow-auto max-h-48" style={{ borderColor: 'var(--wv-border)' }}>
               <table className="w-full text-[11px]">
                 <thead>
-                  <tr style={{ backgroundColor: '#F7F5F0' }}>
-                    <th className="px-3 py-1.5 text-left font-semibold" style={{ color: '#6B7280' }}>Date</th>
-                    <th className="px-3 py-1.5 text-right font-semibold" style={{ color: '#6B7280' }}>NAV</th>
-                    <th className="px-3 py-1.5 text-right font-semibold" style={{ color: '#6B7280' }}>Stamp Duty</th>
-                    <th className="px-3 py-1.5 text-right font-semibold" style={{ color: '#6B7280' }}>Eff. Amount</th>
-                    <th className="px-3 py-1.5 text-right font-semibold" style={{ color: '#6B7280' }}>Units (4dp)</th>
-                    <th className="px-3 py-1.5 text-right font-semibold" style={{ color: '#6B7280' }}>Amount</th>
+                  <tr style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+                    <th className="px-3 py-1.5 text-left font-semibold" style={{ color: 'var(--wv-text-secondary)' }}>Date</th>
+                    <th className="px-3 py-1.5 text-right font-semibold" style={{ color: 'var(--wv-text-secondary)' }}>NAV</th>
+                    <th className="px-3 py-1.5 text-right font-semibold" style={{ color: 'var(--wv-text-secondary)' }}>Stamp Duty</th>
+                    <th className="px-3 py-1.5 text-right font-semibold" style={{ color: 'var(--wv-text-secondary)' }}>Eff. Amount</th>
+                    <th className="px-3 py-1.5 text-right font-semibold" style={{ color: 'var(--wv-text-secondary)' }}>Units (4dp)</th>
+                    <th className="px-3 py-1.5 text-right font-semibold" style={{ color: 'var(--wv-text-secondary)' }}>Amount</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -724,16 +724,16 @@ function SipBlockCard({
                     const r = row as typeof row & { stamp_duty?: number; effective_amount?: number };
                     return (
                       <tr key={i} className="border-t" style={{ borderColor: '#F0EDE6' }}>
-                        <td className="px-3 py-1.5" style={{ color: '#1A1A2E' }}>{row.date}</td>
-                        <td className="px-3 py-1.5 text-right" style={{ color: '#1A1A2E' }}>₹{row.nav.toFixed(4)}</td>
-                        <td className="px-3 py-1.5 text-right" style={{ color: '#9CA3AF' }}>
+                        <td className="px-3 py-1.5" style={{ color: 'var(--wv-text)' }}>{row.date}</td>
+                        <td className="px-3 py-1.5 text-right" style={{ color: 'var(--wv-text)' }}>₹{row.nav.toFixed(4)}</td>
+                        <td className="px-3 py-1.5 text-right" style={{ color: 'var(--wv-text-muted)' }}>
                           {r.stamp_duty ? `₹${r.stamp_duty.toFixed(2)}` : '—'}
                         </td>
-                        <td className="px-3 py-1.5 text-right" style={{ color: '#6B7280' }}>
+                        <td className="px-3 py-1.5 text-right" style={{ color: 'var(--wv-text-secondary)' }}>
                           {r.effective_amount ? `₹${r.effective_amount.toFixed(2)}` : `₹${row.amount.toLocaleString('en-IN')}`}
                         </td>
-                        <td className="px-3 py-1.5 text-right font-medium" style={{ color: '#1A1A2E' }}>{row.units_purchased.toFixed(4)}</td>
-                        <td className="px-3 py-1.5 text-right" style={{ color: '#1A1A2E' }}>₹{row.amount.toLocaleString('en-IN')}</td>
+                        <td className="px-3 py-1.5 text-right font-medium" style={{ color: 'var(--wv-text)' }}>{row.units_purchased.toFixed(4)}</td>
+                        <td className="px-3 py-1.5 text-right" style={{ color: 'var(--wv-text)' }}>₹{row.amount.toLocaleString('en-IN')}</td>
                       </tr>
                     );
                   })}
@@ -904,6 +904,8 @@ export default function MutualFundsPage() {
   useEffect(() => {
     if (!selectedFamily) return;
     setFamilyId(selectedFamily);
+    setPortfolio('');
+    setBroker('');
     (async () => {
       const { data: fUsers } = await supabase.from('users').select('id, name, pan, primary_mobile, primary_email').eq('family_id', selectedFamily);
       setMembers(fUsers ?? []);
@@ -1260,6 +1262,7 @@ export default function MutualFundsPage() {
         portfolioName:  portfolio,
         brokerId:       broker || undefined,
         memberId:       member,
+        familyId:       familyId || undefined,
         currentNav:     navData?.nav,
         sipMetadata: {
           is_sip: true,
@@ -1305,6 +1308,7 @@ export default function MutualFundsPage() {
         portfolioName:  portfolio,
         brokerId:       broker || undefined,
         memberId:       member,
+        familyId:       familyId || undefined,
         currentNav:     navData?.nav ?? (isNFO ? 10 : undefined),
         holderDetails:  holderMeta,
       };
@@ -1406,13 +1410,13 @@ export default function MutualFundsPage() {
           <BarChart3 className="w-5 h-5" style={{ color: '#2E8B8B' }} />
         </div>
         <div>
-          <h1 className="font-display text-xl font-semibold" style={{ color: '#1A1A2E' }}>
+          <h1 className="font-display text-xl font-semibold" style={{ color: 'var(--wv-text)' }}>
             {editTxnId ? 'Edit Transaction'
               : mode === 'edit' ? 'Edit Holding'
               : mode === 'add_to' ? 'Add More Units'
               : 'Mutual Funds'}
           </h1>
-          <p className="text-xs" style={{ color: '#9CA3AF' }}>
+          <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>
             {editTxnId ? (editTxnData?.fundName ?? '…')
               : mode === 'edit'   ? 'Update the details for this holding'
               : mode === 'add_to' ? 'Add more units to an existing holding'
@@ -1428,7 +1432,7 @@ export default function MutualFundsPage() {
         <>
           {editTxnLoading && (
             <div className="flex items-center gap-2 px-4 py-3 rounded-xl mb-4 text-xs"
-              style={{ backgroundColor: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.15)', color: '#1B2A4A' }}>
+              style={{ backgroundColor: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.15)', color: 'var(--wv-text)' }}>
               <Loader2 className="w-3.5 h-3.5 animate-spin" />Loading transaction data…
             </div>
           )}
@@ -1449,23 +1453,23 @@ export default function MutualFundsPage() {
                            color: editTxnData.txnType === 'sip' ? '#2563EB' : '#1B2A4A' }}>
                   {editTxnData.txnType === 'sip' ? 'SIP' : 'Lump Sum'}
                 </span>
-                <span className="text-xs font-semibold flex-1" style={{ color: '#1A1A2E' }}>{editTxnData.fundName}</span>
-                <span className="text-[10px]" style={{ color: '#9CA3AF' }}>Fund &amp; portfolio locked</span>
+                <span className="text-xs font-semibold flex-1" style={{ color: 'var(--wv-text)' }}>{editTxnData.fundName}</span>
+                <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Fund &amp; portfolio locked</span>
               </div>
 
               {/* Editable fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Invested Amount (₹)</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Invested Amount (₹)</Label>
                   <Input value={amount} onChange={(e) => { setAmount(e.target.value); setErrors(er => ({ ...er, amount: '' })); }}
                     placeholder="50000" className="h-9 text-xs" type="number"
                     style={errors.amount ? { borderColor: '#DC2626' } : {}} />
                   <FieldError msg={errors.amount} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                     Purchase Date
-                    {isHistLoading && <Loader2 className="w-2.5 h-2.5 inline ml-1 animate-spin" style={{ color: '#9CA3AF' }} />}
+                    {isHistLoading && <Loader2 className="w-2.5 h-2.5 inline ml-1 animate-spin" style={{ color: 'var(--wv-text-muted)' }} />}
                   </Label>
                   <Input type="date" value={purchaseDate}
                     onChange={(e) => { handleDateChange(e.target.value); setErrors(er => ({ ...er, purchaseDate: '' })); }}
@@ -1474,7 +1478,7 @@ export default function MutualFundsPage() {
                   <FieldError msg={errors.purchaseDate} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>NAV at Purchase</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>NAV at Purchase</Label>
                   {histNavHint && (
                     <p className="text-[10px]" style={{ color: '#059669' }}>
                       NAV on {fmtNavDate(histNavHint.date)}: ₹{histNavHint.nav.toFixed(4)} (auto-filled)
@@ -1486,23 +1490,23 @@ export default function MutualFundsPage() {
                   <FieldError msg={errors.nav} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                     Units Allotted
                     {applyStampDuty && <span className="ml-1 text-[10px]" style={{ color: '#059669' }}>after stamp duty</span>}
                   </Label>
                   <Input value={units} readOnly placeholder="= (Amount − Stamp Duty) ÷ NAV" className="h-9 text-xs"
                     style={{ backgroundColor: units ? 'rgba(5,150,105,0.04)' : undefined }} />
                   {applyStampDuty && units && (
-                    <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                    <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                       Stamp duty ₹{stampDutyAmt.toFixed(2)} · effective ₹{effectiveAmount.toFixed(2)}
                     </p>
                   )}
                 </div>
                 {editTxnData.folio && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Folio</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Folio</Label>
                     <Input value={editTxnData.folio} readOnly className="h-9 text-xs"
-                      style={{ backgroundColor: '#F7F5F0' }} />
+                      style={{ backgroundColor: 'var(--wv-surface-2)' }} />
                   </div>
                 )}
               </div>
@@ -1511,13 +1515,13 @@ export default function MutualFundsPage() {
               <div className="flex gap-3 pt-1">
                 <Button onClick={handleSaveTransaction} disabled={isSaving}
                   className="flex-1 h-9 text-xs font-semibold"
-                  style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>
+                  style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}>
                   {isSaving
                     ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Saving…</>
                     : 'Update Transaction'}
                 </Button>
                 <Button variant="outline" onClick={() => router.push('/portfolio/mutual-funds')}
-                  className="h-9 text-xs" style={{ borderColor: '#E8E5DD', color: '#6B7280' }}>
+                  className="h-9 text-xs" style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}>
                   Cancel
                 </Button>
               </div>
@@ -1530,7 +1534,7 @@ export default function MutualFundsPage() {
       {/* Prefill loading / error / mode banners */}
       {prefillLoading && (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl mb-4 text-xs"
-          style={{ backgroundColor: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.15)', color: '#1B2A4A' }}>
+          style={{ backgroundColor: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.15)', color: 'var(--wv-text)' }}>
           <Loader2 className="w-3.5 h-3.5 animate-spin" />Loading holding data…
         </div>
       )}
@@ -1549,19 +1553,19 @@ export default function MutualFundsPage() {
               Adding units to: {prefill?.schemeName ?? '…'}
             </span>
             {prefill && (
-              <span style={{ color: '#6B7280' }}>
+              <span style={{ color: 'var(--wv-text-secondary)' }}>
                 Existing: {prefill.existingUnits.toFixed(4)} units · Invested: {formatLargeINR(prefill.investedAmount)}
               </span>
             )}
           </span>
-          <button onClick={() => router.push('/portfolio/mutual-funds')} className="underline ml-4 flex-shrink-0" style={{ color: '#6B7280' }}>Cancel</button>
+          <button onClick={() => router.push('/portfolio/mutual-funds')} className="underline ml-4 flex-shrink-0" style={{ color: 'var(--wv-text-secondary)' }}>Cancel</button>
         </div>
       )}
       {mode === 'edit' && !prefillLoading && (
         <div className="flex items-center justify-between px-4 py-3 rounded-xl mb-4 text-xs"
           style={{ backgroundColor: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.2)', color: '#C9A84C' }}>
           <span>Editing holding — existing buy/SIP transactions will be replaced on save</span>
-          <button onClick={() => router.push('/portfolio/mutual-funds')} className="underline" style={{ color: '#6B7280' }}>Cancel</button>
+          <button onClick={() => router.push('/portfolio/mutual-funds')} className="underline" style={{ color: 'var(--wv-text-secondary)' }}>Cancel</button>
         </div>
       )}
 
@@ -1573,15 +1577,15 @@ export default function MutualFundsPage() {
           <div className="flex gap-2">
             <button onClick={() => { setHolder({ ...savedHolder }); setShowReuseHolder(false); }}
               className="px-3 py-1 rounded-lg text-xs font-semibold"
-              style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>Yes</button>
+              style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}>Yes</button>
             <button onClick={() => setShowReuseHolder(false)}
-              className="px-3 py-1 rounded-lg text-xs" style={{ color: '#6B7280' }}>No</button>
+              className="px-3 py-1 rounded-lg text-xs" style={{ color: 'var(--wv-text-secondary)' }}>No</button>
           </div>
         </div>
       )}
 
       <Tabs defaultValue="manual">
-        <TabsList className="mb-5 w-full" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
+        <TabsList className="mb-5 w-full" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
           <TabsTrigger value="manual"  className="flex-1 gap-1.5 text-xs data-[state=active]:bg-white"><BarChart3 className="w-3.5 h-3.5" />Manual Entry</TabsTrigger>
           <TabsTrigger value="import"  className="flex-1 gap-1.5 text-xs data-[state=active]:bg-white"><Upload   className="w-3.5 h-3.5" />CSV / Statement</TabsTrigger>
           <TabsTrigger value="api"     className="flex-1 gap-1.5 text-xs data-[state=active]:bg-white"><LinkIcon className="w-3.5 h-3.5" />API Fetch</TabsTrigger>
@@ -1592,12 +1596,12 @@ export default function MutualFundsPage() {
 
           {/* Step 1 — Portfolio & Broker */}
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Step 1 — Portfolio &amp; Distributor</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>Step 1 — Portfolio &amp; Distributor</p>
             <div className="space-y-4">
               {/* Family selector */}
               {families.length > 1 && (
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family</Label>
                   <div className="flex flex-wrap gap-2">
                     {families.map(f => (
                       <button key={f.id}
@@ -1606,7 +1610,7 @@ export default function MutualFundsPage() {
                         style={{
                           backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
                           color: selectedFamily === f.id ? 'white' : '#6B7280',
-                          borderColor: selectedFamily === f.id ? '#1B2A4A' : '#E8E5DD',
+                          borderColor: selectedFamily === f.id ? '#1B2A4A' : 'var(--wv-border)',
                         }}>
                         {f.name}
                       </button>
@@ -1617,7 +1621,7 @@ export default function MutualFundsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
                   <Select value={member} onValueChange={setMember}>
                     <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Loading…" /></SelectTrigger>
                     <SelectContent>
@@ -1631,7 +1635,7 @@ export default function MutualFundsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio</Label>
                 <PortfolioSelector
                   familyId={familyId}
                   memberId={member}
@@ -1641,7 +1645,7 @@ export default function MutualFundsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Platform / Distributor</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Platform / Distributor</Label>
                 <BrokerSelector familyId={familyId} selectedBrokerId={broker}
                   onChange={(id) => { setBroker(id); setErrors((e) => ({ ...e, broker: '' })); }}
                   error={errors.broker} />
@@ -1651,7 +1655,7 @@ export default function MutualFundsPage() {
 
           {/* Step 2 — Fund Search */}
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Step 2 — Fund Search</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>Step 2 — Fund Search</p>
             <FieldError msg={errors.fund} />
             <div className="relative" ref={dropRef}>
               <div className="relative">
@@ -1664,14 +1668,14 @@ export default function MutualFundsPage() {
                   style={errors.fund ? { borderColor: '#DC2626' } : {}} />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
                   {isSearching
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: '#9CA3AF' }} />
-                    : <ChevronDown className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />}
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: 'var(--wv-text-muted)' }} />
+                    : <ChevronDown className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />}
                 </div>
               </div>
 
               {showDrop && searchResults.length > 0 && (
                 <div className="absolute top-full mt-1 left-0 right-0 rounded-xl border overflow-hidden bg-white"
-                  style={{ borderColor: '#E8E5DD', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+                  style={{ borderColor: 'var(--wv-border)', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
                   {searchResults.map((f) => {
                     const cc = getCatStyle(f.category);
                     return (
@@ -1680,8 +1684,8 @@ export default function MutualFundsPage() {
                         style={{ borderColor: '#F0EDE6' }}
                         onMouseDown={(e) => { e.preventDefault(); selectFund(f); }}>
                         <div className="min-w-0 flex-1 mr-3">
-                          <p className="text-xs font-medium truncate" style={{ color: '#1A1A2E' }}>{f.schemeName}</p>
-                          <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>AMFI {f.schemeCode}</p>
+                          <p className="text-xs font-medium truncate" style={{ color: 'var(--wv-text)' }}>{f.schemeName}</p>
+                          <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>AMFI {f.schemeCode}</p>
                         </div>
                         <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
                           style={{ backgroundColor: cc.bg, color: cc.text }}>{f.category}</span>
@@ -1702,24 +1706,24 @@ export default function MutualFundsPage() {
                   {/* Show canonical name from NAV API if it differs from AMFI name */}
                   {navData?.fundName && navData.fundName !== selectedFund.schemeName ? (
                     <>
-                      <p className="text-xs font-semibold truncate" style={{ color: '#1A1A2E' }}>{navData.fundName}</p>
-                      <p className="text-[10px] mt-0.5 truncate" style={{ color: '#9CA3AF' }}>
+                      <p className="text-xs font-semibold truncate" style={{ color: 'var(--wv-text)' }}>{navData.fundName}</p>
+                      <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--wv-text-muted)' }}>
                         AMFI: {selectedFund.schemeName}
                       </p>
                     </>
                   ) : (
-                    <p className="text-xs font-semibold truncate" style={{ color: '#1A1A2E' }}>{selectedFund.schemeName}</p>
+                    <p className="text-xs font-semibold truncate" style={{ color: 'var(--wv-text)' }}>{selectedFund.schemeName}</p>
                   )}
                   {navData ? (
                     <div className="flex items-center gap-3 mt-1">
-                      <p className="text-[10px]" style={{ color: '#6B7280' }}>
-                        Latest NAV: <strong style={{ color: '#1A1A2E' }}>₹{navData.nav.toFixed(4)}</strong>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
+                        Latest NAV: <strong style={{ color: 'var(--wv-text)' }}>₹{navData.nav.toFixed(4)}</strong>
                         {' · '}{fmtNavDate(navData.navDate)}
                       </p>
-                      {navData.fundHouse && <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{navData.fundHouse}</p>}
+                      {navData.fundHouse && <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{navData.fundHouse}</p>}
                     </div>
                   ) : isNavLoading ? (
-                    <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>Fetching live NAV…</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>Fetching live NAV…</p>
                   ) : (
                     <p className="text-[10px] mt-0.5" style={{ color: '#DC2626' }}>NAV unavailable — enter manually</p>
                   )}
@@ -1737,12 +1741,12 @@ export default function MutualFundsPage() {
           {/* Step 3 — Transaction Details */}
           <div className="wv-card p-5">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>Step 3 — Transaction Details</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--wv-text-muted)' }}>Step 3 — Transaction Details</p>
               <div className="flex items-center gap-2">
-                <span className="text-xs" style={{ color: '#6B7280' }}>SIP</span>
+                <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>SIP</span>
                 <button onClick={() => setIsSIP(!isSIP)}
                   className="relative w-10 h-5 rounded-full transition-colors"
-                  style={{ backgroundColor: isSIP ? '#C9A84C' : '#E8E5DD' }}>
+                  style={{ backgroundColor: isSIP ? '#C9A84C' : 'var(--wv-border)' }}>
                   <div className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
                     style={{ transform: isSIP ? 'translateX(22px)' : 'translateX(2px)' }} />
                 </button>
@@ -1778,7 +1782,7 @@ export default function MutualFundsPage() {
                 {/* Folio for SIP */}
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   <div className="space-y-1">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Folio Number</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Folio Number</Label>
                     <Input value={folio} onChange={(e) => setFolio(e.target.value)} placeholder="123456789" className="h-9 text-xs" />
                   </div>
                 </div>
@@ -1788,15 +1792,15 @@ export default function MutualFundsPage() {
                   <div className="p-3 rounded-xl grid grid-cols-4 gap-3"
                     style={{ backgroundColor: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.2)' }}>
                     <div>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Total Invested</p>
-                      <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>{formatLargeINR(sipTotals.invested)}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Total Invested</p>
+                      <p className="text-xs font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(sipTotals.invested)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Current Value</p>
-                      <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>{formatLargeINR(sipTotals.currentValue)}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
+                      <p className="text-xs font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(sipTotals.currentValue)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>P&amp;L</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>P&amp;L</p>
                       <p className="text-xs font-bold flex items-center gap-0.5"
                         style={{ color: sipCombinedPnL >= 0 ? '#059669' : '#DC2626' }}>
                         {sipCombinedPnL >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -1805,7 +1809,7 @@ export default function MutualFundsPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>XIRR</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>XIRR</p>
                       <p className="text-xs font-bold"
                         style={{ color: (sipCombinedXIRR ?? 0) >= 0 ? '#059669' : '#DC2626' }}>
                         {sipCombinedXIRR !== null ? `${(sipCombinedXIRR * 100).toFixed(1)}%` : '—'}
@@ -1818,7 +1822,7 @@ export default function MutualFundsPage() {
               /* ── Lump sum ── */
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Invested Amount (₹)</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Invested Amount (₹)</Label>
                   <Input value={amount} onChange={(e) => { setAmount(e.target.value); setErrors((er) => ({ ...er, amount: '' })); }}
                     placeholder="50000" className="h-9 text-xs" type="number"
                     style={errors.amount ? { borderColor: '#DC2626' } : {}} />
@@ -1826,9 +1830,9 @@ export default function MutualFundsPage() {
                 </div>
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                       Purchase Date
-                      {isHistLoading && <Loader2 className="w-2.5 h-2.5 inline ml-1 animate-spin" style={{ color: '#9CA3AF' }} />}
+                      {isHistLoading && <Loader2 className="w-2.5 h-2.5 inline ml-1 animate-spin" style={{ color: 'var(--wv-text-muted)' }} />}
                     </Label>
                     <label className="flex items-center gap-1.5 cursor-pointer select-none">
                       <input type="checkbox" checked={isNFO} onChange={(e) => {
@@ -1847,7 +1851,7 @@ export default function MutualFundsPage() {
                   <FieldError msg={errors.purchaseDate} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                     NAV at Purchase
                     {!isNFO && navData && <span className="text-[10px] ml-1" style={{ color: '#C9A84C' }}>Today: ₹{navData.nav.toFixed(4)}</span>}
                     {isNFO && <span className="text-[10px] ml-1" style={{ color: '#2563EB' }}>NFO — fixed at ₹10</span>}
@@ -1865,28 +1869,28 @@ export default function MutualFundsPage() {
                   <FieldError msg={errors.nav} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                     Units Allotted (4dp)
                     {applyStampDuty && <span className="ml-1 text-[10px]" style={{ color: '#059669' }}>after stamp duty</span>}
                   </Label>
                   <Input value={units} readOnly placeholder="= (Amount − Stamp Duty) ÷ NAV" className="h-9 text-xs"
                     style={{ backgroundColor: units ? 'rgba(5,150,105,0.04)' : undefined }} />
                   {applyStampDuty && units && (
-                    <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                    <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                       Stamp duty ₹{stampDutyAmt.toFixed(2)} deducted · effective amount ₹{effectiveAmount.toFixed(2)}
                     </p>
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Folio Number</Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Folio Number</Label>
                   <Input value={folio} onChange={(e) => setFolio(e.target.value)} placeholder="123456789" className="h-9 text-xs" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                     Stamp Duty (₹) — 0.005%
-                    {!applyStampDuty && purchaseDate && <span className="ml-1 text-[10px]" style={{ color: '#9CA3AF' }}>not applicable (pre Jul 2020)</span>}
+                    {!applyStampDuty && purchaseDate && <span className="ml-1 text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>not applicable (pre Jul 2020)</span>}
                   </Label>
-                  <Input value={applyStampDuty ? stampDutyAmt.toFixed(2) : '0.00'} readOnly placeholder="0.00" className="h-9 text-xs" style={{ backgroundColor: '#F7F5F0' }} />
+                  <Input value={applyStampDuty ? stampDutyAmt.toFixed(2) : '0.00'} readOnly placeholder="0.00" className="h-9 text-xs" style={{ backgroundColor: 'var(--wv-surface-2)' }} />
                 </div>
 
                 {/* Lump-sum summary strip */}
@@ -1894,15 +1898,15 @@ export default function MutualFundsPage() {
                   <div className="col-span-2 p-3 rounded-xl grid grid-cols-4 gap-3"
                     style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.08)' }}>
                     <div>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Invested</p>
-                      <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>{formatLargeINR(parseFloat(amount))}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Invested</p>
+                      <p className="text-xs font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(parseFloat(amount))}</p>
                     </div>
                     <div>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Current Est.</p>
-                      <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>{formatLargeINR(parseFloat(currVal!))}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Current Est.</p>
+                      <p className="text-xs font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(parseFloat(currVal!))}</p>
                     </div>
                     <div>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Returns</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Returns</p>
                       <p className="text-xs font-bold flex items-center gap-0.5"
                         style={{ color: parseFloat(returns!) >= 0 ? '#059669' : '#DC2626' }}>
                         {parseFloat(returns!) >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -1910,8 +1914,8 @@ export default function MutualFundsPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Units</p>
-                      <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>{units}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Units</p>
+                      <p className="text-xs font-bold" style={{ color: 'var(--wv-text)' }}>{units}</p>
                     </div>
                   </div>
                 )}
@@ -1926,10 +1930,10 @@ export default function MutualFundsPage() {
               <div className="wv-card p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>
+                    <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--wv-text-muted)' }}>
                       Verify Against AMC Statement (Optional)
                     </p>
-                    <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>
                       Upload your AMC account statement PDF to verify accuracy
                     </p>
                   </div>
@@ -1944,10 +1948,10 @@ export default function MutualFundsPage() {
                   <div className="space-y-3">
                     {/* Upload zone */}
                     <div className="border-2 border-dashed rounded-xl p-4 text-center transition-colors"
-                      style={{ borderColor: verifyFile ? '#C9A84C' : '#E8E5DD', backgroundColor: verifyFile ? 'rgba(201,168,76,0.04)' : 'transparent' }}>
+                      style={{ borderColor: verifyFile ? '#C9A84C' : 'var(--wv-border)', backgroundColor: verifyFile ? 'rgba(201,168,76,0.04)' : 'transparent' }}>
                       {verifyFile ? (
                         <div className="flex items-center justify-center gap-2">
-                          <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{verifyFile.name}</span>
+                          <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{verifyFile.name}</span>
                           <button onClick={() => { setVerifyFile(null); setVerifyResult(null); }}
                             className="text-xs" style={{ color: '#DC2626' }}>Remove</button>
                         </div>
@@ -1955,7 +1959,7 @@ export default function MutualFundsPage() {
                         <label className="cursor-pointer">
                           <input type="file" accept=".pdf" className="hidden"
                             onChange={e => { if (e.target.files?.[0]) setVerifyFile(e.target.files[0]); }} />
-                          <p className="text-xs" style={{ color: '#6B7280' }}>
+                          <p className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                             Drop AMC statement PDF here or <span style={{ color: '#C9A84C' }}>click to browse</span>
                           </p>
                         </label>
@@ -1965,13 +1969,13 @@ export default function MutualFundsPage() {
                     {/* Password */}
                     <div className="flex items-center gap-3">
                       <div className="flex-1">
-                        <Label className="text-xs" style={{ color: '#6B7280' }}>Statement password (usually your PAN)</Label>
+                        <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Statement password (usually your PAN)</Label>
                         <Input type="password" value={verifyPassword} onChange={e => setVerifyPassword(e.target.value)}
                           placeholder="e.g. ABCDE1234F" className="h-8 text-xs mt-1" />
                       </div>
                       <Button onClick={handleVerify} disabled={!verifyFile || verifying}
                         className="h-8 text-xs mt-5 gap-1.5"
-                        style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>
+                        style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}>
                         {verifying ? 'Verifying...' : 'Verify'}
                       </Button>
                     </div>
@@ -1996,7 +2000,7 @@ export default function MutualFundsPage() {
             <div className="flex items-center gap-3 mt-5">
               <Button onClick={() => handleSave(false)} disabled={isSaving}
                 className="flex-1 h-9 text-xs font-semibold"
-                style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>
+                style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}>
                 {isSaving
                   ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Saving…</>
                   : mode === 'edit'   ? 'Update Holding'
@@ -2011,7 +2015,7 @@ export default function MutualFundsPage() {
                 </Button>
               )}
               <Button variant="outline" className="h-9 text-xs"
-                style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
+                style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}
                 onClick={() => router.push('/portfolio/mutual-funds')}>
                 Cancel
               </Button>
@@ -2023,8 +2027,8 @@ export default function MutualFundsPage() {
         <TabsContent value="import">
           {/* ── AMC Statement Import (primary) ── */}
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#9CA3AF' }}>AMC Statement Import</p>
-            <p className="text-xs mb-5" style={{ color: '#6B7280' }}>Import directly from AMC statements — HDFC, SBI, ICICI, Axis, Mirae, etc.</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--wv-text-muted)' }}>AMC Statement Import</p>
+            <p className="text-xs mb-5" style={{ color: 'var(--wv-text-secondary)' }}>Import directly from AMC statements — HDFC, SBI, ICICI, Axis, Mirae, etc.</p>
             <MfStatementImport
               members={members.map(m => ({ id: m.id, name: m.name }))}
               defaultMemberId={member}
@@ -2036,8 +2040,8 @@ export default function MutualFundsPage() {
           {/* ── eCAS Statement Import ── */}
           <details className="wv-card p-5 mt-4 group">
             <summary className="flex items-center gap-2 cursor-pointer list-none select-none">
-              <span className="text-xs font-semibold" style={{ color: '#6B7280' }}>eCAS Statement Import</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: '#F7F5F0', color: '#9CA3AF' }}>PDF, CSV, or Excel from CAMS or MFCentral</span>
+              <span className="text-xs font-semibold" style={{ color: 'var(--wv-text-secondary)' }}>eCAS Statement Import</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-muted)' }}>PDF, CSV, or Excel from CAMS or MFCentral</span>
             </summary>
             <div className="mt-4">
               <ECASImporter
@@ -2053,8 +2057,8 @@ export default function MutualFundsPage() {
           {/* ── Legacy CAS / Holdings-only Import (collapsed) ── */}
           <details className="wv-card p-5 mt-4 group">
             <summary className="flex items-center gap-2 cursor-pointer list-none select-none">
-              <span className="text-xs font-semibold" style={{ color: '#6B7280' }}>Legacy CAS / Holdings-only Import</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: '#F7F5F0', color: '#9CA3AF' }}>Current balance only, no transaction history</span>
+              <span className="text-xs font-semibold" style={{ color: 'var(--wv-text-secondary)' }}>Legacy CAS / Holdings-only Import</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-muted)' }}>Current balance only, no transaction history</span>
             </summary>
             <div className="mt-4">
               <CASImporter
@@ -2070,8 +2074,8 @@ export default function MutualFundsPage() {
           {/* ── Previous Imports ── */}
           <div className="wv-card p-5 mt-4">
             <div className="flex items-center gap-2 mb-4">
-              <History className="w-4 h-4" style={{ color: '#9CA3AF' }} />
-              <h3 className="text-sm font-semibold" style={{ color: '#1B2A4A' }}>Previous Imports</h3>
+              <History className="w-4 h-4" style={{ color: 'var(--wv-text-muted)' }} />
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>Previous Imports</h3>
             </div>
             <ImportHistory
               key={importHistoryKey}
@@ -2084,25 +2088,25 @@ export default function MutualFundsPage() {
         {/* ─── Tab 3: API Fetch ─── */}
         <TabsContent value="api">
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>Connect Platform APIs</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>Connect Platform APIs</p>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { name: 'MFCentral',       color: '#1B2A4A', letter: 'M', desc: 'Fetch from MFCentral portal' },
+                { name: 'MFCentral',       color: 'var(--wv-text)', letter: 'M', desc: 'Fetch from MFCentral portal' },
                 { name: 'Kuvera',          color: '#5C6BC0', letter: 'K', desc: 'Import via Kuvera account'   },
                 { name: 'Coin by Zerodha', color: '#2E8B8B', letter: 'C', desc: 'Zerodha Coin integration'    },
                 { name: 'Groww',           color: '#00D09C', letter: 'G', desc: 'Groww mutual funds sync'     },
               ].map((api) => (
-                <div key={api.name} className="p-4 rounded-xl border" style={{ borderColor: '#E8E5DD' }}>
+                <div key={api.name} className="p-4 rounded-xl border" style={{ borderColor: 'var(--wv-border)' }}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold"
                       style={{ backgroundColor: api.color }}>{api.letter}</div>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                       style={{ backgroundColor: '#F5EDD6', color: '#C9A84C' }}>Coming Soon</span>
                   </div>
-                  <p className="text-xs font-semibold mb-0.5" style={{ color: '#1A1A2E' }}>{api.name}</p>
-                  <p className="text-[11px] mb-1" style={{ color: '#9CA3AF' }}>{api.desc}</p>
+                  <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--wv-text)' }}>{api.name}</p>
+                  <p className="text-[11px] mb-1" style={{ color: 'var(--wv-text-muted)' }}>{api.desc}</p>
                   <p className="text-[10px] mb-3" style={{ color: '#D1D5DB' }}>Requires licensed AA integration</p>
-                  <Button disabled className="w-full h-7 text-[11px]" style={{ backgroundColor: '#F7F5F0', color: '#9CA3AF' }}>
+                  <Button disabled className="w-full h-7 text-[11px]" style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-muted)' }}>
                     Coming Soon
                   </Button>
                 </div>

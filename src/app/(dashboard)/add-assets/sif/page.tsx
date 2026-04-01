@@ -120,6 +120,7 @@ function SifAddContent() {
   useEffect(() => {
     if (!selectedFamily) return;
     setFamilyId(selectedFamily);
+    setPortfolio('');
     (async () => {
       const { data: fUsers } = await supabase.from('users').select('id, name').eq('family_id', selectedFamily);
       setMembers(fUsers ?? []);
@@ -179,6 +180,7 @@ function SifAddContent() {
       portfolioName: portfolio,
       brokerId: null,
       memberId: member,
+      familyId: familyId || undefined,
       notes: notes.trim() || null,
     };
 
@@ -210,14 +212,14 @@ function SifAddContent() {
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-          <Shield className="w-5 h-5" style={{ color: '#1B2A4A' }} />
+          style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+          <Shield className="w-5 h-5" style={{ color: 'var(--wv-text)' }} />
         </div>
         <div>
-          <h1 className="font-display text-xl font-semibold" style={{ color: '#1A1A2E' }}>
+          <h1 className="font-display text-xl font-semibold" style={{ color: 'var(--wv-text)' }}>
             Specialized Investment Fund (SIF)
           </h1>
-          <p className="text-xs" style={{ color: '#9CA3AF' }}>
+          <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>
             Add SIF holdings with manual NAV entry
           </p>
         </div>
@@ -229,7 +231,7 @@ function SifAddContent() {
         {/* ── Family & Member ────────────────────────────────────────────── */}
         {families.length > 1 && (
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family</Label>
             <Select value={selectedFamily} onValueChange={setSelectedFamily}>
               <SelectTrigger className="h-9 text-xs">
                 <SelectValue placeholder="Select family" />
@@ -245,7 +247,7 @@ function SifAddContent() {
 
         {members.length > 1 && (
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Member</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Member</Label>
             <Select value={member} onValueChange={setMember}>
               <SelectTrigger className="h-9 text-xs"
                 style={errors.member ? { borderColor: '#DC2626' } : {}}>
@@ -270,7 +272,7 @@ function SifAddContent() {
         />
 
         {/* ── Divider ────────────────────────────────────────────────────── */}
-        <div className="border-t" style={{ borderColor: '#E8E5DD' }} />
+        <div className="border-t" style={{ borderColor: 'var(--wv-border)' }} />
 
         <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#C9A84C' }}>
           Fund Details
@@ -279,7 +281,7 @@ function SifAddContent() {
         {/* ── Fund Name + AMC ────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Fund Name *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Fund Name *</Label>
             <Input
               value={fundName}
               onChange={(e) => { setFundName(e.target.value); setErrors(er => ({ ...er, fundName: '' })); }}
@@ -290,7 +292,7 @@ function SifAddContent() {
             <FieldError msg={errors.fundName} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>AMC / Fund House</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>AMC / Fund House</Label>
             <Input
               value={amc}
               onChange={(e) => setAmc(e.target.value)}
@@ -302,7 +304,7 @@ function SifAddContent() {
 
         {/* ── Scheme Code ────────────────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <Label className="text-xs" style={{ color: '#6B7280' }}>Scheme Code (optional)</Label>
+          <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Scheme Code (optional)</Label>
           <Input
             value={schemeCode}
             onChange={(e) => setSchemeCode(e.target.value)}
@@ -313,7 +315,7 @@ function SifAddContent() {
 
         {/* ── Transaction Type ───────────────────────────────────────────── */}
         <div className="space-y-2">
-          <Label className="text-xs" style={{ color: '#6B7280' }}>Transaction Type</Label>
+          <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Transaction Type</Label>
           <div className="flex gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -347,7 +349,7 @@ function SifAddContent() {
         {/* ── Date + NAV ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Purchase Date *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Purchase Date *</Label>
             <Input
               type="date"
               value={purchaseDate}
@@ -359,7 +361,7 @@ function SifAddContent() {
             <FieldError msg={errors.purchaseDate} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>NAV ({'\u20B9'}) *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>NAV ({'\u20B9'}) *</Label>
             <Input
               type="number"
               value={nav}
@@ -369,7 +371,7 @@ function SifAddContent() {
               className="h-9 text-xs"
               style={errors.nav ? { borderColor: '#DC2626' } : {}}
             />
-            <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Enter latest NAV manually</p>
+            <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Enter latest NAV manually</p>
             <FieldError msg={errors.nav} />
           </div>
         </div>
@@ -377,7 +379,7 @@ function SifAddContent() {
         {/* ── Amount + Units ──────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Investment Amount ({'\u20B9'}) *</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Investment Amount ({'\u20B9'}) *</Label>
             <Input
               type="number"
               value={amount}
@@ -390,7 +392,7 @@ function SifAddContent() {
             <FieldError msg={errors.amount} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
               Units
               {!unitsManuallyEdited && parsedUnits > 0 && (
                 <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium"
@@ -415,7 +417,7 @@ function SifAddContent() {
         {/* ── Folio + Stamp Duty ──────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Folio Number (optional)</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Folio Number (optional)</Label>
             <Input
               value={folio}
               onChange={(e) => setFolio(e.target.value)}
@@ -424,7 +426,7 @@ function SifAddContent() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Stamp Duty ({'\u20B9'})</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Stamp Duty ({'\u20B9'})</Label>
             <Input
               type="number"
               value={stampDuty}
@@ -438,7 +440,7 @@ function SifAddContent() {
 
         {/* ── Notes ──────────────────────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <Label className="text-xs" style={{ color: '#6B7280' }}>Notes (optional)</Label>
+          <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes (optional)</Label>
           <Input
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -448,26 +450,26 @@ function SifAddContent() {
         </div>
 
         {/* ── Divider ────────────────────────────────────────────────────── */}
-        <div className="border-t" style={{ borderColor: '#E8E5DD' }} />
+        <div className="border-t" style={{ borderColor: 'var(--wv-border)' }} />
 
         {/* ── Summary ────────────────────────────────────────────────────── */}
         {(parsedAmount > 0 || parsedUnits > 0) && (
-          <div className="rounded-xl p-4" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
-            <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Investment Summary</p>
+          <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+            <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Investment Summary</p>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <p className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: '#9CA3AF' }}>Total Investment</p>
-                <p className="text-sm font-semibold" style={{ color: '#1B2A4A' }}>{formatLargeINR(totalInvestment)}</p>
+                <p className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: 'var(--wv-text-muted)' }}>Total Investment</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalInvestment)}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: '#9CA3AF' }}>Units Acquired</p>
-                <p className="text-sm font-semibold" style={{ color: '#1B2A4A' }}>
+                <p className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: 'var(--wv-text-muted)' }}>Units Acquired</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>
                   {parsedUnits > 0 ? parsedUnits.toLocaleString('en-IN', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : '—'}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: '#9CA3AF' }}>Avg NAV</p>
-                <p className="text-sm font-semibold" style={{ color: '#1B2A4A' }}>
+                <p className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: 'var(--wv-text-muted)' }}>Avg NAV</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>
                   {avgNav > 0 ? `\u20B9${avgNav.toFixed(4)}` : '—'}
                 </p>
               </div>
@@ -500,7 +502,7 @@ export default function SifAddPage() {
     <Suspense fallback={
       <div className="p-6 max-w-2xl mx-auto">
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1B2A4A' }} />
+          <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--wv-text)' }} />
         </div>
       </div>
     }>

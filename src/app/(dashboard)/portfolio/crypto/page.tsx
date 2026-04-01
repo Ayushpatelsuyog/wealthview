@@ -227,8 +227,8 @@ export default function CryptoPortfolioPage() {
             <Bitcoin className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: '#1B2A4A' }}>Cryptocurrency</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Track your crypto portfolio across exchanges</p>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--wv-text)' }}>Cryptocurrency</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Track your crypto portfolio across exchanges</p>
           </div>
         </div>
         <Button
@@ -259,7 +259,7 @@ export default function CryptoPortfolioPage() {
       {loading && (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#C9A84C' }} />
-          <span className="ml-3 text-sm" style={{ color: '#9CA3AF' }}>Loading crypto holdings...</span>
+          <span className="ml-3 text-sm" style={{ color: 'var(--wv-text-muted)' }}>Loading crypto holdings...</span>
         </div>
       )}
 
@@ -267,8 +267,8 @@ export default function CryptoPortfolioPage() {
       {!loading && cryptos.length === 0 && (
         <div className="wv-card p-12 text-center">
           <Bitcoin className="w-12 h-12 mx-auto mb-4" style={{ color: '#C9A84C' }} />
-          <h3 className="text-lg font-semibold mb-2" style={{ color: '#1B2A4A' }}>No Crypto Holdings Yet</h3>
-          <p className="text-sm mb-6" style={{ color: '#9CA3AF' }}>Start tracking your cryptocurrency by adding your first holding.</p>
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--wv-text)' }}>No Crypto Holdings Yet</h3>
+          <p className="text-sm mb-6" style={{ color: 'var(--wv-text-muted)' }}>Start tracking your cryptocurrency by adding your first holding.</p>
           <Button
             onClick={() => router.push('/add-assets/crypto')}
             className="gap-2"
@@ -292,7 +292,7 @@ export default function CryptoPortfolioPage() {
               { label: 'Number of Coins', value: String(coinCount), color: undefined },
             ].map((c) => (
               <div key={c.label} className="wv-card p-4">
-                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: '#9CA3AF' }}>{c.label}</p>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--wv-text-muted)' }}>{c.label}</p>
                 <p className="font-display text-lg font-semibold" style={{ color: c.color ?? '#1B2A4A' }}>{c.value}</p>
               </div>
             ))}
@@ -304,9 +304,9 @@ export default function CryptoPortfolioPage() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #E8E5DD' }}>
+                  <tr style={{ borderBottom: '1px solid var(--wv-border)' }}>
                     {['Coin', 'Exchange', 'Quantity', 'Avg Buy Price', 'Invested', 'Current Price', 'Current Value', 'P&L', 'P&L%', ''].map((h) => (
-                      <th key={h} className="px-4 py-3 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap" style={{ color: '#9CA3AF' }}>
+                      <th key={h} className="px-4 py-3 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap" style={{ color: 'var(--wv-text-muted)' }}>
                         {h}
                       </th>
                     ))}
@@ -318,19 +318,19 @@ export default function CryptoPortfolioPage() {
                       key={crypto.id}
                       onClick={() => openDetail(crypto)}
                       className="cursor-pointer transition-colors hover:bg-gray-50"
-                      style={{ borderBottom: '1px solid #F3F4F6' }}
+                      style={{ borderBottom: '1px solid var(--wv-border)' }}
                     >
                       <td className="px-4 py-3">
-                        <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{crypto.symbol}</p>
-                        <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{crypto.name}</p>
-                        {crypto.memberName && <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{crypto.memberName}</p>}
+                        <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{crypto.symbol}</p>
+                        <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{crypto.name}</p>
+                        {crypto.memberName && <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{crypto.memberName}</p>}
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#4B5563' }}>{crypto.exchange}</td>
-                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{crypto.exchange}</td>
+                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>
                         {crypto.quantity.toLocaleString('en-IN', { maximumFractionDigits: 8 })}
                       </td>
-                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatINRFull(crypto.avg_buy_price)}</td>
-                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(crypto.investedValue)}</td>
+                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatINRFull(crypto.avg_buy_price)}</td>
+                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(crypto.investedValue)}</td>
                       <td className="px-4 py-3">
                         {updatingPriceId === crypto.id ? (
                           <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
@@ -355,7 +355,7 @@ export default function CryptoPortfolioPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-xs font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>
+                      <td className="px-4 py-3 text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>
                         {crypto.currentPrice > 0 ? formatLargeINR(crypto.currentValue) : '--'}
                       </td>
                       <td className="px-4 py-3 text-xs font-semibold tabular-nums" style={{ color: pnlColor(crypto.pnl) }}>
@@ -381,7 +381,7 @@ export default function CryptoPortfolioPage() {
             </div>
 
             {/* Mobile card layout */}
-            <div className="md:hidden divide-y" style={{ borderColor: '#F3F4F6' }}>
+            <div className="md:hidden divide-y" style={{ borderColor: 'var(--wv-border)' }}>
               {filtered.map((crypto) => (
                 <div
                   key={crypto.id}
@@ -390,8 +390,8 @@ export default function CryptoPortfolioPage() {
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: '#1A1A2E' }}>{crypto.symbol} — {crypto.name}</p>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>{crypto.symbol} — {crypto.name}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                         {crypto.exchange} {crypto.memberName ? `· ${crypto.memberName}` : ''}
                       </p>
                     </div>
@@ -422,31 +422,31 @@ export default function CryptoPortfolioPage() {
                   )}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Quantity</p>
-                      <p className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{crypto.quantity.toLocaleString('en-IN', { maximumFractionDigits: 8 })}</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Quantity</p>
+                      <p className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{crypto.quantity.toLocaleString('en-IN', { maximumFractionDigits: 8 })}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Avg Buy</p>
-                      <p className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatINRFull(crypto.avg_buy_price)}</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Avg Buy</p>
+                      <p className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatINRFull(crypto.avg_buy_price)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Invested</p>
-                      <p className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(crypto.investedValue)}</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Invested</p>
+                      <p className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(crypto.investedValue)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Current Value</p>
-                      <p className="text-xs font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
+                      <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>
                         {crypto.currentPrice > 0 ? formatLargeINR(crypto.currentValue) : '--'}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>P&L</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>P&L</p>
                       <p className="text-xs font-semibold tabular-nums" style={{ color: pnlColor(crypto.pnl) }}>
                         {crypto.currentPrice > 0 ? `${crypto.pnl >= 0 ? '+' : ''}${formatLargeINR(crypto.pnl)}` : '--'}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>P&L %</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>P&L %</p>
                       <p className="text-xs font-semibold tabular-nums" style={{ color: pnlColor(crypto.pnlPercent) }}>
                         {crypto.currentPrice > 0 ? `${crypto.pnlPercent >= 0 ? '+' : ''}${crypto.pnlPercent.toFixed(2)}%` : '--'}
                       </p>
@@ -471,18 +471,18 @@ export default function CryptoPortfolioPage() {
                     <Bitcoin className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold" style={{ color: '#1B2A4A' }}>{selectedCrypto.symbol}</h2>
-                    <p className="text-xs" style={{ color: '#9CA3AF' }}>{selectedCrypto.name}</p>
+                    <h2 className="text-base font-bold" style={{ color: 'var(--wv-text)' }}>{selectedCrypto.symbol}</h2>
+                    <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>{selectedCrypto.name}</p>
                   </div>
                 </div>
                 {selectedCrypto.memberName && (
-                  <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Held by: {selectedCrypto.memberName}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--wv-text-muted)' }}>Held by: {selectedCrypto.memberName}</p>
                 )}
               </div>
 
               {/* Holding Details */}
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Holding Details</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Holding Details</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'Exchange', value: selectedCrypto.exchange },
@@ -493,8 +493,8 @@ export default function CryptoPortfolioPage() {
                     { label: 'Current Value', value: selectedCrypto.currentPrice > 0 ? formatINRFull(selectedCrypto.currentValue) : '--' },
                   ].map((item) => (
                     <div key={item.label}>
-                      <p className="text-[10px] uppercase tracking-wider" style={{ color: '#9CA3AF' }}>{item.label}</p>
-                      <p className="text-sm font-medium" style={{ color: '#1A1A2E' }}>{item.value}</p>
+                      <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</p>
+                      <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{item.value}</p>
                     </div>
                   ))}
                 </div>
@@ -503,16 +503,16 @@ export default function CryptoPortfolioPage() {
               {/* P&L */}
               {selectedCrypto.currentPrice > 0 && (
                 <div className="space-y-3">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Profit & Loss</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Profit & Loss</h3>
                   <div className="wv-card p-4 space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-xs" style={{ color: '#4B5563' }}>P&L</span>
+                      <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>P&L</span>
                       <span className="text-sm font-semibold tabular-nums" style={{ color: pnlColor(selectedCrypto.pnl) }}>
                         {selectedCrypto.pnl >= 0 ? '+' : ''}{formatINRFull(selectedCrypto.pnl)}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 12 }}>
-                      <span className="text-xs" style={{ color: '#4B5563' }}>P&L %</span>
+                    <div className="flex justify-between items-center" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 12 }}>
+                      <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>P&L %</span>
                       <span className="text-sm font-semibold tabular-nums" style={{ color: pnlColor(selectedCrypto.pnlPercent) }}>
                         {selectedCrypto.pnlPercent >= 0 ? '+' : ''}{selectedCrypto.pnlPercent.toFixed(2)}%
                       </span>
@@ -530,12 +530,12 @@ export default function CryptoPortfolioPage() {
                 if (extras.length === 0) return null;
                 return (
                   <div className="space-y-3">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Additional Details</h3>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Additional Details</h3>
                     <div className="space-y-2">
                       {extras.map((item) => (
                         <div key={item.label} className="flex justify-between">
-                          <span className="text-xs" style={{ color: '#9CA3AF' }}>{item.label}</span>
-                          <span className="text-xs font-medium text-right max-w-[60%] break-all" style={{ color: '#1A1A2E' }}>{item.value}</span>
+                          <span className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</span>
+                          <span className="text-xs font-medium text-right max-w-[60%] break-all" style={{ color: 'var(--wv-text)' }}>{item.value}</span>
                         </div>
                       ))}
                     </div>
@@ -546,19 +546,19 @@ export default function CryptoPortfolioPage() {
               {/* Transaction History */}
               {selectedCrypto.transactions && selectedCrypto.transactions.length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Transactions</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Transactions</h3>
                   <div className="space-y-2">
                     {selectedCrypto.transactions.map((tx) => (
                       <div key={tx.id} className="flex justify-between items-center p-2 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.03)' }}>
                         <div>
-                          <p className="text-xs font-medium capitalize" style={{ color: '#1A1A2E' }}>{tx.type}</p>
-                          <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{formatDate(tx.date)}</p>
+                          <p className="text-xs font-medium capitalize" style={{ color: 'var(--wv-text)' }}>{tx.type}</p>
+                          <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{formatDate(tx.date)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs font-semibold tabular-nums" style={{ color: '#1A1A2E' }}>
+                          <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>
                             {Number(tx.quantity).toLocaleString('en-IN', { maximumFractionDigits: 8 })}
                           </p>
-                          <p className="text-[10px] tabular-nums" style={{ color: '#9CA3AF' }}>@ {formatINRFull(tx.price)}</p>
+                          <p className="text-[10px] tabular-nums" style={{ color: 'var(--wv-text-muted)' }}>@ {formatINRFull(tx.price)}</p>
                         </div>
                       </div>
                     ))}
@@ -567,7 +567,7 @@ export default function CryptoPortfolioPage() {
               )}
 
               {/* Actions */}
-              <div className="flex gap-3 pt-2" style={{ borderTop: '1px solid #E8E5DD' }}>
+              <div className="flex gap-3 pt-2" style={{ borderTop: '1px solid var(--wv-border)' }}>
                 <Button
                   onClick={() => router.push(`/add-assets/crypto?edit=${selectedCrypto.id}`)}
                   className="flex-1 gap-2 text-sm"

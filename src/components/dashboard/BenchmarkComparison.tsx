@@ -4,7 +4,7 @@ import type { DashboardSnapshot } from '@/lib/types/dashboard';
 
 // Simulated 1-year benchmark returns (can be replaced with live data later)
 const BENCHMARKS = [
-  { name: 'Nifty 50',  value: 14.2, color: '#1B2A4A', bg: 'rgba(27,42,74,0.08)' },
+  { name: 'Nifty 50',  value: 14.2, color: 'var(--wv-text)', bg: 'rgba(27,42,74,0.08)' },
   { name: 'S&P 500',   value: 12.8, color: '#2E8B8B', bg: 'rgba(46,139,139,0.08)' },
   { name: 'Gold',      value: 8.5,  color: '#C9A84C', bg: '#F5EDD6' },
 ];
@@ -23,7 +23,7 @@ export function BenchmarkComparison({ snapshot }: Props) {
           {BENCHMARKS.map((b) => (
             <div key={b.name}>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs" style={{ color: '#6B7280' }}>{b.name}</span>
+                <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{b.name}</span>
                 <span className="text-sm font-bold" style={{ color: b.color }}>+{b.value}%</span>
               </div>
               <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#F0EDE6' }}>
@@ -33,13 +33,13 @@ export function BenchmarkComparison({ snapshot }: Props) {
           ))}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>Your Portfolio</span>
-              <span className="text-sm font-bold" style={{ color: '#9CA3AF' }}>—</span>
+              <span className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>Your Portfolio</span>
+              <span className="text-sm font-bold" style={{ color: 'var(--wv-text-muted)' }}>—</span>
             </div>
             <div className="h-2 rounded-full" style={{ backgroundColor: '#F0EDE6', border: '1.5px dashed #D1D5DB' }} />
           </div>
         </div>
-        <p className="text-[11px]" style={{ color: '#9CA3AF' }}>
+        <p className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>
           Add investments with transaction dates to see how your portfolio compares to benchmarks.
         </p>
       </div>
@@ -57,7 +57,7 @@ export function BenchmarkComparison({ snapshot }: Props) {
   return (
     <div className="wv-card p-5">
       <h3 className="section-heading text-sm mb-1">Benchmark Comparison</h3>
-      <p className="text-[11px] mb-4" style={{ color: '#9CA3AF' }}>1-year annualised returns vs market</p>
+      <p className="text-[11px] mb-4" style={{ color: 'var(--wv-text-muted)' }}>1-year annualised returns vs market</p>
 
       <div className="space-y-4">
         {items.map((item) => (
@@ -75,8 +75,8 @@ export function BenchmarkComparison({ snapshot }: Props) {
         ))}
       </div>
 
-      <div className="mt-4 pt-4 flex items-center justify-between" style={{ borderTop: '1px solid #E8E5DD' }}>
-        <span className="text-xs" style={{ color: '#9CA3AF' }}>
+      <div className="mt-4 pt-4 flex items-center justify-between" style={{ borderTop: '1px solid var(--wv-border)' }}>
+        <span className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>
           {outperformance >= 0 ? 'Outperforming' : 'Underperforming'} Nifty 50 by
         </span>
         <span className="text-sm font-bold" style={{ color: outperformance >= 0 ? '#059669' : '#DC2626' }}>

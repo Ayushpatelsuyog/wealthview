@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   if (profileErr) return NextResponse.json({ error: profileErr.message }, { status: 500 });
 
   // ── 3. Ensure family exists ───────────────────────────────────────────────
-  let familyId: string = profile.family_id;
+  let familyId: string = body.familyId || profile.family_id;
   if (!familyId) {
     const { data: newFamily, error: famErr } = await supabase
       .from('families')

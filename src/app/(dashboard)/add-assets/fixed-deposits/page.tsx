@@ -334,6 +334,7 @@ function FixedDepositFormContent() {
             total_interest: Math.round(totalInterest * 100) / 100,
           },
           memberId: member,
+          familyId: selectedFamily || undefined,
           portfolioName: portfolioName.trim(),
         }),
       });
@@ -351,18 +352,18 @@ function FixedDepositFormContent() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: '#F7F5F0' }}>
+    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
       <div className="max-w-2xl mx-auto space-y-5">
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-            <Landmark className="w-5 h-5" style={{ color: '#1B2A4A' }} />
+            style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+            <Landmark className="w-5 h-5" style={{ color: 'var(--wv-text)' }} />
           </div>
           <div>
-            <h1 className="text-lg font-bold" style={{ color: '#1B2A4A' }}>Add Fixed Deposit</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Enter your FD details for tracking</p>
+            <h1 className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>Add Fixed Deposit</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Enter your FD details for tracking</p>
           </div>
         </div>
 
@@ -371,14 +372,14 @@ function FixedDepositFormContent() {
 
         {/* Step 1 — Family & Portfolio */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 1 — Family &amp; Portfolio
           </p>
 
           {/* Family selector */}
           {families.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family</Label>
               <div className="flex flex-wrap gap-2">
                 {families.map(f => (
                   <button key={f.id}
@@ -387,7 +388,7 @@ function FixedDepositFormContent() {
                     style={{
                       backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
                       color: selectedFamily === f.id ? 'white' : '#6B7280',
-                      borderColor: selectedFamily === f.id ? '#1B2A4A' : '#E8E5DD',
+                      borderColor: selectedFamily === f.id ? '#1B2A4A' : 'var(--wv-border)',
                     }}>
                     {f.name}
                   </button>
@@ -399,7 +400,7 @@ function FixedDepositFormContent() {
           {/* Family member */}
           {members.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
               <Select value={member} onValueChange={setMember}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -411,7 +412,7 @@ function FixedDepositFormContent() {
 
           {/* Portfolio name */}
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio Name</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio Name</Label>
             <Input
               value={portfolioName}
               onChange={e => setPortfolioName(e.target.value)}
@@ -424,7 +425,7 @@ function FixedDepositFormContent() {
 
         {/* Step 2 — FD Details */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 2 — FD Details
           </p>
 
@@ -432,7 +433,7 @@ function FixedDepositFormContent() {
             {/* Row: FD Type + Bank */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>FD Type</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>FD Type</Label>
                 <Select value={fdType} onValueChange={setFdType}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -441,7 +442,7 @@ function FixedDepositFormContent() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Bank / Institution <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Bank / Institution <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   value={bank}
                   onChange={e => setBank(e.target.value)}
@@ -454,7 +455,7 @@ function FixedDepositFormContent() {
 
             {/* Account number */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>FD Account / Certificate Number <span className="text-gray-400">(optional)</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>FD Account / Certificate Number <span className="text-gray-400">(optional)</span></Label>
               <Input
                 value={accountNumber}
                 onChange={e => setAccountNumber(e.target.value)}
@@ -466,7 +467,7 @@ function FixedDepositFormContent() {
             {/* Row: Principal + Interest Rate */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Principal Amount (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Principal Amount (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={principal}
@@ -479,7 +480,7 @@ function FixedDepositFormContent() {
                 <FieldError msg={errors.principal} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Interest Rate (% p.a.) <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Interest Rate (% p.a.) <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={interestRate}
@@ -496,7 +497,7 @@ function FixedDepositFormContent() {
 
             {/* Row: Tenure (value + unit) */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Tenure <span style={{ color: '#DC2626' }}>*</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Tenure <span style={{ color: '#DC2626' }}>*</span></Label>
               <div className="flex gap-2">
                 <Input
                   type="number"
@@ -520,7 +521,7 @@ function FixedDepositFormContent() {
             {/* Row: Start Date + Maturity Date */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Start Date <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Start Date <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="date"
                   value={startDate}
@@ -530,7 +531,7 @@ function FixedDepositFormContent() {
                 <FieldError msg={errors.startDate} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                   Maturity Date
                   {!maturityDateManual && maturityDate && (
                     <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium"
@@ -551,7 +552,7 @@ function FixedDepositFormContent() {
             {/* Row: Compounding + Payout */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Compounding Frequency</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Compounding Frequency</Label>
                 <Select value={compounding} onValueChange={setCompounding}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -560,7 +561,7 @@ function FixedDepositFormContent() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Interest Payout</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Interest Payout</Label>
                 <Select value={payout} onValueChange={setPayout}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -587,12 +588,12 @@ function FixedDepositFormContent() {
                 onChange={e => setAutoRenew(e.target.checked)}
                 className="sr-only"
               />
-              <span className="text-xs" style={{ color: '#6B7280' }}>Auto-Renew on Maturity</span>
+              <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Auto-Renew on Maturity</span>
             </label>
 
             {/* Notes */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Notes <span className="text-gray-400">(optional)</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes <span className="text-gray-400">(optional)</span></Label>
               <Input
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
@@ -611,30 +612,30 @@ function FixedDepositFormContent() {
             </p>
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Principal</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(principalNum)}</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Principal</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(principalNum)}</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(5,150,105,0.06)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Maturity Amount</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Maturity Amount</p>
                 <p className="text-sm font-bold" style={{ color: '#059669' }}>{formatLargeINR(Math.round(maturityAmount))}</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(201,168,76,0.08)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Total Interest</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Total Interest</p>
                 <p className="text-sm font-bold" style={{ color: '#C9A84C' }}>{formatLargeINR(Math.round(totalInterest))}</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Effective Yield %</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{effectiveYield.toFixed(2)}%</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Effective Yield %</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{effectiveYield.toFixed(2)}%</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Maturity Date</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Maturity Date</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>
                   {maturityDate ? new Date(maturityDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                 </p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Days to Maturity</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Days to Maturity</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>
                   {daysToMaturity > 0 ? daysToMaturity.toLocaleString('en-IN') : 'Matured'}
                 </p>
               </div>

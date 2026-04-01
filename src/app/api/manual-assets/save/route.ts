@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (!profile?.family_id) return NextResponse.json({ error: 'No family found' }, { status: 400 });
 
   const targetUserId = memberId || profile.id;
-  const familyId = profile.family_id;
+  const familyId = body.familyId || profile.family_id;
 
   // Find or create portfolio
   const { data: existingPortfolio } = await supabase

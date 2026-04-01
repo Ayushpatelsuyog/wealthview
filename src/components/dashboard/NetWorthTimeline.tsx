@@ -7,13 +7,13 @@ import type { DashboardSnapshot } from '@/lib/types/dashboard';
 function RealTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border rounded-xl p-3 shadow-card-hover text-xs" style={{ borderColor: '#E8E5DD' }}>
-      <p className="font-semibold mb-2" style={{ color: '#6B7280' }}>{label}</p>
+    <div className="bg-white border rounded-xl p-3 shadow-card-hover text-xs" style={{ borderColor: 'var(--wv-border)' }}>
+      <p className="font-semibold mb-2" style={{ color: 'var(--wv-text-secondary)' }}>{label}</p>
       {payload.map((p) => (
         <div key={p.name} className="flex items-center gap-2 mb-0.5">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-          <span style={{ color: '#6B7280' }}>Net Worth:</span>
-          <span className="font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(p.value)}</span>
+          <span style={{ color: 'var(--wv-text-secondary)' }}>Net Worth:</span>
+          <span className="font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(p.value)}</span>
         </div>
       ))}
     </div>
@@ -34,7 +34,7 @@ export function NetWorthTimeline({ snapshot }: Props) {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="section-heading text-sm">Net Worth Timeline</h3>
-            <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>
               Timeline builds as you track over time — check back daily
             </p>
           </div>
@@ -43,7 +43,7 @@ export function NetWorthTimeline({ snapshot }: Props) {
         <div className="flex items-center gap-4 mb-3">
           <div className="flex items-center gap-1.5">
             <div className="w-5 h-0.5 rounded" style={{ backgroundColor: '#C9A84C' }} />
-            <span className="text-[11px]" style={{ color: '#6B7280' }}>Portfolio</span>
+            <span className="text-[11px]" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio</span>
           </div>
         </div>
 
@@ -75,14 +75,14 @@ export function NetWorthTimeline({ snapshot }: Props) {
       <div className="flex flex-col items-center justify-center py-10 gap-3">
         <div
           className="w-full h-24 rounded-xl flex items-end gap-1 px-4 pb-3"
-          style={{ backgroundColor: '#F7F5F0' }}
+          style={{ backgroundColor: 'var(--wv-surface-2)' }}
         >
           {[20, 35, 28, 45, 40, 60, 55, 72, 68, 85, 80, 100].map((h, i) => (
-            <div key={i} className="flex-1 rounded-t" style={{ height: `${h}%`, backgroundColor: '#E8E5DD' }} />
+            <div key={i} className="flex-1 rounded-t" style={{ height: `${h}%`, backgroundColor: 'var(--wv-border)' }} />
           ))}
         </div>
-        <p className="text-sm font-medium" style={{ color: '#1A1A2E' }}>Your wealth journey starts here</p>
-        <p className="text-xs text-center max-w-xs" style={{ color: '#9CA3AF' }}>
+        <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>Your wealth journey starts here</p>
+        <p className="text-xs text-center max-w-xs" style={{ color: 'var(--wv-text-muted)' }}>
           Add investments and assets to begin tracking your net worth over time
         </p>
       </div>

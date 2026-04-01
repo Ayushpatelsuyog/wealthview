@@ -79,7 +79,7 @@ function txnBg(txn: Transaction): string {
   const notes = txn.notes?.toLowerCase() ?? '';
   if (notes.includes('bonus')) return 'rgba(201,168,76,0.12)';
   if (notes.includes('split')) return 'rgba(99,102,241,0.10)';
-  return TXN_CONFIG[txn.type]?.bg ?? '#F3F4F6';
+  return TXN_CONFIG[txn.type]?.bg ?? 'var(--wv-border)';
 }
 function txnColor(txn: Transaction): string {
   const notes = txn.notes?.toLowerCase() ?? '';
@@ -239,7 +239,7 @@ export function GlobalStockDetailSheet({
   return (
     <Sheet open={open} onOpenChange={o => { if (!o) onClose(); }}>
       <SheetContent side="right" className="w-full sm:max-w-lg p-0 overflow-y-auto"
-        style={{ backgroundColor: '#F7F5F0', border: 'none' }}>
+        style={{ backgroundColor: 'var(--wv-surface-2)', border: 'none' }}>
 
         {/* Header */}
         <div className="sticky top-0 z-10 px-5 py-4 flex items-start gap-3"
@@ -275,8 +275,8 @@ export function GlobalStockDetailSheet({
                   onBlur={() => setEditingSector(false)}
                   className="h-5 text-[10px] rounded px-1 border-none outline-none"
                   style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'white' }}>
-                  <option value="" style={{ color: '#1A1A2E' }}>Select…</option>
-                  {SECTORS.map(s => <option key={s} value={s} style={{ color: '#1A1A2E' }}>{s}</option>)}
+                  <option value="" style={{ color: 'var(--wv-text)' }}>Select…</option>
+                  {SECTORS.map(s => <option key={s} value={s} style={{ color: 'var(--wv-text)' }}>{s}</option>)}
                 </select>
               ) : String(holding.metadata?.sector ?? '') ? (
                 <button
@@ -331,7 +331,7 @@ export function GlobalStockDetailSheet({
 
           {/* Position details */}
           <div className="wv-card p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#9CA3AF' }}>Position Details</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--wv-text-muted)' }}>Position Details</p>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { label: 'Shares Held', value: Number(holding.quantity).toLocaleString('en-IN', { maximumFractionDigits: 4 }) },
@@ -342,8 +342,8 @@ export function GlobalStockDetailSheet({
                 { label: 'Country', value: `${countryFlag(country)} ${country}` },
               ].map(({ label, value }) => (
                 <div key={label}>
-                  <p className="text-[9px]" style={{ color: '#9CA3AF' }}>{label}</p>
-                  <p className="text-xs font-bold mt-0.5" style={{ color: '#1A1A2E' }}>{value}</p>
+                  <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>{label}</p>
+                  <p className="text-xs font-bold mt-0.5" style={{ color: 'var(--wv-text)' }}>{value}</p>
                 </div>
               ))}
             </div>
@@ -351,35 +351,35 @@ export function GlobalStockDetailSheet({
 
           {/* Unrealized P&L */}
           <div className="wv-card p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--wv-text-muted)' }}>
               Unrealized P&L
               <span className="normal-case font-normal ml-1">({Number(holding.quantity).toLocaleString('en-IN', { maximumFractionDigits: 0 })} shares remaining)</span>
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Cost Basis ({currency})</p>
-                <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fmtLocal(investedLocal, currency)}</p>
+                <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Cost Basis ({currency})</p>
+                <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{fmtLocal(investedLocal, currency)}</p>
               </div>
               <div>
-                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Cost Basis (INR)</p>
-                <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(investedINR)}</p>
+                <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Cost Basis (INR)</p>
+                <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(investedINR)}</p>
               </div>
               <div>
-                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Current Value ({currency})</p>
-                <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fmtLocal(currentLocal, currency)}</p>
+                <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Current Value ({currency})</p>
+                <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{fmtLocal(currentLocal, currency)}</p>
               </div>
               <div>
-                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Current Value (INR)</p>
-                <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(currentINR)}</p>
+                <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Current Value (INR)</p>
+                <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(currentINR)}</p>
               </div>
               <div>
-                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Unrealized P&L ({currency})</p>
+                <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Unrealized P&L ({currency})</p>
                 <p className="text-xs font-bold" style={{ color: localGainLoss >= 0 ? '#059669' : '#DC2626' }}>
                   {localGainLoss >= 0 ? '+' : ''}{fmtLocal(localGainLoss, currency)} ({localGainPct >= 0 ? '+' : ''}{localGainPct.toFixed(1)}%)
                 </p>
               </div>
               <div>
-                <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Unrealized P&L (INR)</p>
+                <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Unrealized P&L (INR)</p>
                 <p className="text-xs font-bold" style={{ color: gainLossINR >= 0 ? '#059669' : '#DC2626' }}>
                   {gainLossINR >= 0 ? '+' : ''}{formatLargeINR(gainLossINR)} ({gainLossPct >= 0 ? '+' : ''}{gainLossPct.toFixed(1)}%)
                 </p>
@@ -390,27 +390,27 @@ export function GlobalStockDetailSheet({
           {/* Realized P&L (only if sells exist) */}
           {hasSells && (
             <div className="wv-card p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#9CA3AF' }}>
+              <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--wv-text-muted)' }}>
                 Realized P&L
                 <span className="normal-case font-normal ml-1">({totalSoldQty.toLocaleString('en-IN', { maximumFractionDigits: 0 })} shares sold)</span>
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Sale Value ({currency})</p>
-                  <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fmtLocal(totalSaleValueLocal, currency)}</p>
+                  <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Sale Value ({currency})</p>
+                  <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{fmtLocal(totalSaleValueLocal, currency)}</p>
                 </div>
                 <div>
-                  <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Cost of Sold ({currency})</p>
-                  <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fmtLocal(totalSaleCostLocal, currency)}</p>
+                  <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Cost of Sold ({currency})</p>
+                  <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{fmtLocal(totalSaleCostLocal, currency)}</p>
                 </div>
                 <div>
-                  <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Realized P&L ({currency})</p>
+                  <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Realized P&L ({currency})</p>
                   <p className="text-xs font-bold" style={{ color: realizedPnlLocal >= 0 ? '#059669' : '#DC2626' }}>
                     {realizedPnlLocal >= 0 ? '+' : ''}{fmtLocal(realizedPnlLocal, currency)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Realized P&L (INR)</p>
+                  <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Realized P&L (INR)</p>
                   <p className="text-xs font-bold" style={{ color: realizedPnlINR >= 0 ? '#059669' : '#DC2626' }}>
                     {realizedPnlINR >= 0 ? '+' : ''}{formatLargeINR(realizedPnlINR)}
                   </p>
@@ -422,16 +422,16 @@ export function GlobalStockDetailSheet({
           {/* Total P&L (if sells exist) */}
           {hasSells && (
             <div className="wv-card p-3" style={{ backgroundColor: 'rgba(201,168,76,0.06)' }}>
-              <p className="text-[9px] font-semibold uppercase tracking-widest text-center mb-2" style={{ color: '#9CA3AF' }}>Total P&L (Unrealized + Realized)</p>
+              <p className="text-[9px] font-semibold uppercase tracking-widest text-center mb-2" style={{ color: 'var(--wv-text-muted)' }}>Total P&L (Unrealized + Realized)</p>
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div>
-                  <p className="text-[9px]" style={{ color: '#6B7280' }}>Total ({currency})</p>
+                  <p className="text-[9px]" style={{ color: 'var(--wv-text-secondary)' }}>Total ({currency})</p>
                   <p className="text-sm font-bold" style={{ color: (localGainLoss + realizedPnlLocal) >= 0 ? '#059669' : '#DC2626' }}>
                     {(localGainLoss + realizedPnlLocal) >= 0 ? '+' : ''}{fmtLocal(localGainLoss + realizedPnlLocal, currency)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[9px]" style={{ color: '#6B7280' }}>Total (INR)</p>
+                  <p className="text-[9px]" style={{ color: 'var(--wv-text-secondary)' }}>Total (INR)</p>
                   <p className="text-sm font-bold" style={{ color: (gainLossINR + realizedPnlINR) >= 0 ? '#059669' : '#DC2626' }}>
                     {(gainLossINR + realizedPnlINR) >= 0 ? '+' : ''}{formatLargeINR(gainLossINR + realizedPnlINR)}
                   </p>
@@ -442,27 +442,27 @@ export function GlobalStockDetailSheet({
 
           {/* Returns card */}
           <div className="wv-card p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--wv-text-muted)' }}>
               Unrealized Returns Breakdown
             </p>
             {/* Two-column: Local Currency | INR */}
             <div className="grid grid-cols-2 gap-3">
               {/* Local Currency column */}
               <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.10)' }}>
-                <p className="text-[10px] font-bold mb-2" style={{ color: '#1B2A4A' }}>
+                <p className="text-[10px] font-bold mb-2" style={{ color: 'var(--wv-text)' }}>
                   Local ({currency})
                 </p>
                 <div className="space-y-1.5">
                   <div>
-                    <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Invested</p>
-                    <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fmtLocal(investedLocal, currency)}</p>
+                    <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Invested</p>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{fmtLocal(investedLocal, currency)}</p>
                   </div>
                   <div>
-                    <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Current Value</p>
-                    <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fmtLocal(currentLocal, currency)}</p>
+                    <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{fmtLocal(currentLocal, currency)}</p>
                   </div>
                   <div>
-                    <p className="text-[9px]" style={{ color: '#9CA3AF' }}>P&L</p>
+                    <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>P&L</p>
                     <p className="text-xs font-bold" style={{ color: localGainLoss >= 0 ? '#059669' : '#DC2626' }}>
                       {localGainLoss >= 0 ? '+' : ''}{fmtLocal(localGainLoss, currency)}
                       <span className="text-[10px] font-medium ml-1">
@@ -480,15 +480,15 @@ export function GlobalStockDetailSheet({
                 </p>
                 <div className="space-y-1.5">
                   <div>
-                    <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Invested</p>
-                    <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(investedINR)}</p>
+                    <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Invested</p>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(investedINR)}</p>
                   </div>
                   <div>
-                    <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Current Value</p>
-                    <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(currentINR)}</p>
+                    <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(currentINR)}</p>
                   </div>
                   <div>
-                    <p className="text-[9px]" style={{ color: '#9CA3AF' }}>P&L</p>
+                    <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>P&L</p>
                     <p className="text-xs font-bold" style={{ color: gainLossINR >= 0 ? '#059669' : '#DC2626' }}>
                       {gainLossINR >= 0 ? '+' : ''}{formatLargeINR(gainLossINR)}
                       <span className="text-[10px] font-medium ml-1">
@@ -511,15 +511,15 @@ export function GlobalStockDetailSheet({
                   </p>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Purchase FX Rate</p>
-                      <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>₹{avgBuyFxRate.toFixed(2)}/{currency}</p>
+                      <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Purchase FX Rate</p>
+                      <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>₹{avgBuyFxRate.toFixed(2)}/{currency}</p>
                     </div>
                     <div>
-                      <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Current FX Rate</p>
-                      <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>₹{fxRate.toFixed(2)}/{currency}</p>
+                      <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Current FX Rate</p>
+                      <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>₹{fxRate.toFixed(2)}/{currency}</p>
                     </div>
                     <div>
-                      <p className="text-[9px]" style={{ color: '#9CA3AF' }}>FX Gain/Loss</p>
+                      <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>FX Gain/Loss</p>
                       <p className="text-xs font-bold" style={{ color: fxImpact >= 0 ? '#059669' : '#DC2626' }}>
                         {fxImpact >= 0 ? '+' : ''}{formatLargeINR(fxImpact)}
                         <span className="text-[10px] font-medium ml-1">({fxChangePct >= 0 ? '+' : ''}{fxChangePct.toFixed(2)}%)</span>
@@ -532,7 +532,7 @@ export function GlobalStockDetailSheet({
 
             {/* Total P&L summary */}
             <div className="mt-2 p-2 rounded-lg text-center" style={{ backgroundColor: 'rgba(201,168,76,0.06)' }}>
-              <p className="text-[10px]" style={{ color: '#6B7280' }}>
+              <p className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
                 Total INR P&L:{' '}
                 <span className="font-bold" style={{ color: gainLossINR >= 0 ? '#059669' : '#DC2626' }}>
                   {gainLossINR >= 0 ? '+' : ''}{formatLargeINR(gainLossINR)}
@@ -545,19 +545,19 @@ export function GlobalStockDetailSheet({
           {/* Transaction history */}
           <div className="wv-card">
             <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: '#F0EDE6' }}>
-              <p className="text-xs font-semibold" style={{ color: '#1B2A4A' }}>
+              <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>
                 Transaction History
-                <span className="ml-2 text-[10px] font-normal" style={{ color: '#9CA3AF' }}>
+                <span className="ml-2 text-[10px] font-normal" style={{ color: 'var(--wv-text-muted)' }}>
                   {sorted.length} record{sorted.length !== 1 ? 's' : ''}
                 </span>
               </p>
-              <BarChart3 className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
+              <BarChart3 className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />
             </div>
 
             {sorted.length === 0 ? (
               <div className="px-4 py-8 text-center">
-                <AlertCircle className="w-5 h-5 mx-auto mb-2" style={{ color: '#9CA3AF' }} />
-                <p className="text-xs" style={{ color: '#9CA3AF' }}>No transactions yet</p>
+                <AlertCircle className="w-5 h-5 mx-auto mb-2" style={{ color: 'var(--wv-text-muted)' }} />
+                <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>No transactions yet</p>
               </div>
             ) : (
               <div className="divide-y" style={{ borderColor: '#F7F5F0' }}>
@@ -588,11 +588,11 @@ export function GlobalStockDetailSheet({
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline gap-2 flex-wrap">
-                            <span className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>
+                            <span className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>
                               {Number(t.quantity).toLocaleString('en-IN', { maximumFractionDigits: 4 })} shares
                             </span>
                             {!isBonus && Number(t.price) > 0 && (
-                              <span className="text-[10px]" style={{ color: '#6B7280' }}>
+                              <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
                                 @ {fmtLocal(Number(t.price), currency)}
                               </span>
                             )}
@@ -600,38 +600,38 @@ export function GlobalStockDetailSheet({
                           <div className="flex items-baseline gap-2 mt-0.5 flex-wrap">
                             {amtLocal > 0 && !isBonus && (
                               <>
-                                <span className="text-[10px] font-medium" style={{ color: '#1A1A2E' }}>
+                                <span className="text-[10px] font-medium" style={{ color: 'var(--wv-text)' }}>
                                   {fmtLocal(amtLocal, currency)}
                                 </span>
-                                <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                                <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                                   ≈ {formatLargeINR(amtINR)}
                                 </span>
                               </>
                             )}
                           </div>
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                            <span className="text-[10px]" style={{ color: '#9CA3AF' }}>{fmtDate(t.date)}</span>
+                            <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{fmtDate(t.date)}</span>
                             {Number(t.fees) > 0 && (
-                              <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                              <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                                 fees: {fmtLocal(Number(t.fees), currency)}
                               </span>
                             )}
                             {wb && (
-                              <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                              <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                                 bal: {wb._runningBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                               </span>
                             )}
                             {label === 'Buy' && (
-                              <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                              <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                                 held: {holdingPeriodStr(t.date)}
                               </span>
                             )}
-                            <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                            <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                               FX: {txnFx.toFixed(2)}
                             </span>
                           </div>
                           {t.notes && !t.notes.startsWith('Buy') && !t.notes.startsWith('Sell at') && !t.notes.includes('meta:') && (
-                            <p className="text-[10px] mt-0.5 truncate" style={{ color: '#9CA3AF' }}>{t.notes}</p>
+                            <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--wv-text-muted)' }}>{t.notes}</p>
                           )}
                           {t.type === 'sell' && (() => {
                             const metaMatch = (t.notes ?? '').match(/meta:(\{[^}]+\})/);
@@ -676,7 +676,7 @@ export function GlobalStockDetailSheet({
               <button
                 onClick={() => setShowAllTxns(!showAllTxns)}
                 className="w-full px-4 py-2.5 text-[11px] font-medium flex items-center justify-center gap-1 border-t"
-                style={{ borderColor: '#F0EDE6', color: '#6B7280' }}>
+                style={{ borderColor: '#F0EDE6', color: 'var(--wv-text-secondary)' }}>
                 {showAllTxns
                   ? <><ChevronUp className="w-3 h-3" /> Show less</>
                   : <><ChevronDown className="w-3 h-3" /> Show all {sorted.length} transactions</>}
@@ -703,12 +703,12 @@ export function GlobalStockDetailSheet({
               <Plus className="w-3.5 h-3.5" />Add More Shares
             </Button>
             <Button variant="outline" className="h-9 text-xs gap-1.5"
-              style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
+              style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}
               onClick={() => navTo(`/add-assets/global-stocks?sell=${h.id}`)}>
               Sell / Exit
             </Button>
             <Button variant="outline" className="h-9 text-xs gap-1.5"
-              style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
+              style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}
               onClick={() => navTo(`/add-assets/global-stocks?dividend=${h.id}`)}>
               Record Dividend
             </Button>

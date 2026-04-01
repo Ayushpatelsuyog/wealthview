@@ -29,20 +29,20 @@ function SliderRow({ label, unit, min, max, step, value, onChange }: SliderRowPr
   return (
     <div>
       <div className="flex justify-between mb-1">
-        <span className="text-[11px]" style={{ color: '#6B7280' }}>{label}</span>
-        <span className="text-[11px] font-semibold" style={{ color: '#1A1A2E' }}>
+        <span className="text-[11px]" style={{ color: 'var(--wv-text-secondary)' }}>{label}</span>
+        <span className="text-[11px] font-semibold" style={{ color: 'var(--wv-text)' }}>
           {unit === '₹' ? `₹${value}L` : `${value}%`}
         </span>
       </div>
       <input
         type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        style={{ background: `linear-gradient(to right, #C9A84C ${pct}%, #E8E5DD ${pct}%)` }}
+        style={{ background: `linear-gradient(to right, #C9A84C ${pct}%, var(--wv-border) ${pct}%)` }}
         className="w-full"
       />
       <div className="flex justify-between mt-0.5">
-        <span className="text-[10px]" style={{ color: '#9CA3AF' }}>{unit === '₹' ? `₹${min}L` : `${min}%`}</span>
-        <span className="text-[10px]" style={{ color: '#9CA3AF' }}>{unit === '₹' ? `₹${max}L` : `${max}%`}</span>
+        <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{unit === '₹' ? `₹${min}L` : `${min}%`}</span>
+        <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{unit === '₹' ? `₹${max}L` : `${max}%`}</span>
       </div>
     </div>
   );
@@ -52,15 +52,15 @@ interface TTProps { active?: boolean; payload?: Array<{ name: string; value: num
 function CustomTooltip({ active, payload, label }: TTProps) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border rounded-xl p-3 shadow-card-hover text-xs" style={{ borderColor: '#E8E5DD' }}>
-      <p className="font-semibold mb-2" style={{ color: '#6B7280' }}>Year {label}</p>
+    <div className="bg-white border rounded-xl p-3 shadow-card-hover text-xs" style={{ borderColor: 'var(--wv-border)' }}>
+      <p className="font-semibold mb-2" style={{ color: 'var(--wv-text-secondary)' }}>Year {label}</p>
       {payload.map((p) => (
         <div key={p.name} className="flex items-center gap-2 mb-0.5">
           <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: p.color }} />
-          <span style={{ color: '#6B7280' }}>
+          <span style={{ color: 'var(--wv-text-secondary)' }}>
             {p.name === 'portfolio' ? 'Projected NW' : p.name === 'invested' ? 'Invested Capital' : 'FD/Ins Inflows'}:
           </span>
-          <span className="font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(p.value)}</span>
+          <span className="font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(p.value)}</span>
         </div>
       ))}
     </div>
@@ -90,13 +90,13 @@ export function ProjectionEngine({ snapshot }: Props) {
       <div className="flex items-center justify-between mb-1">
         <h3 className="section-heading text-sm">Projection Engine</h3>
         {hasData && startingNetWorth > 0 && (
-          <span className="text-[11px]" style={{ color: '#9CA3AF' }}>
+          <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>
             Starting from {formatLargeINR(startingNetWorth)}
           </span>
         )}
       </div>
       {!hasData && (
-        <p className="text-[11px] mb-4" style={{ color: '#9CA3AF' }}>
+        <p className="text-[11px] mb-4" style={{ color: 'var(--wv-text-muted)' }}>
           Add investments to project from your actual net worth. Currently projecting from ₹0.
         </p>
       )}
@@ -113,15 +113,15 @@ export function ProjectionEngine({ snapshot }: Props) {
       <div className="flex items-center gap-5 mb-3">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#C9A84C' }} />
-          <span className="text-[11px]" style={{ color: '#6B7280' }}>Projected NW</span>
+          <span className="text-[11px]" style={{ color: 'var(--wv-text-secondary)' }}>Projected NW</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#2E8B8B' }} />
-          <span className="text-[11px]" style={{ color: '#6B7280' }}>FD/Insurance inflows</span>
+          <span className="text-[11px]" style={{ color: 'var(--wv-text-secondary)' }}>FD/Insurance inflows</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#F5EDD6' }} />
-          <span className="text-[11px]" style={{ color: '#6B7280' }}>Invested capital</span>
+          <span className="text-[11px]" style={{ color: 'var(--wv-text-secondary)' }}>Invested capital</span>
         </div>
       </div>
 
@@ -152,9 +152,9 @@ export function ProjectionEngine({ snapshot }: Props) {
           { label: '10 Years',  value: yr10 },
           { label: 'FD/Ins In', value: totalInflows },
         ].map((item) => (
-          <div key={item.label} className="text-center p-3 rounded-xl" style={{ backgroundColor: '#F7F5F0' }}>
-            <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: '#9CA3AF' }}>{item.label}</p>
-            <p className="font-display text-sm font-semibold" style={{ color: '#1B2A4A' }}>{formatLargeINR(item.value)}</p>
+          <div key={item.label} className="text-center p-3 rounded-xl" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+            <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</p>
+            <p className="font-display text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(item.value)}</p>
           </div>
         ))}
       </div>

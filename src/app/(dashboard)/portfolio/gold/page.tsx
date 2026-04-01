@@ -221,8 +221,8 @@ export default function GoldPortfolioPage() {
             <Gem className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: '#1B2A4A' }}>Gold & Jewelry</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Track your gold, jewelry and digital gold holdings</p>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--wv-text)' }}>Gold & Jewelry</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Track your gold, jewelry and digital gold holdings</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -251,7 +251,7 @@ export default function GoldPortfolioPage() {
         <div className="wv-card p-4">
           <div className="flex items-end gap-3">
             <div className="flex-1 space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Current Gold Price per Gram (₹)</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Current Gold Price per Gram (₹)</Label>
               <Input
                 type="number"
                 value={newGoldPrice}
@@ -272,7 +272,7 @@ export default function GoldPortfolioPage() {
               Update All
             </Button>
           </div>
-          <p className="text-[10px] mt-2" style={{ color: '#9CA3AF' }}>This will update the current value of all gold holdings using this price (adjusted for purity).</p>
+          <p className="text-[10px] mt-2" style={{ color: 'var(--wv-text-muted)' }}>This will update the current value of all gold holdings using this price (adjusted for purity).</p>
         </div>
       )}
 
@@ -288,7 +288,7 @@ export default function GoldPortfolioPage() {
       {loading && (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#C9A84C' }} />
-          <span className="ml-3 text-sm" style={{ color: '#9CA3AF' }}>Loading gold holdings...</span>
+          <span className="ml-3 text-sm" style={{ color: 'var(--wv-text-muted)' }}>Loading gold holdings...</span>
         </div>
       )}
 
@@ -296,8 +296,8 @@ export default function GoldPortfolioPage() {
       {!loading && holdings.length === 0 && (
         <div className="wv-card p-12 text-center">
           <Gem className="w-12 h-12 mx-auto mb-4" style={{ color: '#C9A84C' }} />
-          <h3 className="text-lg font-semibold mb-2" style={{ color: '#1B2A4A' }}>No Gold Holdings Yet</h3>
-          <p className="text-sm mb-6" style={{ color: '#9CA3AF' }}>Start tracking your gold investments by adding your first holding.</p>
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--wv-text)' }}>No Gold Holdings Yet</h3>
+          <p className="text-sm mb-6" style={{ color: 'var(--wv-text-muted)' }}>Start tracking your gold investments by adding your first holding.</p>
           <Button
             onClick={() => router.push('/add-assets/gold')}
             className="gap-2"
@@ -321,7 +321,7 @@ export default function GoldPortfolioPage() {
               { label: 'Total P&L', value: `${totalPnl >= 0 ? '+' : ''}${formatLargeINR(totalPnl)}`, color: totalPnl >= 0 ? '#059669' : '#DC2626' },
             ].map((c) => (
               <div key={c.label} className="wv-card p-4">
-                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: '#9CA3AF' }}>{c.label}</p>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--wv-text-muted)' }}>{c.label}</p>
                 <p className="font-display text-lg font-semibold" style={{ color: c.color ?? '#1B2A4A' }}>{c.value}</p>
               </div>
             ))}
@@ -333,9 +333,9 @@ export default function GoldPortfolioPage() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #E8E5DD' }}>
+                  <tr style={{ borderBottom: '1px solid var(--wv-border)' }}>
                     {['Description', 'Type', 'Purity', 'Weight (g)', 'Invested (₹)', 'Current Value (₹)', 'P&L'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap" style={{ color: '#9CA3AF' }}>
+                      <th key={h} className="px-4 py-3 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap" style={{ color: 'var(--wv-text-muted)' }}>
                         {h}
                       </th>
                     ))}
@@ -347,17 +347,17 @@ export default function GoldPortfolioPage() {
                       key={h.id}
                       onClick={() => openDetail(h)}
                       className="cursor-pointer transition-colors hover:bg-gray-50"
-                      style={{ borderBottom: '1px solid #F3F4F6' }}
+                      style={{ borderBottom: '1px solid var(--wv-border)' }}
                     >
                       <td className="px-4 py-3">
-                        <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{h.description}</p>
-                        {h.memberName && <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{h.memberName}</p>}
+                        <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{h.description}</p>
+                        {h.memberName && <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{h.memberName}</p>}
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#4B5563' }}>{h.goldType}</td>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{h.goldType}</td>
                       <td className="px-4 py-3 text-xs font-medium" style={{ color: '#C9A84C' }}>{h.purityLabel}</td>
-                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{h.weightGrams.toFixed(3)}</td>
-                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatINRFull(h.totalCost)}</td>
-                      <td className="px-4 py-3 text-xs font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>{formatINRFull(h.currentValue)}</td>
+                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{h.weightGrams.toFixed(3)}</td>
+                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatINRFull(h.totalCost)}</td>
+                      <td className="px-4 py-3 text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatINRFull(h.currentValue)}</td>
                       <td className="px-4 py-3">
                         <p className="text-xs font-medium tabular-nums" style={{ color: h.pnl >= 0 ? '#059669' : '#DC2626' }}>
                           {h.pnl >= 0 ? '+' : ''}{formatINRFull(h.pnl)}
@@ -373,7 +373,7 @@ export default function GoldPortfolioPage() {
             </div>
 
             {/* Mobile card layout */}
-            <div className="md:hidden divide-y" style={{ borderColor: '#F3F4F6' }}>
+            <div className="md:hidden divide-y" style={{ borderColor: 'var(--wv-border)' }}>
               {filtered.map((h) => (
                 <div
                   key={h.id}
@@ -382,8 +382,8 @@ export default function GoldPortfolioPage() {
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: '#1A1A2E' }}>{h.description}</p>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>{h.description}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                         {h.goldType} {h.memberName ? ` . ${h.memberName}` : ''}
                       </p>
                     </div>
@@ -394,19 +394,19 @@ export default function GoldPortfolioPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Weight</p>
-                      <p className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{h.weightGrams.toFixed(3)}g</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Weight</p>
+                      <p className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{h.weightGrams.toFixed(3)}g</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Invested</p>
-                      <p className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(h.totalCost)}</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Invested</p>
+                      <p className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(h.totalCost)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Current Value</p>
-                      <p className="text-xs font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>{formatLargeINR(h.currentValue)}</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
+                      <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(h.currentValue)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>P&L</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>P&L</p>
                       <p className="text-xs font-medium tabular-nums" style={{ color: h.pnl >= 0 ? '#059669' : '#DC2626' }}>
                         {h.pnl >= 0 ? '+' : ''}{formatLargeINR(h.pnl)}
                       </p>
@@ -431,12 +431,12 @@ export default function GoldPortfolioPage() {
                     <Gem className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold" style={{ color: '#1B2A4A' }}>{selectedHolding.description}</h2>
-                    <p className="text-xs" style={{ color: '#9CA3AF' }}>{selectedHolding.goldType}</p>
+                    <h2 className="text-base font-bold" style={{ color: 'var(--wv-text)' }}>{selectedHolding.description}</h2>
+                    <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>{selectedHolding.goldType}</p>
                   </div>
                 </div>
                 {selectedHolding.memberName && (
-                  <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Held by: {selectedHolding.memberName}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--wv-text-muted)' }}>Held by: {selectedHolding.memberName}</p>
                 )}
               </div>
 
@@ -448,7 +448,7 @@ export default function GoldPortfolioPage() {
 
               {/* Gold Details */}
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Holding Details</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Holding Details</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'Weight', value: `${selectedHolding.weightGrams.toFixed(3)}g` },
@@ -459,8 +459,8 @@ export default function GoldPortfolioPage() {
                     ...(selectedHolding.platform ? [{ label: 'Platform', value: selectedHolding.platform }] : []),
                   ].map((item) => (
                     <div key={item.label}>
-                      <p className="text-[10px] uppercase tracking-wider" style={{ color: '#9CA3AF' }}>{item.label}</p>
-                      <p className="text-sm font-medium" style={{ color: '#1A1A2E' }}>{item.value}</p>
+                      <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</p>
+                      <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{item.value}</p>
                     </div>
                   ))}
                 </div>
@@ -468,17 +468,17 @@ export default function GoldPortfolioPage() {
 
               {/* Value Summary */}
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Valuation</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Valuation</h3>
                 <div className="wv-card p-4 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Total Invested</span>
-                    <span className="text-sm font-semibold tabular-nums" style={{ color: '#1A1A2E' }}>{formatINRFull(selectedHolding.totalCost)}</span>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Total Invested</span>
+                    <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatINRFull(selectedHolding.totalCost)}</span>
                   </div>
-                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 12 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Current Value</span>
-                    <span className="text-sm font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>{formatINRFull(selectedHolding.currentValue)}</span>
+                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 12 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Current Value</span>
+                    <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatINRFull(selectedHolding.currentValue)}</span>
                   </div>
-                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid #E8E5DD', paddingTop: 12 }}>
+                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 12 }}>
                     <span className="text-xs font-semibold" style={{ color: selectedHolding.pnl >= 0 ? '#059669' : '#DC2626' }}>P&L</span>
                     <span className="text-base font-bold tabular-nums" style={{ color: selectedHolding.pnl >= 0 ? '#059669' : '#DC2626' }}>
                       {selectedHolding.pnl >= 0 ? '+' : ''}{formatINRFull(selectedHolding.pnl)} ({selectedHolding.pnlPercent >= 0 ? '+' : ''}{selectedHolding.pnlPercent.toFixed(2)}%)
@@ -498,12 +498,12 @@ export default function GoldPortfolioPage() {
                 if (extras.length === 0) return null;
                 return (
                   <div className="space-y-3">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Additional Details</h3>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Additional Details</h3>
                     <div className="space-y-2">
                       {extras.map((item) => (
                         <div key={item.label} className="flex justify-between">
-                          <span className="text-xs" style={{ color: '#9CA3AF' }}>{item.label}</span>
-                          <span className="text-xs font-medium text-right max-w-[60%]" style={{ color: '#1A1A2E' }}>{item.value}</span>
+                          <span className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</span>
+                          <span className="text-xs font-medium text-right max-w-[60%]" style={{ color: 'var(--wv-text)' }}>{item.value}</span>
                         </div>
                       ))}
                     </div>
@@ -512,12 +512,12 @@ export default function GoldPortfolioPage() {
               })()}
 
               {/* Last Updated */}
-              <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+              <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                 Last updated: {formatDate(selectedHolding.last_updated)}
               </p>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-2" style={{ borderTop: '1px solid #E8E5DD' }}>
+              <div className="flex gap-3 pt-2" style={{ borderTop: '1px solid var(--wv-border)' }}>
                 <Button
                   onClick={() => {
                     router.push(`/add-assets/gold?edit=${selectedHolding.id}`);

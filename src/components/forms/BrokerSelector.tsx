@@ -157,8 +157,8 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
 
       {loading ? (
         <div className="flex items-center gap-2 py-3">
-          <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#9CA3AF' }} />
-          <span className="text-xs" style={{ color: '#9CA3AF' }}>Loading distributors…</span>
+          <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--wv-text-muted)' }} />
+          <span className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Loading distributors…</span>
         </div>
       ) : (
         <div className="grid grid-cols-4 gap-2">
@@ -177,7 +177,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
                   onClick={() => onChange(b.id)}
                   className="w-full flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all"
                   style={{
-                    borderColor:     isSelected ? b.logo_color : '#E8E5DD',
+                    borderColor:     isSelected ? b.logo_color : 'var(--wv-border)',
                     backgroundColor: isSelected ? `${b.logo_color}12` : 'white',
                     boxShadow:       isSelected ? `0 0 0 1px ${b.logo_color}` : 'none',
                   }}
@@ -188,7 +188,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
                   >
                     {brokerLetter(b.name)}
                   </div>
-                  <span className="text-[10px] font-medium text-center leading-tight" style={{ color: '#6B7280' }}>
+                  <span className="text-[10px] font-medium text-center leading-tight" style={{ color: 'var(--wv-text-secondary)' }}>
                     {b.name}
                   </span>
                 </button>
@@ -218,11 +218,11 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
             type="button"
             onClick={() => { setShowAdd(true); setAddError(null); }}
             className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-dashed transition-all hover:border-gold"
-            style={{ borderColor: '#E8E5DD' }}
+            style={{ borderColor: 'var(--wv-border)' }}
           >
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: '#F7F5F0' }}
+              style={{ backgroundColor: 'var(--wv-surface-2)' }}
             >
               <Plus className="w-4 h-4" style={{ color: '#C9A84C' }} />
             </div>
@@ -245,11 +245,11 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
             style={{ backgroundColor: 'white' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-sm font-semibold mb-4" style={{ color: '#1A1A2E' }}>Add Distributor / Platform</h3>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--wv-text)' }}>Add Distributor / Platform</h3>
 
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Distributor Name *</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Distributor Name *</Label>
                 <Input
                   value={addName}
                   onChange={e => setAddName(e.target.value)}
@@ -261,7 +261,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Platform Type</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Platform Type</Label>
                 <Select value={addPlatform} onValueChange={setAddPlatform}>
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue />
@@ -275,7 +275,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Brand Color</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Brand Color</Label>
                 <div className="flex gap-2 flex-wrap">
                   {PRESET_COLORS.map(c => (
                     <button
@@ -296,14 +296,14 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
               </div>
 
               {/* Preview */}
-              <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: '#F7F5F0' }}>
+              <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
                 <div
                   className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold"
                   style={{ backgroundColor: addColor }}
                 >
                   {brokerLetter(addName || 'B')}
                 </div>
-                <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                   {addName || 'Distributor Name'}
                 </span>
               </div>
@@ -350,10 +350,10 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
             >
               <X className="w-5 h-5" style={{ color: '#DC2626' }} />
             </div>
-            <h3 className="text-sm font-semibold mb-1" style={{ color: '#1A1A2E' }}>
+            <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--wv-text)' }}>
               Remove {deleteTarget.name}?
             </h3>
-            <p className="text-xs mb-4" style={{ color: '#6B7280' }}>
+            <p className="text-xs mb-4" style={{ color: 'var(--wv-text-secondary)' }}>
               This cannot be undone. The distributor will be removed from your list.
             </p>
 

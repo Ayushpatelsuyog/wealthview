@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 500 });
 
   // 2. Ensure family
-  let familyId: string = profile.family_id;
+  let familyId: string = body.familyId || profile.family_id;
   if (!familyId) {
     const { data: newFamily, error: famErr } = await supabase
       .from('families')

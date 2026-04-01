@@ -181,8 +181,8 @@ export default function NPSPortfolioPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1B2A4A' }} />
-        <span className="ml-2 text-sm" style={{ color: '#6B7280' }}>Loading NPS accounts...</span>
+        <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--wv-text)' }} />
+        <span className="ml-2 text-sm" style={{ color: 'var(--wv-text-secondary)' }}>Loading NPS accounts...</span>
       </div>
     );
   }
@@ -206,8 +206,8 @@ export default function NPSPortfolioPage() {
             <Shield className="w-5 h-5" style={{ color: '#dc2626' }} />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: '#1B2A4A' }}>NPS Portfolio</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>National Pension System accounts</p>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--wv-text)' }}>NPS Portfolio</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>National Pension System accounts</p>
           </div>
         </div>
         <Button
@@ -230,16 +230,16 @@ export default function NPSPortfolioPage() {
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <IndianRupee className="w-4 h-4" style={{ color: '#C9A84C' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Total Value</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Total Value</p>
           </div>
-          <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(summary.totalValue)}</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(summary.totalValue)}</p>
         </div>
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <IndianRupee className="w-4 h-4" style={{ color: '#C9A84C' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Contributions</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Contributions</p>
           </div>
-          <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(summary.totalContributions)}</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(summary.totalContributions)}</p>
         </div>
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -247,7 +247,7 @@ export default function NPSPortfolioPage() {
               ? <TrendingUp className="w-4 h-4" style={{ color: '#059669' }} />
               : <TrendingDown className="w-4 h-4" style={{ color: '#DC2626' }} />
             }
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Returns</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Returns</p>
           </div>
           <p className="text-lg font-bold" style={{ color: summary.totalReturns >= 0 ? '#059669' : '#DC2626' }}>
             {formatLargeINR(summary.totalReturns)}
@@ -256,9 +256,9 @@ export default function NPSPortfolioPage() {
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <Building2 className="w-4 h-4" style={{ color: '#C9A84C' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Accounts</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Accounts</p>
           </div>
-          <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{summary.accountCount}</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{summary.accountCount}</p>
         </div>
       </div>
 
@@ -266,8 +266,8 @@ export default function NPSPortfolioPage() {
       {rows.length === 0 ? (
         <div className="wv-card p-12 text-center">
           <Shield className="w-10 h-10 mx-auto mb-3" style={{ color: '#D1D5DB' }} />
-          <p className="text-sm font-medium" style={{ color: '#6B7280' }}>No NPS accounts found</p>
-          <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Add your first NPS account to start tracking</p>
+          <p className="text-sm font-medium" style={{ color: 'var(--wv-text-secondary)' }}>No NPS accounts found</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--wv-text-muted)' }}>Add your first NPS account to start tracking</p>
           <Button
             onClick={() => router.push('/add-assets/nps')}
             className="mt-4 text-white text-sm"
@@ -282,14 +282,14 @@ export default function NPSPortfolioPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr style={{ backgroundColor: '#F7F5F0' }}>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>PRAN</th>
-                  <th className="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Tier</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Fund Manager</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Contribution</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Current Value</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Returns</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Returns %</th>
+                <tr style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>PRAN</th>
+                  <th className="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Tier</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Fund Manager</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Contribution</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Current Value</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Returns</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Returns %</th>
                 </tr>
               </thead>
               <tbody>
@@ -301,8 +301,8 @@ export default function NPSPortfolioPage() {
                     style={{ borderColor: '#F3F0E8' }}
                   >
                     <td className="px-4 py-3">
-                      <p className="font-medium text-sm" style={{ color: '#1B2A4A' }}>{row.pran}</p>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{row.memberName}</p>
+                      <p className="font-medium text-sm" style={{ color: 'var(--wv-text)' }}>{row.pran}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{row.memberName}</p>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span
@@ -317,7 +317,7 @@ export default function NPSPortfolioPage() {
                     </td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#374151' }}>{row.fundManager}</td>
                     <td className="px-4 py-3 text-sm text-right" style={{ color: '#374151' }}>{formatLargeINR(row.totalContribution)}</td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold" style={{ color: '#1B2A4A' }}>{formatLargeINR(row.value)}</td>
+                    <td className="px-4 py-3 text-sm text-right font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(row.value)}</td>
                     <td className="px-4 py-3 text-sm text-right font-semibold" style={{ color: row.returns >= 0 ? '#059669' : '#DC2626' }}>
                       {formatLargeINR(row.returns)}
                     </td>
@@ -336,7 +336,7 @@ export default function NPSPortfolioPage() {
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="right" className="overflow-y-auto w-full sm:max-w-md">
           <SheetHeader>
-            <SheetTitle style={{ color: '#1B2A4A' }}>NPS Account Details</SheetTitle>
+            <SheetTitle style={{ color: 'var(--wv-text)' }}>NPS Account Details</SheetTitle>
             <SheetDescription>
               {selectedAsset?.fundManager} — Tier {selectedAsset?.tier}
             </SheetDescription>
@@ -347,15 +347,15 @@ export default function NPSPortfolioPage() {
               {/* Info grid */}
               <div className="wv-card p-4 grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>PRAN</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.pran}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>PRAN</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.pran}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Member</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.memberName}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Member</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.memberName}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>NPS Tier</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>NPS Tier</p>
                   <span
                     className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
                     style={{
@@ -367,31 +367,31 @@ export default function NPSPortfolioPage() {
                   </span>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Fund Manager</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.fundManager}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Fund Manager</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.fundManager}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Total Contribution</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{formatCurrency(selectedAsset.totalContribution)}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Total Contribution</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{formatCurrency(selectedAsset.totalContribution)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Current Value</p>
-                  <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{formatCurrency(selectedAsset.value)}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
+                  <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{formatCurrency(selectedAsset.value)}</p>
                 </div>
                 {selectedAsset.employerContribution > 0 && (
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Employer Contribution</p>
-                    <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{formatCurrency(selectedAsset.employerContribution)}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Employer Contribution</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{formatCurrency(selectedAsset.employerContribution)}</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Returns</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Returns</p>
                   <p className="text-sm font-bold" style={{ color: selectedAsset.returns >= 0 ? '#059669' : '#DC2626' }}>
                     {formatCurrency(selectedAsset.returns)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Returns %</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Returns %</p>
                   <p className="text-sm font-bold" style={{ color: selectedAsset.returnsPercent >= 0 ? '#059669' : '#DC2626' }}>
                     {selectedAsset.returnsPercent >= 0 ? '+' : ''}{selectedAsset.returnsPercent.toFixed(2)}%
                   </p>
@@ -399,8 +399,8 @@ export default function NPSPortfolioPage() {
               </div>
 
               {/* Tax benefits breakdown */}
-              <div className="rounded-xl p-4 space-y-3" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
-                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#6B7280' }}>
+              <div className="rounded-xl p-4 space-y-3" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-secondary)' }}>
                   Tax Benefits
                 </span>
                 <div className="grid grid-cols-1 gap-y-2 text-sm">
@@ -412,7 +412,7 @@ export default function NPSPortfolioPage() {
                     <span className="text-gray-500">Sec 80CCD(1B) — extra &#8377;50K</span>
                     <span className="font-medium" style={{ color: '#C9A84C' }}>{formatCurrency(selectedAsset.eligible80CCD1B)}</span>
                   </div>
-                  <div className="flex justify-between pt-1" style={{ borderTop: '1px solid #E8E5DD' }}>
+                  <div className="flex justify-between pt-1" style={{ borderTop: '1px solid var(--wv-border)' }}>
                     <span className="text-gray-500 font-medium">Total Tax Benefit</span>
                     <span className="font-bold" style={{ color: '#C9A84C' }}>
                       {formatCurrency(selectedAsset.eligible80CCD1 + selectedAsset.eligible80CCD1B)}
@@ -424,14 +424,14 @@ export default function NPSPortfolioPage() {
               {/* Notes */}
               {selectedAsset.notes && (
                 <div className="wv-card p-4">
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Notes</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Notes</p>
                   <p className="text-sm mt-1" style={{ color: '#374151' }}>{selectedAsset.notes}</p>
                 </div>
               )}
 
               <div className="wv-card p-4">
-                <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Last Updated</p>
-                <p className="text-sm font-medium mt-1" style={{ color: '#1B2A4A' }}>{fmtDate(selectedAsset.last_updated)}</p>
+                <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Last Updated</p>
+                <p className="text-sm font-medium mt-1" style={{ color: 'var(--wv-text)' }}>{fmtDate(selectedAsset.last_updated)}</p>
               </div>
 
               {/* Actions */}

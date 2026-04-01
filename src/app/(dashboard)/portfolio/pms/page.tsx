@@ -78,7 +78,7 @@ function SummaryCard({
 }) {
   return (
     <div className="wv-card p-4">
-      <p className="text-[10px] uppercase tracking-wide mb-1" style={{ color: '#9CA3AF' }}>{label}</p>
+      <p className="text-[10px] uppercase tracking-wide mb-1" style={{ color: 'var(--wv-text-muted)' }}>{label}</p>
       <p className="text-lg font-bold" style={{ color: color ?? '#1B2A4A' }}>{value}</p>
     </div>
   );
@@ -273,14 +273,14 @@ export default function PMSPortfolioPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-            <Layers className="w-5 h-5" style={{ color: '#1B2A4A' }} />
+            style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+            <Layers className="w-5 h-5" style={{ color: 'var(--wv-text)' }} />
           </div>
           <div>
-            <h1 className="font-display text-xl font-semibold" style={{ color: '#1A1A2E' }}>
+            <h1 className="font-display text-xl font-semibold" style={{ color: 'var(--wv-text)' }}>
               PMS Portfolio
             </h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>
               Portfolio Management Services
             </p>
           </div>
@@ -305,8 +305,8 @@ export default function PMSPortfolioPage() {
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1B2A4A' }} />
-          <span className="ml-2 text-sm" style={{ color: '#6B7280' }}>Loading PMS holdings...</span>
+          <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--wv-text)' }} />
+          <span className="ml-2 text-sm" style={{ color: 'var(--wv-text-secondary)' }}>Loading PMS holdings...</span>
         </div>
       )}
 
@@ -324,10 +324,10 @@ export default function PMSPortfolioPage() {
       {!loading && !error && filtered.length === 0 && (
         <div className="wv-card p-12 text-center">
           <Layers className="w-12 h-12 mx-auto mb-4" style={{ color: '#C9A84C' }} />
-          <h3 className="text-lg font-semibold mb-2" style={{ color: '#1B2A4A' }}>
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--wv-text)' }}>
             No PMS Holdings Yet
           </h3>
-          <p className="text-sm mb-6" style={{ color: '#9CA3AF' }}>
+          <p className="text-sm mb-6" style={{ color: 'var(--wv-text-muted)' }}>
             Add your first Portfolio Management Service holding to start tracking.
           </p>
           <Button
@@ -361,10 +361,10 @@ export default function PMSPortfolioPage() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr style={{ backgroundColor: '#F7F5F0', borderBottom: '1px solid #E8E5DD' }}>
+                  <tr style={{ backgroundColor: 'var(--wv-surface-2)', borderBottom: '1px solid var(--wv-border)' }}>
                     {['Provider', 'Strategy', 'Invested', 'Current Value', 'P&L', 'P&L%', 'Mgmt Fee', 'Benchmark', 'Actions'].map(col => (
                       <th key={col} className="text-left px-4 py-3 text-[10px] uppercase tracking-wide font-semibold"
-                        style={{ color: '#9CA3AF' }}>
+                        style={{ color: 'var(--wv-text-muted)' }}>
                         {col}
                       </th>
                     ))}
@@ -376,17 +376,17 @@ export default function PMSPortfolioPage() {
                       key={row.id}
                       onClick={() => setDetailId(row.id)}
                       className="cursor-pointer transition-colors hover:bg-gray-50"
-                      style={{ borderBottom: '1px solid #F3F4F6' }}
+                      style={{ borderBottom: '1px solid var(--wv-border)' }}
                     >
                       <td className="px-4 py-3">
-                        <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{row.provider}</p>
-                        {row.memberName && <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{row.memberName}</p>}
+                        <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{row.provider}</p>
+                        {row.memberName && <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{row.memberName}</p>}
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#4B5563' }}>{row.strategy}</td>
-                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{row.strategy}</td>
+                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>
                         {formatLargeINR(row.invested)}
                       </td>
-                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>
+                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>
                         {formatLargeINR(row.currentValue)}
                       </td>
                       <td className="px-4 py-3">
@@ -404,10 +404,10 @@ export default function PMSPortfolioPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-xs tabular-nums" style={{ color: '#4B5563' }}>
+                      <td className="px-4 py-3 text-xs tabular-nums" style={{ color: 'var(--wv-text-secondary)' }}>
                         {row.managementFee > 0 ? `${row.managementFee.toFixed(2)}%` : '--'}
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#4B5563' }}>{row.benchmark || '--'}</td>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{row.benchmark || '--'}</td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
                           <button
@@ -436,7 +436,7 @@ export default function PMSPortfolioPage() {
             </div>
 
             {/* Mobile card layout */}
-            <div className="md:hidden divide-y" style={{ borderColor: '#F3F4F6' }}>
+            <div className="md:hidden divide-y" style={{ borderColor: 'var(--wv-border)' }}>
               {filtered.map(row => (
                 <div
                   key={row.id}
@@ -445,8 +445,8 @@ export default function PMSPortfolioPage() {
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: '#1A1A2E' }}>{row.provider}</p>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>{row.provider}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                         {row.strategy} {row.memberName ? `· ${row.memberName}` : ''}
                       </p>
                     </div>
@@ -461,12 +461,12 @@ export default function PMSPortfolioPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Invested</p>
-                      <p className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(row.invested)}</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Invested</p>
+                      <p className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(row.invested)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Current Value</p>
-                      <p className="text-xs font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>{formatLargeINR(row.currentValue)}</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
+                      <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(row.currentValue)}</p>
                     </div>
                   </div>
                 </div>
@@ -479,8 +479,8 @@ export default function PMSPortfolioPage() {
       {/* ── Inline Value Update Modal ──────────────────────────────────────────── */}
       {editValueId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => { setEditValueId(null); setEditValueAmount(''); }}>
-          <div className="bg-white rounded-xl p-6 w-80 shadow-xl" onClick={e => e.stopPropagation()}>
-            <p className="text-sm font-semibold mb-3" style={{ color: '#1B2A4A' }}>Update Current Value</p>
+          <div className="rounded-xl p-6 w-80 shadow-xl" onClick={e => e.stopPropagation()}>
+            <p className="text-sm font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Update Current Value</p>
             <Input
               type="number"
               value={editValueAmount}
@@ -520,7 +520,7 @@ export default function PMSPortfolioPage() {
       <Sheet open={!!detailId} onOpenChange={(open) => { if (!open) setDetailId(null); }}>
         <SheetContent className="overflow-y-auto sm:max-w-lg">
           <SheetHeader>
-            <SheetTitle style={{ color: '#1B2A4A' }}>
+            <SheetTitle style={{ color: 'var(--wv-text)' }}>
               {detailAsset?.provider ?? 'PMS Details'}
             </SheetTitle>
             <SheetDescription>
@@ -531,8 +531,8 @@ export default function PMSPortfolioPage() {
           {detailAsset && (
             <div className="mt-6 space-y-6">
               {/* PMS Info */}
-              <div className="rounded-xl p-4" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>PMS Information</p>
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>PMS Information</p>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'Provider', value: detailAsset.provider },
@@ -543,27 +543,27 @@ export default function PMSPortfolioPage() {
                     { label: 'Member', value: detailAsset.memberName || '--' },
                   ].map(item => (
                     <div key={item.label}>
-                      <p className="text-[10px] uppercase tracking-wide" style={{ color: '#9CA3AF' }}>{item.label}</p>
-                      <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{item.value}</p>
+                      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</p>
+                      <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{item.value}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Performance */}
-              <div className="rounded-xl p-4" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Performance</p>
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Performance</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Invested</p>
-                    <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{formatLargeINR(detailAsset.invested)}</p>
+                    <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Invested</p>
+                    <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(detailAsset.invested)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Current Value</p>
-                    <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{formatLargeINR(detailAsset.currentValue)}</p>
+                    <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
+                    <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(detailAsset.currentValue)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide" style={{ color: '#9CA3AF' }}>P&amp;L</p>
+                    <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>P&amp;L</p>
                     <p className="text-xs font-semibold" style={{ color: detailAsset.pnl >= 0 ? '#059669' : '#DC2626' }}>
                       {detailAsset.pnl >= 0 ? '+' : ''}{formatLargeINR(detailAsset.pnl)} ({formatPercentage(detailAsset.pnlPct)})
                     </p>
@@ -572,24 +572,24 @@ export default function PMSPortfolioPage() {
               </div>
 
               {/* Fee Structure */}
-              <div className="rounded-xl p-4" style={{ border: '1px solid #E8E5DD' }}>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Fee Structure</p>
+              <div className="rounded-xl p-4" style={{ border: '1px solid var(--wv-border)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Fee Structure</p>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Management Fee</span>
-                    <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Management Fee</span>
+                    <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                       {detailAsset.managementFee > 0 ? `${detailAsset.managementFee.toFixed(2)}%` : '--'}
                     </span>
                   </div>
-                  <div className="flex justify-between" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 8 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Performance Fee</span>
-                    <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                  <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Performance Fee</span>
+                    <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                       {detailAsset.performanceFee > 0 ? `${detailAsset.performanceFee.toFixed(2)}%` : '--'}
                     </span>
                   </div>
-                  <div className="flex justify-between" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 8 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Hurdle Rate</span>
-                    <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                  <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Hurdle Rate</span>
+                    <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                       {detailAsset.hurdleRate > 0 ? `${detailAsset.hurdleRate.toFixed(2)}%` : '--'}
                     </span>
                   </div>
@@ -598,18 +598,18 @@ export default function PMSPortfolioPage() {
 
               {/* Notes */}
               {detailAsset.notes && (
-                <div className="rounded-xl p-4" style={{ border: '1px solid #E8E5DD' }}>
-                  <p className="text-xs font-semibold mb-2" style={{ color: '#1B2A4A' }}>Notes</p>
-                  <p className="text-xs" style={{ color: '#4B5563' }}>{detailAsset.notes}</p>
+                <div className="rounded-xl p-4" style={{ border: '1px solid var(--wv-border)' }}>
+                  <p className="text-xs font-semibold mb-2" style={{ color: 'var(--wv-text)' }}>Notes</p>
+                  <p className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{detailAsset.notes}</p>
                 </div>
               )}
 
               {/* Update Value */}
-              <div className="rounded-xl p-4" style={{ border: '1px solid #E8E5DD' }}>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Update Value</p>
+              <div className="rounded-xl p-4" style={{ border: '1px solid var(--wv-border)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Update Value</p>
                 <div className="flex items-end gap-2">
                   <div className="flex-1">
-                    <p className="text-[10px] mb-1" style={{ color: '#9CA3AF' }}>Enter latest value</p>
+                    <p className="text-[10px] mb-1" style={{ color: 'var(--wv-text-muted)' }}>Enter latest value</p>
                     <Input
                       type="number"
                       value={editValueId === detailAsset.id ? editValueAmount : ''}
@@ -642,7 +642,7 @@ export default function PMSPortfolioPage() {
                   onClick={() => router.push(`/add-assets/pms?edit=${detailAsset.id}`)}
                   variant="outline"
                   className="flex-1 text-xs h-9"
-                  style={{ borderColor: '#E8E5DD', color: '#1B2A4A' }}
+                  style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }}
                 >
                   <Pencil className="w-3 h-3 mr-1.5" />Edit
                 </Button>

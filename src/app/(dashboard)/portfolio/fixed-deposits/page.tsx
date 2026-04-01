@@ -64,7 +64,7 @@ function statusStyle(status: string): { bg: string; text: string } {
     case 'Active':        return { bg: 'rgba(5,150,105,0.12)', text: '#059669' };
     case 'Maturing Soon': return { bg: 'rgba(217,119,6,0.12)', text: '#D97706' };
     case 'Matured':       return { bg: 'rgba(220,38,38,0.12)', text: '#DC2626' };
-    default:              return { bg: '#F3F4F6', text: '#6B7280' };
+    default:              return { bg: 'var(--wv-border)', text: '#6B7280' };
   }
 }
 
@@ -202,8 +202,8 @@ export default function FixedDepositsPage() {
             <Landmark className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: '#1B2A4A' }}>Fixed Deposits</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Track your FD investments and interest accrual</p>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--wv-text)' }}>Fixed Deposits</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Track your FD investments and interest accrual</p>
           </div>
         </div>
         <Button
@@ -228,7 +228,7 @@ export default function FixedDepositsPage() {
       {loading && (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#C9A84C' }} />
-          <span className="ml-3 text-sm" style={{ color: '#9CA3AF' }}>Loading fixed deposits...</span>
+          <span className="ml-3 text-sm" style={{ color: 'var(--wv-text-muted)' }}>Loading fixed deposits...</span>
         </div>
       )}
 
@@ -236,8 +236,8 @@ export default function FixedDepositsPage() {
       {!loading && fds.length === 0 && (
         <div className="wv-card p-12 text-center">
           <Landmark className="w-12 h-12 mx-auto mb-4" style={{ color: '#C9A84C' }} />
-          <h3 className="text-lg font-semibold mb-2" style={{ color: '#1B2A4A' }}>No Fixed Deposits Yet</h3>
-          <p className="text-sm mb-6" style={{ color: '#9CA3AF' }}>Start tracking your FDs by adding your first deposit.</p>
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--wv-text)' }}>No Fixed Deposits Yet</h3>
+          <p className="text-sm mb-6" style={{ color: 'var(--wv-text-muted)' }}>Start tracking your FDs by adding your first deposit.</p>
           <Button
             onClick={() => router.push('/add-assets/fixed-deposits')}
             className="gap-2"
@@ -261,7 +261,7 @@ export default function FixedDepositsPage() {
               { label: 'Number of FDs', value: String(fdCount), color: undefined },
             ].map((c) => (
               <div key={c.label} className="wv-card p-4">
-                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: '#9CA3AF' }}>{c.label}</p>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--wv-text-muted)' }}>{c.label}</p>
                 <p className="font-display text-lg font-semibold" style={{ color: c.color ?? '#1B2A4A' }}>{c.value}</p>
               </div>
             ))}
@@ -273,9 +273,9 @@ export default function FixedDepositsPage() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #E8E5DD' }}>
+                  <tr style={{ borderBottom: '1px solid var(--wv-border)' }}>
                     {['Bank', 'FD Type', 'Principal (₹)', 'Rate (%)', 'Start Date', 'Maturity Date', 'Days to Maturity', 'Accrued Interest', 'Current Value', 'Status'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap" style={{ color: '#9CA3AF' }}>
+                      <th key={h} className="px-4 py-3 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap" style={{ color: 'var(--wv-text-muted)' }}>
                         {h}
                       </th>
                     ))}
@@ -289,24 +289,24 @@ export default function FixedDepositsPage() {
                         key={fd.id}
                         onClick={() => openDetail(fd)}
                         className="cursor-pointer transition-colors hover:bg-gray-50"
-                        style={{ borderBottom: '1px solid #F3F4F6' }}
+                        style={{ borderBottom: '1px solid var(--wv-border)' }}
                       >
                         <td className="px-4 py-3">
-                          <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{fd.bank}</p>
-                          {fd.memberName && <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{fd.memberName}</p>}
+                          <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{fd.bank}</p>
+                          {fd.memberName && <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{fd.memberName}</p>}
                         </td>
-                        <td className="px-4 py-3 text-xs" style={{ color: '#4B5563' }}>{fd.fdType}</td>
-                        <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatINRFull(fd.principal)}</td>
-                        <td className="px-4 py-3 text-xs font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>{fd.rate.toFixed(2)}%</td>
-                        <td className="px-4 py-3 text-xs tabular-nums" style={{ color: '#4B5563' }}>{formatDate(fd.startDate)}</td>
-                        <td className="px-4 py-3 text-xs tabular-nums" style={{ color: '#4B5563' }}>{formatDate(fd.maturityDate)}</td>
+                        <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{fd.fdType}</td>
+                        <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatINRFull(fd.principal)}</td>
+                        <td className="px-4 py-3 text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{fd.rate.toFixed(2)}%</td>
+                        <td className="px-4 py-3 text-xs tabular-nums" style={{ color: 'var(--wv-text-secondary)' }}>{formatDate(fd.startDate)}</td>
+                        <td className="px-4 py-3 text-xs tabular-nums" style={{ color: 'var(--wv-text-secondary)' }}>{formatDate(fd.maturityDate)}</td>
                         <td className="px-4 py-3 text-xs tabular-nums" style={{ color: fd.daysToMaturity <= 30 ? '#D97706' : '#4B5563' }}>
                           {fd.maturityDate ? `${fd.daysToMaturity} days` : '—'}
                         </td>
                         <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#059669' }}>
                           +{formatINRFull(fd.interest)}
                         </td>
-                        <td className="px-4 py-3 text-xs font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>{formatINRFull(fd.currentValue)}</td>
+                        <td className="px-4 py-3 text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatINRFull(fd.currentValue)}</td>
                         <td className="px-4 py-3">
                           <span
                             className="text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap"
@@ -323,7 +323,7 @@ export default function FixedDepositsPage() {
             </div>
 
             {/* Mobile card layout */}
-            <div className="md:hidden divide-y" style={{ borderColor: '#F3F4F6' }}>
+            <div className="md:hidden divide-y" style={{ borderColor: 'var(--wv-border)' }}>
               {filtered.map((fd) => {
                 const st = statusStyle(fd.status);
                 return (
@@ -334,8 +334,8 @@ export default function FixedDepositsPage() {
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <p className="text-sm font-semibold" style={{ color: '#1A1A2E' }}>{fd.bank}</p>
-                        <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                        <p className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>{fd.bank}</p>
+                        <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                           {fd.fdType} {fd.memberName ? `· ${fd.memberName}` : ''}
                         </p>
                       </div>
@@ -348,27 +348,27 @@ export default function FixedDepositsPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Principal</p>
-                        <p className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(fd.principal)}</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Principal</p>
+                        <p className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(fd.principal)}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Current Value</p>
-                        <p className="text-xs font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>{formatLargeINR(fd.currentValue)}</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
+                        <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(fd.currentValue)}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Rate</p>
-                        <p className="text-xs font-medium tabular-nums" style={{ color: '#1B2A4A' }}>{fd.rate.toFixed(2)}%</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Rate</p>
+                        <p className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{fd.rate.toFixed(2)}%</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Interest</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Interest</p>
                         <p className="text-xs font-medium tabular-nums" style={{ color: '#059669' }}>+{formatLargeINR(fd.interest)}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Maturity</p>
-                        <p className="text-xs tabular-nums" style={{ color: '#4B5563' }}>{formatDate(fd.maturityDate)}</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Maturity</p>
+                        <p className="text-xs tabular-nums" style={{ color: 'var(--wv-text-secondary)' }}>{formatDate(fd.maturityDate)}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Days Left</p>
+                        <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Days Left</p>
                         <p className="text-xs tabular-nums" style={{ color: fd.daysToMaturity <= 30 ? '#D97706' : '#4B5563' }}>
                           {fd.maturityDate ? `${fd.daysToMaturity} days` : '—'}
                         </p>
@@ -394,12 +394,12 @@ export default function FixedDepositsPage() {
                     <Landmark className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold" style={{ color: '#1B2A4A' }}>{selectedFD.bank}</h2>
-                    <p className="text-xs" style={{ color: '#9CA3AF' }}>{selectedFD.fdType} Fixed Deposit</p>
+                    <h2 className="text-base font-bold" style={{ color: 'var(--wv-text)' }}>{selectedFD.bank}</h2>
+                    <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>{selectedFD.fdType} Fixed Deposit</p>
                   </div>
                 </div>
                 {selectedFD.memberName && (
-                  <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Held by: {selectedFD.memberName}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--wv-text-muted)' }}>Held by: {selectedFD.memberName}</p>
                 )}
               </div>
 
@@ -418,7 +418,7 @@ export default function FixedDepositsPage() {
 
               {/* FD Details */}
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Deposit Details</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Deposit Details</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'Principal', value: formatINRFull(selectedFD.principal) },
@@ -429,8 +429,8 @@ export default function FixedDepositsPage() {
                     { label: 'Days to Maturity', value: selectedFD.maturityDate ? `${selectedFD.daysToMaturity} days` : '—' },
                   ].map((item) => (
                     <div key={item.label}>
-                      <p className="text-[10px] uppercase tracking-wider" style={{ color: '#9CA3AF' }}>{item.label}</p>
-                      <p className="text-sm font-medium" style={{ color: '#1A1A2E' }}>{item.value}</p>
+                      <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</p>
+                      <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{item.value}</p>
                     </div>
                   ))}
                 </div>
@@ -438,23 +438,23 @@ export default function FixedDepositsPage() {
 
               {/* Interest Accrual Summary */}
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Interest Accrual</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Interest Accrual</h3>
                 <div className="wv-card p-4 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Principal Amount</span>
-                    <span className="text-sm font-semibold tabular-nums" style={{ color: '#1A1A2E' }}>{formatINRFull(selectedFD.principal)}</span>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Principal Amount</span>
+                    <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatINRFull(selectedFD.principal)}</span>
                   </div>
-                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 12 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Accrued Interest</span>
+                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 12 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Accrued Interest</span>
                     <span className="text-sm font-semibold tabular-nums" style={{ color: '#059669' }}>+{formatINRFull(selectedFD.interest)}</span>
                   </div>
-                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid #E8E5DD', paddingTop: 12 }}>
-                    <span className="text-xs font-semibold" style={{ color: '#1B2A4A' }}>Current Value</span>
-                    <span className="text-base font-bold tabular-nums" style={{ color: '#1B2A4A' }}>{formatINRFull(selectedFD.currentValue)}</span>
+                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 12 }}>
+                    <span className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>Current Value</span>
+                    <span className="text-base font-bold tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatINRFull(selectedFD.currentValue)}</span>
                   </div>
                   {selectedFD.principal > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-xs" style={{ color: '#9CA3AF' }}>Effective Return</span>
+                      <span className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Effective Return</span>
                       <span className="text-xs font-medium tabular-nums" style={{ color: '#059669' }}>
                         +{((selectedFD.interest / selectedFD.principal) * 100).toFixed(2)}%
                       </span>
@@ -477,12 +477,12 @@ export default function FixedDepositsPage() {
                 if (extras.length === 0) return null;
                 return (
                   <div className="space-y-3">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>Additional Details</h3>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Additional Details</h3>
                     <div className="space-y-2">
                       {extras.map((item) => (
                         <div key={item.label} className="flex justify-between">
-                          <span className="text-xs" style={{ color: '#9CA3AF' }}>{item.label}</span>
-                          <span className="text-xs font-medium text-right max-w-[60%]" style={{ color: '#1A1A2E' }}>{item.value}</span>
+                          <span className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</span>
+                          <span className="text-xs font-medium text-right max-w-[60%]" style={{ color: 'var(--wv-text)' }}>{item.value}</span>
                         </div>
                       ))}
                     </div>
@@ -491,12 +491,12 @@ export default function FixedDepositsPage() {
               })()}
 
               {/* Last Updated */}
-              <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+              <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                 Last updated: {formatDate(selectedFD.last_updated)}
               </p>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-2" style={{ borderTop: '1px solid #E8E5DD' }}>
+              <div className="flex gap-3 pt-2" style={{ borderTop: '1px solid var(--wv-border)' }}>
                 <Button
                   onClick={() => {
                     router.push(`/add-assets/fixed-deposits?edit=${selectedFD.id}`);

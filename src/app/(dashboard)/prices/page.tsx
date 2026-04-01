@@ -62,7 +62,7 @@ function Change({ pct, abs, absPrefix = '' }: { pct: number; abs?: number; absPr
 function CacheTag({ fromCache, cachedAgo }: { fromCache: boolean; cachedAgo: number | null }) {
   if (cachedAgo === null) return null;
   return (
-    <span className="flex items-center gap-1 text-[10px]" style={{ color: '#9CA3AF' }}>
+    <span className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
       {fromCache ? <Clock className="w-3 h-3" /> : <Wifi className="w-3 h-3" />}
       {fromCache ? `cached ${cachedAgo}s ago` : 'live'}
     </span>
@@ -79,7 +79,7 @@ function SectionHeader({
     <div className="flex items-center justify-between mb-4">
       <div className="flex items-center gap-2">
         {icon}
-        <h2 className="font-semibold text-sm" style={{ color: '#1B2A4A' }}>{title}</h2>
+        <h2 className="font-semibold text-sm" style={{ color: 'var(--wv-text)' }}>{title}</h2>
         <CacheTag fromCache={fromCache} cachedAgo={cachedAgo} />
       </div>
       <div className="flex items-center gap-3">
@@ -88,7 +88,7 @@ function SectionHeader({
           onClick={onRefresh}
           disabled={loading}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-          style={{ backgroundColor: '#F7F5F0', color: '#6B7280' }}
+          style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-secondary)' }}
         >
           <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
           {loading ? 'Fetching…' : 'Refresh'}
@@ -124,27 +124,27 @@ function StockTable({ rows, currency = '₹' }: { rows: StockPrice[]; currency?:
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
-          <tr style={{ borderBottom: '1px solid #E8E5DD' }}>
+          <tr style={{ borderBottom: '1px solid var(--wv-border)' }}>
             {['Symbol', 'Name', 'Price', '24h Change', '52w High', '52w Low', 'Source'].map((h) => (
-              <th key={h} className="text-left pb-2 font-medium" style={{ color: '#9CA3AF' }}>{h}</th>
+              <th key={h} className="text-left pb-2 font-medium" style={{ color: 'var(--wv-text-muted)' }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((s) => (
             <tr key={s.symbol} style={{ borderBottom: '1px solid #F7F5F0' }}>
-              <td className="py-2.5 font-semibold" style={{ color: '#1B2A4A' }}>
+              <td className="py-2.5 font-semibold" style={{ color: 'var(--wv-text)' }}>
                 {s.symbol}
-                <span className="ml-1 text-[10px] font-normal" style={{ color: '#9CA3AF' }}>{s.exchange}</span>
+                <span className="ml-1 text-[10px] font-normal" style={{ color: 'var(--wv-text-muted)' }}>{s.exchange}</span>
               </td>
-              <td className="py-2.5" style={{ color: '#6B7280' }}>{s.name}</td>
-              <td className="py-2.5 font-semibold" style={{ color: '#1A1A2E' }}>
+              <td className="py-2.5" style={{ color: 'var(--wv-text-secondary)' }}>{s.name}</td>
+              <td className="py-2.5 font-semibold" style={{ color: 'var(--wv-text)' }}>
                 {currency}{s.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </td>
               <td className="py-2.5"><Change pct={s.changePct} abs={s.change} absPrefix={currency} /></td>
-              <td className="py-2.5" style={{ color: '#6B7280' }}>{currency}{s.high52w.toLocaleString('en-IN')}</td>
-              <td className="py-2.5" style={{ color: '#6B7280' }}>{currency}{s.low52w.toLocaleString('en-IN')}</td>
-              <td className="py-2.5 text-[10px]" style={{ color: '#9CA3AF' }}>{s.source}</td>
+              <td className="py-2.5" style={{ color: 'var(--wv-text-secondary)' }}>{currency}{s.high52w.toLocaleString('en-IN')}</td>
+              <td className="py-2.5" style={{ color: 'var(--wv-text-secondary)' }}>{currency}{s.low52w.toLocaleString('en-IN')}</td>
+              <td className="py-2.5 text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{s.source}</td>
             </tr>
           ))}
         </tbody>
@@ -158,28 +158,28 @@ function CryptoTable({ rows }: { rows: CryptoPrice[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
-          <tr style={{ borderBottom: '1px solid #E8E5DD' }}>
+          <tr style={{ borderBottom: '1px solid var(--wv-border)' }}>
             {['#', 'Coin', 'Price (INR)', '24h Change', 'Market Cap', 'Source'].map((h) => (
-              <th key={h} className="text-left pb-2 font-medium" style={{ color: '#9CA3AF' }}>{h}</th>
+              <th key={h} className="text-left pb-2 font-medium" style={{ color: 'var(--wv-text-muted)' }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((c, i) => (
             <tr key={c.id} style={{ borderBottom: '1px solid #F7F5F0' }}>
-              <td className="py-2.5" style={{ color: '#9CA3AF' }}>{i + 1}</td>
+              <td className="py-2.5" style={{ color: 'var(--wv-text-muted)' }}>{i + 1}</td>
               <td className="py-2.5">
                 <div className="flex items-center gap-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={c.image} alt={c.name} className="w-5 h-5 rounded-full" />
-                  <span className="font-semibold" style={{ color: '#1B2A4A' }}>{c.name}</span>
-                  <span className="text-[10px]" style={{ color: '#9CA3AF' }}>{c.symbol}</span>
+                  <span className="font-semibold" style={{ color: 'var(--wv-text)' }}>{c.name}</span>
+                  <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{c.symbol}</span>
                 </div>
               </td>
-              <td className="py-2.5 font-semibold" style={{ color: '#1A1A2E' }}>{fmtInr(c.priceInr)}</td>
+              <td className="py-2.5 font-semibold" style={{ color: 'var(--wv-text)' }}>{fmtInr(c.priceInr)}</td>
               <td className="py-2.5"><Change pct={c.change24h} /></td>
-              <td className="py-2.5" style={{ color: '#6B7280' }}>{fmtInr(c.marketCap, 0)}</td>
-              <td className="py-2.5 text-[10px]" style={{ color: '#9CA3AF' }}>{c.source}</td>
+              <td className="py-2.5" style={{ color: 'var(--wv-text-secondary)' }}>{fmtInr(c.marketCap, 0)}</td>
+              <td className="py-2.5 text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{c.source}</td>
             </tr>
           ))}
         </tbody>
@@ -193,22 +193,22 @@ function MFTable({ rows }: { rows: MFPrice[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
-          <tr style={{ borderBottom: '1px solid #E8E5DD' }}>
+          <tr style={{ borderBottom: '1px solid var(--wv-border)' }}>
             {['Scheme', 'Category', 'NAV', 'As of Date', 'Source'].map((h) => (
-              <th key={h} className="text-left pb-2 font-medium" style={{ color: '#9CA3AF' }}>{h}</th>
+              <th key={h} className="text-left pb-2 font-medium" style={{ color: 'var(--wv-text-muted)' }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((m) => (
             <tr key={m.schemeCode} style={{ borderBottom: '1px solid #F7F5F0' }}>
-              <td className="py-2.5 font-medium" style={{ color: '#1B2A4A', maxWidth: 320 }}>{m.name}</td>
-              <td className="py-2.5" style={{ color: '#6B7280' }}>{m.category || '—'}</td>
-              <td className="py-2.5 font-semibold" style={{ color: '#1A1A2E' }}>
+              <td className="py-2.5 font-medium" style={{ color: 'var(--wv-text)', maxWidth: 320 }}>{m.name}</td>
+              <td className="py-2.5" style={{ color: 'var(--wv-text-secondary)' }}>{m.category || '—'}</td>
+              <td className="py-2.5 font-semibold" style={{ color: 'var(--wv-text)' }}>
                 {m.nav > 0 ? `₹${m.nav.toFixed(4)}` : '—'}
               </td>
-              <td className="py-2.5" style={{ color: '#6B7280' }}>{m.date || '—'}</td>
-              <td className="py-2.5 text-[10px]" style={{ color: '#9CA3AF' }}>{m.source}</td>
+              <td className="py-2.5" style={{ color: 'var(--wv-text-secondary)' }}>{m.date || '—'}</td>
+              <td className="py-2.5 text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{m.source}</td>
             </tr>
           ))}
         </tbody>
@@ -222,26 +222,26 @@ function ForexTable({ rows }: { rows: ForexRate[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
-          <tr style={{ borderBottom: '1px solid #E8E5DD' }}>
+          <tr style={{ borderBottom: '1px solid var(--wv-border)' }}>
             {['Pair', 'Rate (INR)', '24h Change', 'Source'].map((h) => (
-              <th key={h} className="text-left pb-2 font-medium" style={{ color: '#9CA3AF' }}>{h}</th>
+              <th key={h} className="text-left pb-2 font-medium" style={{ color: 'var(--wv-text-muted)' }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.pair} style={{ borderBottom: '1px solid #F7F5F0' }}>
-              <td className="py-2.5 font-semibold" style={{ color: '#1B2A4A' }}>
+              <td className="py-2.5 font-semibold" style={{ color: 'var(--wv-text)' }}>
                 {r.pair}
-                <span className="ml-2 text-[10px] font-normal px-1.5 py-0.5 rounded" style={{ backgroundColor: '#F7F5F0', color: '#6B7280' }}>
+                <span className="ml-2 text-[10px] font-normal px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-secondary)' }}>
                   1 {r.base}
                 </span>
               </td>
-              <td className="py-2.5 font-semibold" style={{ color: '#1A1A2E' }}>
+              <td className="py-2.5 font-semibold" style={{ color: 'var(--wv-text)' }}>
                 ₹{r.rate.toFixed(r.rate < 10 ? 4 : 2)}
               </td>
               <td className="py-2.5"><Change pct={r.changePct24h} /></td>
-              <td className="py-2.5 text-[10px]" style={{ color: '#9CA3AF' }}>{r.source}</td>
+              <td className="py-2.5 text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{r.source}</td>
             </tr>
           ))}
         </tbody>
@@ -324,8 +324,8 @@ export default function PricesPage() {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-semibold" style={{ color: '#1B2A4A' }}>Live Prices</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#9CA3AF' }}>
+          <h1 className="font-display text-2xl font-semibold" style={{ color: 'var(--wv-text)' }}>Live Prices</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>
             Real-time & simulated market data — Indian Stocks, Global Stocks, Mutual Funds, Crypto, Forex
           </p>
         </div>
@@ -335,7 +335,7 @@ export default function PricesPage() {
               onClick={() => fetchAll(false)}
               disabled={anyLoading}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90"
-              style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}
+              style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}
             >
               <Wifi className="w-4 h-4" />
               {anyLoading ? 'Fetching…' : 'Load All Prices'}
@@ -346,7 +346,7 @@ export default function PricesPage() {
               onClick={() => fetchAll(true)}
               disabled={anyLoading}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-              style={{ backgroundColor: '#F7F5F0', color: '#6B7280' }}
+              style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-secondary)' }}
             >
               <RefreshCw className={`w-4 h-4 ${anyLoading ? 'animate-spin' : ''}`} />
               Refresh All
@@ -359,8 +359,8 @@ export default function PricesPage() {
       {!hasAnyData && !anyLoading && (
         <div className="wv-card p-12 text-center">
           <Wifi className="w-10 h-10 mx-auto mb-3" style={{ color: '#C9A84C' }} />
-          <p className="font-semibold mb-1" style={{ color: '#1B2A4A' }}>No data loaded yet</p>
-          <p className="text-sm" style={{ color: '#9CA3AF' }}>
+          <p className="font-semibold mb-1" style={{ color: 'var(--wv-text)' }}>No data loaded yet</p>
+          <p className="text-sm" style={{ color: 'var(--wv-text-muted)' }}>
             Click &ldquo;Load All Prices&rdquo; above to fetch market data from live APIs.
           </p>
         </div>

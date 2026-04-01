@@ -122,15 +122,15 @@ export function FamilyMemberSelector({ onSelectionChange, compact }: FamilyMembe
       {/* Level 1: Family selector — only if 2+ families */}
       {families.length > 1 && (
         <div className="flex items-center gap-2 flex-wrap">
-          <Users className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#9CA3AF' }} />
-          <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: '#9CA3AF' }}>Family:</span>
+          <Users className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--wv-text-muted)' }} />
+          <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: 'var(--wv-text-muted)' }}>Family:</span>
           <button
             onClick={() => setSelectedFamilyId('')}
             className={pillBase}
             style={{
               backgroundColor: !selectedFamilyId ? '#1B2A4A' : '#F7F5F0',
               color: !selectedFamilyId ? 'white' : '#6B7280',
-              border: `1px solid ${!selectedFamilyId ? '#1B2A4A' : '#E8E5DD'}`,
+              border: `1px solid ${!selectedFamilyId ? '#1B2A4A' : 'var(--wv-border)'}`,
             }}>
             All Families
           </button>
@@ -141,7 +141,7 @@ export function FamilyMemberSelector({ onSelectionChange, compact }: FamilyMembe
               style={{
                 backgroundColor: selectedFamilyId === f.id ? '#1B2A4A' : '#F7F5F0',
                 color: selectedFamilyId === f.id ? 'white' : '#6B7280',
-                border: `1px solid ${selectedFamilyId === f.id ? '#1B2A4A' : '#E8E5DD'}`,
+                border: `1px solid ${selectedFamilyId === f.id ? '#1B2A4A' : 'var(--wv-border)'}`,
               }}>
               {f.name}
             </button>
@@ -152,7 +152,7 @@ export function FamilyMemberSelector({ onSelectionChange, compact }: FamilyMembe
       {/* Level 2: Member selector — only if 2+ visible members */}
       {visibleMembers.length > 1 && (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: '#9CA3AF' }}>
+          <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: 'var(--wv-text-muted)' }}>
             {families.length > 1 ? 'Member:' : 'Family:'}
           </span>
           <button
@@ -161,7 +161,7 @@ export function FamilyMemberSelector({ onSelectionChange, compact }: FamilyMembe
             style={{
               backgroundColor: allSelected ? '#C9A84C' : '#F7F5F0',
               color: allSelected ? 'white' : '#6B7280',
-              border: `1px solid ${allSelected ? '#C9A84C' : '#E8E5DD'}`,
+              border: `1px solid ${allSelected ? '#C9A84C' : 'var(--wv-border)'}`,
             }}>
             All Members
           </button>
@@ -181,7 +181,7 @@ export function FamilyMemberSelector({ onSelectionChange, compact }: FamilyMembe
                 style={{
                   backgroundColor: selected && !allSelected ? '#C9A84C' : '#F7F5F0',
                   color: selected && !allSelected ? 'white' : '#6B7280',
-                  border: `1px solid ${selected && !allSelected ? '#C9A84C' : '#E8E5DD'}`,
+                  border: `1px solid ${selected && !allSelected ? '#C9A84C' : 'var(--wv-border)'}`,
                 }}>
                 {m.name}
               </button>

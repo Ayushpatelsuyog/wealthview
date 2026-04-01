@@ -159,8 +159,8 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
 
       {loading ? (
         <div className="flex items-center gap-2 py-3">
-          <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#9CA3AF' }} />
-          <span className="text-xs" style={{ color: '#9CA3AF' }}>Loading portfolios…</span>
+          <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--wv-text-muted)' }} />
+          <span className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Loading portfolios…</span>
         </div>
       ) : (
         <div className="grid grid-cols-4 gap-2">
@@ -180,7 +180,7 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
                   onClick={() => onChange(p.name)}
                   className="w-full flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all"
                   style={{
-                    borderColor:     isSelected ? '#C9A84C' : '#E8E5DD',
+                    borderColor:     isSelected ? '#C9A84C' : 'var(--wv-border)',
                     backgroundColor: isSelected ? 'rgba(201,168,76,0.08)' : 'white',
                     boxShadow:       isSelected ? '0 0 0 1px #C9A84C' : 'none',
                   }}
@@ -191,7 +191,7 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
                   >
                     {portfolioLetter(p.name)}
                   </div>
-                  <span className="text-[10px] font-medium text-center leading-tight" style={{ color: '#6B7280' }}>
+                  <span className="text-[10px] font-medium text-center leading-tight" style={{ color: 'var(--wv-text-secondary)' }}>
                     {p.name}
                   </span>
                 </button>
@@ -221,11 +221,11 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
             type="button"
             onClick={() => { setShowAdd(true); setAddError(null); }}
             className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-dashed transition-all hover:border-gold"
-            style={{ borderColor: '#E8E5DD' }}
+            style={{ borderColor: 'var(--wv-border)' }}
           >
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: '#F7F5F0' }}
+              style={{ backgroundColor: 'var(--wv-surface-2)' }}
             >
               <Plus className="w-4 h-4" style={{ color: '#C9A84C' }} />
             </div>
@@ -248,11 +248,11 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
             style={{ backgroundColor: 'white' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-sm font-semibold mb-4" style={{ color: '#1A1A2E' }}>Add Portfolio</h3>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--wv-text)' }}>Add Portfolio</h3>
 
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio Name *</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio Name *</Label>
                 <Input
                   value={addName}
                   onChange={e => setAddName(e.target.value)}
@@ -264,7 +264,7 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Type</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Type</Label>
                 <Select value={addType} onValueChange={setAddType}>
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue />
@@ -278,7 +278,7 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Color</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Color</Label>
                 <div className="flex gap-2 flex-wrap">
                   {PRESET_COLORS.map(c => (
                     <button
@@ -299,14 +299,14 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
               </div>
 
               {/* Preview */}
-              <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: '#F7F5F0' }}>
+              <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
                 <div
                   className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold"
                   style={{ backgroundColor: addColor }}
                 >
                   {portfolioLetter(addName || 'P')}
                 </div>
-                <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                   {addName || 'Portfolio Name'}
                 </span>
               </div>
@@ -353,10 +353,10 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
             >
               <X className="w-5 h-5" style={{ color: '#DC2626' }} />
             </div>
-            <h3 className="text-sm font-semibold mb-1" style={{ color: '#1A1A2E' }}>
+            <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--wv-text)' }}>
               Remove {deleteTarget.name}?
             </h3>
-            <p className="text-xs mb-4" style={{ color: '#6B7280' }}>
+            <p className="text-xs mb-4" style={{ color: 'var(--wv-text-secondary)' }}>
               This cannot be undone. The portfolio will be removed from your list.
             </p>
 

@@ -36,7 +36,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: '#F7F5F0' }}>
+    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
       {/* Left panel */}
       <div
         className="hidden lg:flex flex-col justify-between w-1/2 p-12"
@@ -85,15 +85,15 @@ export default function LoginPage() {
             >
               <TrendingUp className="w-6 h-6" style={{ color: '#C9A84C' }} />
             </div>
-            <span className="text-xl font-semibold" style={{ color: '#1B2A4A' }}>WealthView</span>
+            <span className="text-xl font-semibold" style={{ color: 'var(--wv-text)' }}>WealthView</span>
           </div>
 
-          <h1 className="text-3xl font-bold mb-2" style={{ color: '#1B2A4A' }}>Welcome back</h1>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--wv-text)' }}>Welcome back</h1>
           <p className="text-gray-500 mb-8">Sign in to your wealth dashboard</p>
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" style={{ color: '#1B2A4A' }}>Email address</Label>
+              <Label htmlFor="email" style={{ color: 'var(--wv-text)' }}>Email address</Label>
               <Input
                 id="email"
                 type="email"
@@ -106,7 +106,7 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" style={{ color: '#1B2A4A' }}>Password</Label>
+              <Label htmlFor="password" style={{ color: 'var(--wv-text)' }}>Password</Label>
               <div className="relative">
                 <Input
                   id="password"

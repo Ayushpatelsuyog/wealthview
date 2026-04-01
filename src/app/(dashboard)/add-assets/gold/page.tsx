@@ -254,6 +254,7 @@ function GoldFormContent() {
             notes: notes.trim() || undefined,
           },
           memberId: member,
+          familyId: selectedFamily || undefined,
           portfolioName: portfolioName.trim(),
         }),
       });
@@ -271,7 +272,7 @@ function GoldFormContent() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: '#F7F5F0' }}>
+    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
       <div className="max-w-2xl mx-auto space-y-5">
 
         {/* Header */}
@@ -281,8 +282,8 @@ function GoldFormContent() {
             <Gem className="w-5 h-5" style={{ color: '#d97706' }} />
           </div>
           <div>
-            <h1 className="text-lg font-bold" style={{ color: '#1B2A4A' }}>Add Gold & Jewelry</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Track your gold, jewelry and digital gold holdings</p>
+            <h1 className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>Add Gold & Jewelry</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Track your gold, jewelry and digital gold holdings</p>
           </div>
         </div>
 
@@ -291,14 +292,14 @@ function GoldFormContent() {
 
         {/* Step 1 — Family & Portfolio */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 1 — Family &amp; Portfolio
           </p>
 
           {/* Family selector */}
           {families.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family</Label>
               <div className="flex flex-wrap gap-2">
                 {families.map(f => (
                   <button key={f.id}
@@ -307,7 +308,7 @@ function GoldFormContent() {
                     style={{
                       backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
                       color: selectedFamily === f.id ? 'white' : '#6B7280',
-                      borderColor: selectedFamily === f.id ? '#1B2A4A' : '#E8E5DD',
+                      borderColor: selectedFamily === f.id ? '#1B2A4A' : 'var(--wv-border)',
                     }}>
                     {f.name}
                   </button>
@@ -319,7 +320,7 @@ function GoldFormContent() {
           {/* Family member */}
           {members.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
               <Select value={member} onValueChange={setMember}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -331,7 +332,7 @@ function GoldFormContent() {
 
           {/* Portfolio name */}
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio Name</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio Name</Label>
             <Input
               value={portfolioName}
               onChange={e => setPortfolioName(e.target.value)}
@@ -344,14 +345,14 @@ function GoldFormContent() {
 
         {/* Step 2 — Gold Details */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 2 — Gold Details
           </p>
 
           <div className="space-y-4">
             {/* Gold Type */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Gold Type</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Gold Type</Label>
               <Select value={goldType} onValueChange={setGoldType}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -362,7 +363,7 @@ function GoldFormContent() {
 
             {/* Description */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Description <span style={{ color: '#DC2626' }}>*</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Description <span style={{ color: '#DC2626' }}>*</span></Label>
               <Input
                 value={description}
                 onChange={e => setDescription(e.target.value)}
@@ -375,7 +376,7 @@ function GoldFormContent() {
             {/* Weight + Purchase Price per Gram */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Weight in Grams <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Weight in Grams <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={weightGrams}
@@ -388,7 +389,7 @@ function GoldFormContent() {
                 <FieldError msg={errors.weight} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Purchase Price per Gram (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Purchase Price per Gram (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={purchasePricePerGram}
@@ -405,7 +406,7 @@ function GoldFormContent() {
             {/* Purchase Date + Purity */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Purchase Date <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Purchase Date <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="date"
                   value={purchaseDate}
@@ -415,7 +416,7 @@ function GoldFormContent() {
                 <FieldError msg={errors.purchaseDate} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Purity</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Purity</Label>
                 <Select value={purity} onValueChange={setPurity}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -427,7 +428,7 @@ function GoldFormContent() {
 
             {/* Total Purchase Cost (auto) */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                 Total Purchase Cost (₹)
                 {weight > 0 && pricePerGram > 0 && (
                   <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium"
@@ -447,7 +448,7 @@ function GoldFormContent() {
             {/* Jewelry: Making Charges */}
             {goldType === 'Jewelry' && (
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Making Charges (₹)</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Making Charges (₹)</Label>
                 <Input
                   type="number"
                   value={makingCharges}
@@ -458,7 +459,7 @@ function GoldFormContent() {
                   className="h-9 text-xs"
                 />
                 {totalCostWithMaking > totalPurchaseCost && (
-                  <p className="text-[10px]" style={{ color: '#6B7280' }}>
+                  <p className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
                     Total Cost (incl. making): ₹{totalCostWithMaking.toLocaleString('en-IN')}
                   </p>
                 )}
@@ -468,7 +469,7 @@ function GoldFormContent() {
             {/* Digital Gold: Platform */}
             {goldType === 'Digital Gold' && (
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Platform</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Platform</Label>
                 <Select value={digitalPlatform} onValueChange={setDigitalPlatform}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -480,7 +481,7 @@ function GoldFormContent() {
 
             {/* Current Gold Price per Gram */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Current Gold Price per Gram (₹) <span className="text-gray-400">(manual)</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Current Gold Price per Gram (₹) <span className="text-gray-400">(manual)</span></Label>
               <Input
                 type="number"
                 value={currentGoldPrice}
@@ -494,7 +495,7 @@ function GoldFormContent() {
 
             {/* Notes */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Notes <span className="text-gray-400">(optional)</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes <span className="text-gray-400">(optional)</span></Label>
               <Input
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
@@ -513,21 +514,21 @@ function GoldFormContent() {
             </p>
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Weight</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{weight.toFixed(3)}g</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Weight</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{weight.toFixed(3)}g</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Total Invested</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(totalCostWithMaking)}</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Total Invested</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalCostWithMaking)}</p>
               </div>
               {currentPrice > 0 ? (
                 <>
                   <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(5,150,105,0.06)' }}>
-                    <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Current Value</p>
+                    <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
                     <p className="text-sm font-bold" style={{ color: '#059669' }}>{formatLargeINR(Math.round(currentValue))}</p>
                   </div>
                   <div className="text-center p-3 rounded-lg col-span-3" style={{ backgroundColor: pnl >= 0 ? 'rgba(5,150,105,0.06)' : 'rgba(220,38,38,0.06)' }}>
-                    <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>P&L</p>
+                    <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>P&L</p>
                     <p className="text-sm font-bold" style={{ color: pnl >= 0 ? '#059669' : '#DC2626' }}>
                       {pnl >= 0 ? '+' : ''}{formatLargeINR(Math.round(pnl))} ({pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%)
                     </p>
@@ -535,7 +536,7 @@ function GoldFormContent() {
                 </>
               ) : (
                 <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(201,168,76,0.08)' }}>
-                  <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Purity</p>
+                  <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Purity</p>
                   <p className="text-sm font-bold" style={{ color: '#C9A84C' }}>{PURITY_OPTIONS.find(p => p.value === purity)?.label}</p>
                 </div>
               )}

@@ -117,13 +117,13 @@ function ActionMenu({
     <div className="relative">
       <button onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
         className="p-1 rounded hover:bg-gray-100 transition-colors">
-        <MoreHorizontal className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
+        <MoreHorizontal className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />
       </button>
       {open && (
         <>
           <div className="fixed inset-0" style={{ zIndex: 9990 }} onClick={() => setOpen(false)} />
           <div className="absolute right-0 bg-white rounded-xl border py-1 min-w-[180px]"
-            style={{ borderColor: '#E8E5DD', top: '100%', zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+            style={{ borderColor: 'var(--wv-border)', top: '100%', zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
             {actions.map(({ label, action, danger }) => (
               <button key={label} onClick={(e) => { e.stopPropagation(); action(); }}
                 className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 transition-colors"
@@ -149,19 +149,19 @@ function DonutChart({ title, data, getColor }: {
   if (data.length === 0) {
     return (
       <div className="wv-card flex flex-col" style={{ padding: 16, minHeight: 220 }}>
-        <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>
-          {title} <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(Market Value)</span>
+        <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>
+          {title} <span style={{ color: 'var(--wv-text-muted)', fontWeight: 400 }}>(Market Value)</span>
         </p>
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-xs" style={{ color: '#9CA3AF' }}>No data</p>
+          <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>No data</p>
         </div>
       </div>
     );
   }
   return (
     <div className="wv-card" style={{ padding: 16, overflow: 'hidden' }}>
-      <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>
-        {title} <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(Market Value)</span>
+      <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>
+        {title} <span style={{ color: 'var(--wv-text-muted)', fontWeight: 400 }}>(Market Value)</span>
       </p>
       <div style={{ width: 150, height: 150, margin: '0 auto 12px' }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -174,8 +174,8 @@ function DonutChart({ title, data, getColor }: {
             </Pie>
             <Tooltip
               formatter={(value) => [fmt(Number(value)), '']}
-              contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid #E8E5DD', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-              itemStyle={{ color: '#1A1A2E' }}
+              contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid var(--wv-border)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+              itemStyle={{ color: 'var(--wv-text)' }}
             />
           </PieChart>
         </ResponsiveContainer>
@@ -187,13 +187,13 @@ function DonutChart({ title, data, getColor }: {
           return (
             <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
               <span style={{ flexShrink: 0, width: 8, height: 8, borderRadius: 2, backgroundColor: color, display: 'inline-block' }} />
-              <span style={{ flex: 1, fontSize: 11, color: '#4B5563', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ flex: 1, fontSize: 11, color: 'var(--wv-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {entry.name}
               </span>
-              <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#1A1A2E', fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, color: 'var(--wv-text)', fontVariantNumeric: 'tabular-nums' }}>
                 {fmt(entry.value)}
               </span>
-              <span style={{ flexShrink: 0, fontSize: 10, color: '#9CA3AF', width: 36, textAlign: 'right' }}>
+              <span style={{ flexShrink: 0, fontSize: 10, color: 'var(--wv-text-muted)', width: 36, textAlign: 'right' }}>
                 {pct}%
               </span>
             </div>
@@ -215,7 +215,7 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
       style={{
         backgroundColor: active ? '#1B2A4A' : '#F7F5F0',
         color:           active ? 'white'   : '#6B7280',
-        border:          `1px solid ${active ? '#1B2A4A' : '#E8E5DD'}`,
+        border:          `1px solid ${active ? '#1B2A4A' : 'var(--wv-border)'}`,
       }}>
       {label}
     </button>
@@ -640,44 +640,44 @@ export default function IndianStocksPortfolioPage() {
             {h.symbol.slice(0, 2)}
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold leading-tight" style={{ color: '#1A1A2E', wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: 1.3 }}>
+            <p className="text-xs font-semibold leading-tight" style={{ color: 'var(--wv-text)', wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: 1.3 }}>
               {h.name}
             </p>
-            <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>{h.symbol}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{h.symbol}</p>
           </div>
         </div>
         <div className="min-w-0">
-          <p className="text-[11px] font-medium truncate" style={{ color: '#4B5563' }}>{h.brokers?.name ?? '—'}</p>
+          <p className="text-[11px] font-medium truncate" style={{ color: 'var(--wv-text-secondary)' }}>{h.brokers?.name ?? '—'}</p>
         </div>
         <div>
           <span className="text-[10px] font-medium px-1.5 py-0.5 rounded"
             style={{ backgroundColor: sectorColor(h.sector) + '15', color: sectorColor(h.sector) }}>{h.sector}</span>
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-medium truncate" style={{ color: '#9CA3AF' }}>{h.portfolios?.name ?? '—'}</p>
+          <p className="text-[10px] font-medium truncate" style={{ color: 'var(--wv-text-muted)' }}>{h.portfolios?.name ?? '—'}</p>
         </div>
         <div className="text-right">
-          <p className="text-xs" style={{ color: '#1A1A2E' }}>{Number(h.quantity).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-          <p className="text-[10px]" style={{ color: '#9CA3AF' }}>₹{Number(h.avg_buy_price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+          <p className="text-xs" style={{ color: 'var(--wv-text)' }}>{Number(h.quantity).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+          <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>₹{Number(h.avg_buy_price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
         </div>
         <div className="text-right">
-          <p className="text-xs" style={{ color: '#1A1A2E' }}>{formatLargeINR(h.investedValue)}</p>
+          <p className="text-xs" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(h.investedValue)}</p>
         </div>
         <div className="text-right" onClick={e => e.stopPropagation()}>
           {h.priceLoading ? (
             <Loader2 className="w-3 h-3 animate-spin ml-auto" style={{ color: '#C9A84C' }} />
           ) : h.currentPrice !== null ? (
-            <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>₹{h.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+            <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>₹{h.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
           ) : h.priceUnavailable ? (
             <div className="flex flex-col items-end gap-1">
-              <p className="text-[9px]" style={{ color: '#9CA3AF' }}>Unavailable</p>
+              <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Unavailable</p>
               <div className="flex items-center gap-1">
                 <input type="number" placeholder="Enter"
                   value={manualPriceInput[h.symbol] ?? ''}
                   onChange={e => setManualPriceInput(prev => ({ ...prev, [h.symbol]: e.target.value }))}
                   onKeyDown={e => { if (e.key === 'Enter') submitManualPrice(h.symbol); }}
                   className="w-16 h-6 text-[10px] text-right border rounded px-1 outline-none"
-                  style={{ borderColor: '#E8E5DD', color: '#1A1A2E' }} />
+                  style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }} />
                 <button onClick={() => submitManualPrice(h.symbol)}
                   className="text-[9px] px-1.5 py-0.5 rounded font-medium"
                   style={{ backgroundColor: '#1B2A4A', color: 'white' }}>✓</button>
@@ -699,14 +699,14 @@ export default function IndianStocksPortfolioPage() {
               </p>
             </div>
           ) : (
-            <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>
+            <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>
           )}
         </div>
         <div className="text-right">
           {h.currentValue != null ? (
-            <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{formatLargeINR(h.currentValue)}</p>
+            <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(h.currentValue)}</p>
           ) : (
-            <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>
+            <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>
           )}
         </div>
         <div className="text-right">
@@ -726,7 +726,7 @@ export default function IndianStocksPortfolioPage() {
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: '#C9A84C' }} />
-          <p className="text-sm" style={{ color: '#9CA3AF' }}>Loading your portfolio…</p>
+          <p className="text-sm" style={{ color: 'var(--wv-text-muted)' }}>Loading your portfolio…</p>
         </div>
       </div>
     );
@@ -759,24 +759,24 @@ export default function IndianStocksPortfolioPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-            <TrendingUp className="w-4.5 h-4.5" style={{ color: '#1B2A4A' }} />
+            style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+            <TrendingUp className="w-4.5 h-4.5" style={{ color: 'var(--wv-text)' }} />
           </div>
           <div>
-            <h1 className="font-display text-lg font-semibold" style={{ color: '#1A1A2E' }}>Indian Stocks</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>{totalUniqueStockCount} stock{totalUniqueStockCount !== 1 ? 's' : ''}</p>
+            <h1 className="font-display text-lg font-semibold" style={{ color: 'var(--wv-text)' }}>Indian Stocks</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>{totalUniqueStockCount} stock{totalUniqueStockCount !== 1 ? 's' : ''}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={refreshAllPrices} disabled={priceRefreshing}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            style={{ backgroundColor: '#F7F5F0', color: '#6B7280', border: '1px solid #E8E5DD' }}>
+            style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-secondary)', border: '1px solid var(--wv-border)' }}>
             <RefreshCw className={`w-3.5 h-3.5 ${priceRefreshing ? 'animate-spin' : ''}`} />
             {priceRefreshing ? 'Refreshing…' : 'Refresh Prices'}
           </button>
           <button onClick={exportCsv}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            style={{ backgroundColor: '#F7F5F0', color: '#6B7280', border: '1px solid #E8E5DD' }}>
+            style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-secondary)', border: '1px solid var(--wv-border)' }}>
             <Download className="w-3.5 h-3.5" />CSV
           </button>
           <button onClick={() => router.push('/add-assets/indian-stocks')}
@@ -789,9 +789,9 @@ export default function IndianStocksPortfolioPage() {
 
       {holdings.length === 0 ? (
         <div className="wv-card p-16 text-center">
-          <TrendingUp className="w-10 h-10 mx-auto mb-4" style={{ color: '#E8E5DD' }} />
-          <h3 className="font-semibold text-base mb-2" style={{ color: '#1A1A2E' }}>No stock holdings yet</h3>
-          <p className="text-sm mb-6" style={{ color: '#9CA3AF' }}>Add your NSE/BSE equity holdings to get started</p>
+          <TrendingUp className="w-10 h-10 mx-auto mb-4" style={{ color: 'var(--wv-border)' }} />
+          <h3 className="font-semibold text-base mb-2" style={{ color: 'var(--wv-text)' }}>No stock holdings yet</h3>
+          <p className="text-sm mb-6" style={{ color: 'var(--wv-text-muted)' }}>Add your NSE/BSE equity holdings to get started</p>
           <button onClick={() => router.push('/add-assets/indian-stocks')}
             className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
             style={{ backgroundColor: '#1B2A4A' }}>
@@ -822,9 +822,9 @@ export default function IndianStocksPortfolioPage() {
               { label: 'Stocks',          value: totalUniqueStockCount.toString(), sub: `${uniqueStockCount} shown` },
             ].map(({ label, value, sub, color }) => (
               <div key={label} className="wv-card p-3">
-                <p className="text-[10px] font-medium" style={{ color: '#9CA3AF' }}>{label}</p>
+                <p className="text-[10px] font-medium" style={{ color: 'var(--wv-text-muted)' }}>{label}</p>
                 <p className="text-sm font-bold mt-1" style={{ color: color ?? '#1A1A2E' }}>{value}</p>
-                {sub && <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>{sub}</p>}
+                {sub && <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{sub}</p>}
               </div>
             ))}
           </div>
@@ -859,16 +859,16 @@ export default function IndianStocksPortfolioPage() {
 
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#9CA3AF' }} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--wv-text-muted)' }} />
               <input
                 value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search by stock name or symbol…"
                 className="w-full h-8 pl-9 pr-8 text-xs rounded-lg border bg-white outline-none focus:border-[#C9A84C]"
-                style={{ borderColor: '#E8E5DD' }}
+                style={{ borderColor: 'var(--wv-border)' }}
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2">
-                  <X className="w-3 h-3" style={{ color: '#9CA3AF' }} />
+                  <X className="w-3 h-3" style={{ color: 'var(--wv-text-muted)' }} />
                 </button>
               )}
             </div>
@@ -877,7 +877,7 @@ export default function IndianStocksPortfolioPage() {
             <div className="space-y-2">
               {brokers.length > 1 && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: '#9CA3AF' }}>Distributor:</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: 'var(--wv-text-muted)' }}>Distributor:</span>
                   {brokers.map(b => (
                     <Pill key={b} label={b} active={filterBrokers.has(b)} onClick={() => toggleSet(filterBrokers, setFilterBrokers, b)} />
                   ))}
@@ -885,7 +885,7 @@ export default function IndianStocksPortfolioPage() {
               )}
               {sectors.length > 1 && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: '#9CA3AF' }}>Sector:</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: 'var(--wv-text-muted)' }}>Sector:</span>
                   {sectors.map(s => (
                     <Pill key={s} label={s} active={filterSectors.has(s)} onClick={() => toggleSet(filterSectors, setFilterSectors, s)} />
                   ))}
@@ -893,7 +893,7 @@ export default function IndianStocksPortfolioPage() {
               )}
               {portfolios.length > 1 && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: '#9CA3AF' }}>Portfolio:</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: 'var(--wv-text-muted)' }}>Portfolio:</span>
                   {portfolios.map(p => (
                     <Pill key={p} label={p} active={filterPortfolios.has(p)} onClick={() => toggleSet(filterPortfolios, setFilterPortfolios, p)} />
                   ))}
@@ -904,7 +904,7 @@ export default function IndianStocksPortfolioPage() {
             {/* Sort + clear */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Sort:</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Sort:</span>
                 {(['value','pnlPct','xirr','name'] as SortKey[]).map(k => {
                   const labels: Record<SortKey, string> = { value: 'Value', pnlPct: 'P&L %', xirr: 'XIRR', name: 'Name', recent: 'Recent' };
                   return (
@@ -920,7 +920,7 @@ export default function IndianStocksPortfolioPage() {
                 })}
               </div>
               <div className="flex items-center gap-2">
-                <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                   Showing {uniqueStockCount} of {totalUniqueStockCount} stocks
                 </p>
                 {isFiltered && (
@@ -962,7 +962,7 @@ export default function IndianStocksPortfolioPage() {
           <div className="wv-card overflow-hidden">
             {/* Table header */}
             <div className="grid text-[10px] font-semibold uppercase tracking-wide px-4 py-2 border-b"
-              style={{ gridTemplateColumns: '2fr 0.6fr 0.6fr 0.6fr 0.9fr 0.9fr 0.7fr 0.7fr 0.9fr 0.9fr 40px', borderColor: '#F0EDE6', color: '#9CA3AF', backgroundColor: '#F7F5F0' }}>
+              style={{ gridTemplateColumns: '2fr 0.6fr 0.6fr 0.6fr 0.9fr 0.9fr 0.7fr 0.7fr 0.9fr 0.9fr 40px', borderColor: '#F0EDE6', color: 'var(--wv-text-muted)', backgroundColor: 'var(--wv-surface-2)' }}>
               <span>Stock</span>
               <span>Distributor</span>
               <span>Sector</span>
@@ -978,7 +978,7 @@ export default function IndianStocksPortfolioPage() {
 
             {groupedFiltered.length === 0 ? (
               <div className="px-4 py-12 text-center">
-                <p className="text-sm" style={{ color: '#9CA3AF' }}>No holdings match your filters</p>
+                <p className="text-sm" style={{ color: 'var(--wv-text-muted)' }}>No holdings match your filters</p>
               </div>
             ) : (
               groupedFiltered.map(group => {
@@ -1007,21 +1007,21 @@ export default function IndianStocksPortfolioPage() {
                           {group.symbol.slice(0, 2)}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold leading-tight" style={{ color: '#1A1A2E' }}>{group.name} — Total</p>
-                          <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>{group.holdings.length} brokers</p>
+                          <p className="text-xs font-semibold leading-tight" style={{ color: 'var(--wv-text)' }}>{group.name} — Total</p>
+                          <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{group.holdings.length} brokers</p>
                         </div>
                       </div>
                       <div><p className="text-[11px] font-semibold" style={{ color: '#C9A84C' }}>Consolidated</p></div>
                       <div><span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ backgroundColor: sectorColor(group.sector) + '15', color: sectorColor(group.sector) }}>{group.sector}</span></div>
-                      <div><p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p></div>
+                      <div><p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p></div>
                       <div className="text-right">
-                        <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{group.totalQty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-                        <p className="text-[10px]" style={{ color: '#9CA3AF' }}>₹{wtdAvg.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+                        <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{group.totalQty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                        <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>₹{wtdAvg.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
                       </div>
-                      <div className="text-right"><p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(group.totalInvested)}</p></div>
+                      <div className="text-right"><p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(group.totalInvested)}</p></div>
                       <div className="text-right">
-                        {group.currentPrice != null ? <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>₹{group.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
-                          : group.priceLoading ? <Loader2 className="w-3 h-3 animate-spin ml-auto" style={{ color: '#C9A84C' }} /> : <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>}
+                        {group.currentPrice != null ? <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>₹{group.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+                          : group.priceLoading ? <Loader2 className="w-3 h-3 animate-spin ml-auto" style={{ color: '#C9A84C' }} /> : <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>}
                       </div>
                       {/* Day P&L */}
                       <div className="text-right">
@@ -1031,11 +1031,11 @@ export default function IndianStocksPortfolioPage() {
                             <p className="text-[10px] font-semibold" style={{ color: groupDayPnl >= 0 ? '#059669' : '#DC2626' }}>
                               {groupDayPnl >= 0 ? '+' : ''}{formatLargeINR(groupDayPnl)}
                             </p>
-                          ) : <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>;
+                          ) : <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>;
                         })()}
                       </div>
                       <div className="text-right">
-                        {group.totalCurrentValue != null ? <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{formatLargeINR(group.totalCurrentValue)}</p> : <p className="text-[10px]" style={{ color: '#9CA3AF' }}>—</p>}
+                        {group.totalCurrentValue != null ? <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(group.totalCurrentValue)}</p> : <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>}
                       </div>
                       <div className="text-right">{tGain != null && tGainPct != null && <_PnlBadge value={tGain} pct={tGainPct} />}</div>
                       <div />

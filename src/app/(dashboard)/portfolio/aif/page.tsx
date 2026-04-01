@@ -80,7 +80,7 @@ function SummaryCard({
 }) {
   return (
     <div className="wv-card p-4">
-      <p className="text-[10px] uppercase tracking-wide mb-1" style={{ color: '#9CA3AF' }}>{label}</p>
+      <p className="text-[10px] uppercase tracking-wide mb-1" style={{ color: 'var(--wv-text-muted)' }}>{label}</p>
       <p className="text-lg font-bold" style={{ color: color ?? '#1B2A4A' }}>{value}</p>
     </div>
   );
@@ -288,14 +288,14 @@ export default function AIFPortfolioPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-            <Building2 className="w-5 h-5" style={{ color: '#1B2A4A' }} />
+            style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+            <Building2 className="w-5 h-5" style={{ color: 'var(--wv-text)' }} />
           </div>
           <div>
-            <h1 className="font-display text-xl font-semibold" style={{ color: '#1A1A2E' }}>
+            <h1 className="font-display text-xl font-semibold" style={{ color: 'var(--wv-text)' }}>
               AIF Portfolio
             </h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>
               Alternative Investment Funds
             </p>
           </div>
@@ -320,8 +320,8 @@ export default function AIFPortfolioPage() {
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1B2A4A' }} />
-          <span className="ml-2 text-sm" style={{ color: '#6B7280' }}>Loading AIF holdings...</span>
+          <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--wv-text)' }} />
+          <span className="ml-2 text-sm" style={{ color: 'var(--wv-text-secondary)' }}>Loading AIF holdings...</span>
         </div>
       )}
 
@@ -339,10 +339,10 @@ export default function AIFPortfolioPage() {
       {!loading && !error && filtered.length === 0 && (
         <div className="wv-card p-12 text-center">
           <Building2 className="w-12 h-12 mx-auto mb-4" style={{ color: '#C9A84C' }} />
-          <h3 className="text-lg font-semibold mb-2" style={{ color: '#1B2A4A' }}>
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--wv-text)' }}>
             No AIF Holdings Yet
           </h3>
-          <p className="text-sm mb-6" style={{ color: '#9CA3AF' }}>
+          <p className="text-sm mb-6" style={{ color: 'var(--wv-text-muted)' }}>
             Add your first Alternative Investment Fund holding to start tracking.
           </p>
           <Button
@@ -372,10 +372,10 @@ export default function AIFPortfolioPage() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr style={{ backgroundColor: '#F7F5F0', borderBottom: '1px solid #E8E5DD' }}>
+                  <tr style={{ backgroundColor: 'var(--wv-surface-2)', borderBottom: '1px solid var(--wv-border)' }}>
                     {['Fund Name', 'Category', 'Called', 'Current Value', 'TVPI', 'DPI', 'Vintage', 'Actions'].map(col => (
                       <th key={col} className="text-left px-4 py-3 text-[10px] uppercase tracking-wide font-semibold"
-                        style={{ color: '#9CA3AF' }}>
+                        style={{ color: 'var(--wv-text-muted)' }}>
                         {col}
                       </th>
                     ))}
@@ -387,17 +387,17 @@ export default function AIFPortfolioPage() {
                       key={row.id}
                       onClick={() => setDetailId(row.id)}
                       className="cursor-pointer transition-colors hover:bg-gray-50"
-                      style={{ borderBottom: '1px solid #F3F4F6' }}
+                      style={{ borderBottom: '1px solid var(--wv-border)' }}
                     >
                       <td className="px-4 py-3">
-                        <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{row.fundName}</p>
-                        {row.memberName && <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{row.memberName}</p>}
+                        <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{row.fundName}</p>
+                        {row.memberName && <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{row.memberName}</p>}
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#4B5563' }}>{row.categoryLabel || row.category || '--'}</td>
-                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{row.categoryLabel || row.category || '--'}</td>
+                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>
                         {formatLargeINR(row.calledAmount)}
                       </td>
-                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>
+                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>
                         {formatLargeINR(row.currentValue)}
                       </td>
                       <td className="px-4 py-3">
@@ -410,10 +410,10 @@ export default function AIFPortfolioPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: '#4B5563' }}>
+                      <td className="px-4 py-3 text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text-secondary)' }}>
                         {row.dpi.toFixed(2)}x
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#4B5563' }}>{row.vintageYear || '--'}</td>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{row.vintageYear || '--'}</td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
                           <button
@@ -442,7 +442,7 @@ export default function AIFPortfolioPage() {
             </div>
 
             {/* Mobile card layout */}
-            <div className="md:hidden divide-y" style={{ borderColor: '#F3F4F6' }}>
+            <div className="md:hidden divide-y" style={{ borderColor: 'var(--wv-border)' }}>
               {filtered.map(row => (
                 <div
                   key={row.id}
@@ -451,8 +451,8 @@ export default function AIFPortfolioPage() {
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: '#1A1A2E' }}>{row.fundName}</p>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--wv-text)' }}>{row.fundName}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                         {row.categoryLabel || row.category || ''} {row.memberName ? `· ${row.memberName}` : ''}
                       </p>
                     </div>
@@ -460,19 +460,19 @@ export default function AIFPortfolioPage() {
                       <p className="text-xs font-semibold tabular-nums" style={{ color: row.tvpi >= 1 ? '#059669' : '#DC2626' }}>
                         {row.tvpi.toFixed(2)}x TVPI
                       </p>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                         {row.dpi.toFixed(2)}x DPI
                       </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Called</p>
-                      <p className="text-xs font-medium tabular-nums" style={{ color: '#1A1A2E' }}>{formatLargeINR(row.calledAmount)}</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Called</p>
+                      <p className="text-xs font-medium tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(row.calledAmount)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase" style={{ color: '#9CA3AF' }}>Current Value</p>
-                      <p className="text-xs font-semibold tabular-nums" style={{ color: '#1B2A4A' }}>{formatLargeINR(row.currentValue)}</p>
+                      <p className="text-[10px] uppercase" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
+                      <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(row.currentValue)}</p>
                     </div>
                   </div>
                 </div>
@@ -485,8 +485,8 @@ export default function AIFPortfolioPage() {
       {/* ── Inline Value Update Modal ──────────────────────────────────────────── */}
       {editValueId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => { setEditValueId(null); setEditValueAmount(''); }}>
-          <div className="bg-white rounded-xl p-6 w-80 shadow-xl" onClick={e => e.stopPropagation()}>
-            <p className="text-sm font-semibold mb-3" style={{ color: '#1B2A4A' }}>Update Current Value</p>
+          <div className="rounded-xl p-6 w-80 shadow-xl" onClick={e => e.stopPropagation()}>
+            <p className="text-sm font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Update Current Value</p>
             <Input
               type="number"
               value={editValueAmount}
@@ -526,7 +526,7 @@ export default function AIFPortfolioPage() {
       <Sheet open={!!detailId} onOpenChange={(open) => { if (!open) setDetailId(null); }}>
         <SheetContent className="overflow-y-auto sm:max-w-lg">
           <SheetHeader>
-            <SheetTitle style={{ color: '#1B2A4A' }}>
+            <SheetTitle style={{ color: 'var(--wv-text)' }}>
               {detailAsset?.fundName ?? 'AIF Details'}
             </SheetTitle>
             <SheetDescription>
@@ -537,8 +537,8 @@ export default function AIFPortfolioPage() {
           {detailAsset && (
             <div className="mt-6 space-y-6">
               {/* Fund Information */}
-              <div className="rounded-xl p-4" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Fund Information</p>
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Fund Information</p>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'Fund Name', value: detailAsset.fundName },
@@ -549,59 +549,59 @@ export default function AIFPortfolioPage() {
                     { label: 'Member', value: detailAsset.memberName || '--' },
                   ].map(item => (
                     <div key={item.label}>
-                      <p className="text-[10px] uppercase tracking-wide" style={{ color: '#9CA3AF' }}>{item.label}</p>
-                      <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{item.value}</p>
+                      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</p>
+                      <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{item.value}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Capital Account */}
-              <div className="rounded-xl p-4" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Capital Account</p>
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Capital Account</p>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Commitment</span>
-                    <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{formatLargeINR(detailAsset.commitmentAmount)}</span>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Commitment</span>
+                    <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(detailAsset.commitmentAmount)}</span>
                   </div>
-                  <div className="flex justify-between" style={{ borderTop: '1px solid #E8E5DD', paddingTop: 8 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Called</span>
-                    <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{formatLargeINR(detailAsset.calledAmount)}</span>
+                  <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Called</span>
+                    <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(detailAsset.calledAmount)}</span>
                   </div>
-                  <div className="flex justify-between" style={{ borderTop: '1px solid #E8E5DD', paddingTop: 8 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Uncalled</span>
-                    <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{formatLargeINR(detailAsset.uncalled)}</span>
+                  <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Uncalled</span>
+                    <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(detailAsset.uncalled)}</span>
                   </div>
-                  <div className="flex justify-between" style={{ borderTop: '1px solid #E8E5DD', paddingTop: 8 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Distributions</span>
+                  <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Distributions</span>
                     <span className="text-xs font-medium" style={{ color: '#059669' }}>{formatLargeINR(detailAsset.distributions)}</span>
                   </div>
-                  <div className="flex justify-between" style={{ borderTop: '1px solid #E8E5DD', paddingTop: 8 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>Current Value</span>
-                    <span className="text-xs font-semibold" style={{ color: '#1B2A4A' }}>{formatLargeINR(detailAsset.currentValue)}</span>
+                  <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Current Value</span>
+                    <span className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(detailAsset.currentValue)}</span>
                   </div>
                 </div>
               </div>
 
               {/* Performance Metrics */}
-              <div className="rounded-xl p-4" style={{ border: '1px solid #E8E5DD' }}>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Performance Metrics</p>
+              <div className="rounded-xl p-4" style={{ border: '1px solid var(--wv-border)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Performance Metrics</p>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-xs" style={{ color: '#4B5563' }}>TVPI (Total Value to Paid-In)</span>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>TVPI (Total Value to Paid-In)</span>
                     <span className="text-xs font-semibold" style={{ color: detailAsset.tvpi >= 1 ? '#059669' : '#DC2626' }}>
                       {detailAsset.tvpi.toFixed(2)}x
                     </span>
                   </div>
-                  <div className="flex justify-between" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 8 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>DPI (Distributions to Paid-In)</span>
-                    <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                  <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>DPI (Distributions to Paid-In)</span>
+                    <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                       {detailAsset.dpi.toFixed(2)}x
                     </span>
                   </div>
-                  <div className="flex justify-between" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 8 }}>
-                    <span className="text-xs" style={{ color: '#4B5563' }}>RVPI (Residual Value to Paid-In)</span>
-                    <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                  <div className="flex justify-between" style={{ borderTop: '1px solid var(--wv-border)', paddingTop: 8 }}>
+                    <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>RVPI (Residual Value to Paid-In)</span>
+                    <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                       {detailAsset.rvpi.toFixed(2)}x
                     </span>
                   </div>
@@ -610,18 +610,18 @@ export default function AIFPortfolioPage() {
 
               {/* Notes */}
               {detailAsset.notes && (
-                <div className="rounded-xl p-4" style={{ border: '1px solid #E8E5DD' }}>
-                  <p className="text-xs font-semibold mb-2" style={{ color: '#1B2A4A' }}>Notes</p>
-                  <p className="text-xs" style={{ color: '#4B5563' }}>{detailAsset.notes}</p>
+                <div className="rounded-xl p-4" style={{ border: '1px solid var(--wv-border)' }}>
+                  <p className="text-xs font-semibold mb-2" style={{ color: 'var(--wv-text)' }}>Notes</p>
+                  <p className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{detailAsset.notes}</p>
                 </div>
               )}
 
               {/* Update Value */}
-              <div className="rounded-xl p-4" style={{ border: '1px solid #E8E5DD' }}>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Update Value</p>
+              <div className="rounded-xl p-4" style={{ border: '1px solid var(--wv-border)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Update Value</p>
                 <div className="flex items-end gap-2">
                   <div className="flex-1">
-                    <p className="text-[10px] mb-1" style={{ color: '#9CA3AF' }}>Enter latest NAV/valuation</p>
+                    <p className="text-[10px] mb-1" style={{ color: 'var(--wv-text-muted)' }}>Enter latest NAV/valuation</p>
                     <Input
                       type="number"
                       value={editValueId === detailAsset.id ? editValueAmount : ''}
@@ -654,7 +654,7 @@ export default function AIFPortfolioPage() {
                   onClick={() => router.push(`/add-assets/aif?edit=${detailAsset.id}`)}
                   variant="outline"
                   className="flex-1 text-xs h-9"
-                  style={{ borderColor: '#E8E5DD', color: '#1B2A4A' }}
+                  style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }}
                 >
                   <Pencil className="w-3 h-3 mr-1.5" />Edit
                 </Button>

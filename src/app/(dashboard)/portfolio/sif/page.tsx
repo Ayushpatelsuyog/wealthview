@@ -97,9 +97,9 @@ function SummaryCard({
 }) {
   return (
     <div className="wv-card p-4">
-      <p className="text-[10px] uppercase tracking-wide mb-1" style={{ color: '#9CA3AF' }}>{label}</p>
+      <p className="text-[10px] uppercase tracking-wide mb-1" style={{ color: 'var(--wv-text-muted)' }}>{label}</p>
       <p className="text-lg font-bold" style={{ color: color ?? '#1B2A4A' }}>{value}</p>
-      {subtext && <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>{subtext}</p>}
+      {subtext && <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{subtext}</p>}
     </div>
   );
 }
@@ -279,14 +279,14 @@ export default function SifPortfolioPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-            <Shield className="w-5 h-5" style={{ color: '#1B2A4A' }} />
+            style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+            <Shield className="w-5 h-5" style={{ color: 'var(--wv-text)' }} />
           </div>
           <div>
-            <h1 className="font-display text-xl font-semibold" style={{ color: '#1A1A2E' }}>
+            <h1 className="font-display text-xl font-semibold" style={{ color: 'var(--wv-text)' }}>
               SIF Portfolio
             </h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>
               Specialized Investment Funds
             </p>
           </div>
@@ -311,8 +311,8 @@ export default function SifPortfolioPage() {
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1B2A4A' }} />
-          <span className="ml-2 text-sm" style={{ color: '#6B7280' }}>Loading SIF holdings...</span>
+          <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--wv-text)' }} />
+          <span className="ml-2 text-sm" style={{ color: 'var(--wv-text-secondary)' }}>Loading SIF holdings...</span>
         </div>
       )}
 
@@ -330,10 +330,10 @@ export default function SifPortfolioPage() {
       {!loading && !error && filteredHoldings.length === 0 && (
         <div className="wv-card p-12 text-center">
           <Shield className="w-12 h-12 mx-auto mb-4" style={{ color: '#C9A84C' }} />
-          <h3 className="text-lg font-semibold mb-2" style={{ color: '#1B2A4A' }}>
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--wv-text)' }}>
             No SIF Holdings Yet
           </h3>
-          <p className="text-sm mb-6" style={{ color: '#9CA3AF' }}>
+          <p className="text-sm mb-6" style={{ color: 'var(--wv-text-muted)' }}>
             Add your first Specialized Investment Fund holding to start tracking.
           </p>
           <Button
@@ -387,10 +387,10 @@ export default function SifPortfolioPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr style={{ backgroundColor: '#F7F5F0', borderBottom: '1px solid #E8E5DD' }}>
+                  <tr style={{ backgroundColor: 'var(--wv-surface-2)', borderBottom: '1px solid var(--wv-border)' }}>
                     {['Fund Name', 'AMC', 'Units', 'Avg NAV', 'Invested', 'Current NAV', 'Current Value', 'P&L', 'P&L%', 'Actions'].map(col => (
                       <th key={col} className="text-left px-4 py-3 text-[10px] uppercase tracking-wide font-semibold"
-                        style={{ color: '#9CA3AF' }}>
+                        style={{ color: 'var(--wv-text-muted)' }}>
                         {col}
                       </th>
                     ))}
@@ -402,12 +402,12 @@ export default function SifPortfolioPage() {
                       key={h.id}
                       onClick={() => setDetailId(h.id)}
                       className="cursor-pointer transition-colors hover:bg-gray-50"
-                      style={{ borderBottom: '1px solid #F3F4F6' }}
+                      style={{ borderBottom: '1px solid var(--wv-border)' }}
                     >
                       <td className="px-4 py-3">
-                        <p className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>{h.name}</p>
+                        <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{h.name}</p>
                         {h.memberName && (
-                          <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{h.memberName}</p>
+                          <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{h.memberName}</p>
                         )}
                         {h.navStale && (
                           <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
@@ -416,14 +416,14 @@ export default function SifPortfolioPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#6B7280' }}>{h.amc || '—'}</td>
-                      <td className="px-4 py-3 text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{h.amc || '—'}</td>
+                      <td className="px-4 py-3 text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                         {h.quantity.toLocaleString('en-IN', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#6B7280' }}>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                         {'\u20B9'}{h.avg_buy_price.toFixed(4)}
                       </td>
-                      <td className="px-4 py-3 text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                      <td className="px-4 py-3 text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                         {formatLargeINR(h.investedValue)}
                       </td>
                       <td className="px-4 py-3">
@@ -459,12 +459,12 @@ export default function SifPortfolioPage() {
                             </button>
                           </div>
                         ) : (
-                          <span className="text-xs" style={{ color: '#6B7280' }}>
+                          <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                             {'\u20B9'}{h.currentNav.toFixed(4)}
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                      <td className="px-4 py-3 text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                         {formatLargeINR(h.currentValue)}
                       </td>
                       <td className="px-4 py-3">
@@ -490,7 +490,7 @@ export default function SifPortfolioPage() {
                             className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
                             title="View details"
                           >
-                            <Pencil className="w-3.5 h-3.5" style={{ color: '#6B7280' }} />
+                            <Pencil className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-secondary)' }} />
                           </button>
                           <button
                             onClick={() => handleDelete(h.id)}
@@ -514,7 +514,7 @@ export default function SifPortfolioPage() {
       <Sheet open={!!detailId} onOpenChange={(open) => { if (!open) setDetailId(null); }}>
         <SheetContent className="overflow-y-auto sm:max-w-lg">
           <SheetHeader>
-            <SheetTitle style={{ color: '#1B2A4A' }}>
+            <SheetTitle style={{ color: 'var(--wv-text)' }}>
               {detailHolding?.name ?? 'Fund Details'}
             </SheetTitle>
             <SheetDescription>
@@ -525,8 +525,8 @@ export default function SifPortfolioPage() {
           {detailHolding && (
             <div className="mt-6 space-y-6">
               {/* Fund Info */}
-              <div className="rounded-xl p-4" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Fund Information</p>
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Fund Information</p>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'Fund Name', value: detailHolding.name },
@@ -537,38 +537,38 @@ export default function SifPortfolioPage() {
                     { label: 'Member', value: detailHolding.memberName || '—' },
                   ].map(item => (
                     <div key={item.label}>
-                      <p className="text-[10px] uppercase tracking-wide" style={{ color: '#9CA3AF' }}>{item.label}</p>
-                      <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{item.value}</p>
+                      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</p>
+                      <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{item.value}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Performance */}
-              <div className="rounded-xl p-4" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Performance</p>
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Performance</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Units</p>
-                    <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                    <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Units</p>
+                    <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                       {detailHolding.quantity.toLocaleString('en-IN', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Avg NAV</p>
-                    <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                    <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Avg NAV</p>
+                    <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                       {'\u20B9'}{detailHolding.avg_buy_price.toFixed(4)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Invested</p>
-                    <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                    <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Invested</p>
+                    <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                       {formatLargeINR(detailHolding.investedValue)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Current NAV</p>
-                    <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                    <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Current NAV</p>
+                    <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                       {'\u20B9'}{detailHolding.currentNav.toFixed(4)}
                       {detailHolding.navStale && (
                         <span className="ml-1 text-[9px] px-1 py-0.5 rounded-full"
@@ -579,13 +579,13 @@ export default function SifPortfolioPage() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Current Value</p>
-                    <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                    <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
+                    <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                       {formatLargeINR(detailHolding.currentValue)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide" style={{ color: '#9CA3AF' }}>P&L</p>
+                    <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>P&L</p>
                     <p className="text-xs font-semibold" style={{ color: detailHolding.pnl >= 0 ? '#059669' : '#DC2626' }}>
                       {detailHolding.pnl >= 0 ? '+' : ''}{formatLargeINR(detailHolding.pnl)} ({formatPercentage(detailHolding.pnlPct)})
                     </p>
@@ -594,11 +594,11 @@ export default function SifPortfolioPage() {
               </div>
 
               {/* Update NAV in sheet */}
-              <div className="rounded-xl p-4" style={{ border: '1px solid #E8E5DD' }}>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Update NAV</p>
+              <div className="rounded-xl p-4" style={{ border: '1px solid var(--wv-border)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Update NAV</p>
                 <div className="flex items-end gap-2">
                   <div className="flex-1">
-                    <p className="text-[10px] mb-1" style={{ color: '#9CA3AF' }}>Enter latest NAV</p>
+                    <p className="text-[10px] mb-1" style={{ color: 'var(--wv-text-muted)' }}>Enter latest NAV</p>
                     <Input
                       type="number"
                       value={editNavId === detailHolding.id ? editNavValue : ''}
@@ -627,29 +627,29 @@ export default function SifPortfolioPage() {
 
               {/* Transaction History */}
               <div>
-                <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>Transaction History</p>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Transaction History</p>
                 {detailHolding.transactions.length === 0 ? (
-                  <p className="text-xs py-4 text-center" style={{ color: '#9CA3AF' }}>No transactions recorded</p>
+                  <p className="text-xs py-4 text-center" style={{ color: 'var(--wv-text-muted)' }}>No transactions recorded</p>
                 ) : (
                   <div className="space-y-2">
                     {detailHolding.transactions
                       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                       .map(txn => (
                         <div key={txn.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg"
-                          style={{ backgroundColor: '#F7F5F0', border: '1px solid #F3F4F6' }}>
+                          style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
                           <div>
-                            <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                            <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                               {txn.type === 'buy' ? 'Purchase' : txn.type === 'sip' ? 'SIP' : txn.type}
                             </p>
-                            <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                            <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                               {new Date(txn.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs font-medium" style={{ color: '#1A1A2E' }}>
+                            <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                               {txn.quantity.toLocaleString('en-IN', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} units
                             </p>
-                            <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                            <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                               @ {'\u20B9'}{txn.price.toFixed(4)}
                             </p>
                           </div>
@@ -665,7 +665,7 @@ export default function SifPortfolioPage() {
                   onClick={() => router.push(`/add-assets/sif?edit=${detailHolding.id}`)}
                   variant="outline"
                   className="flex-1 text-xs h-9"
-                  style={{ borderColor: '#E8E5DD', color: '#1B2A4A' }}
+                  style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }}
                 >
                   <Pencil className="w-3 h-3 mr-1.5" />Edit
                 </Button>

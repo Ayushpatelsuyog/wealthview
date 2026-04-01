@@ -130,6 +130,113 @@
   }
 }
 
+/* ── Dark mode global overrides ──────────────────────────────────────────
+   Override hardcoded Tailwind utility classes so every page respects dark mode.
+   These use !important to beat both utility specificity and inline styles. */
+
+/* Backgrounds */
+.dark .bg-white        { background-color: var(--wv-surface) !important; }
+.dark .bg-gray-50      { background-color: var(--wv-bg) !important; }
+.dark .bg-gray-100     { background-color: var(--wv-surface-2) !important; }
+.dark .bg-green-50     { background-color: rgba(5,150,105,0.08) !important; }
+.dark .bg-red-50       { background-color: rgba(220,38,38,0.08) !important; }
+.dark .bg-green-100    { background-color: rgba(5,150,105,0.12) !important; }
+.dark .bg-blue-50      { background-color: rgba(59,130,246,0.08) !important; }
+
+/* Text */
+.dark .text-gray-900   { color: var(--wv-text) !important; }
+.dark .text-gray-800   { color: var(--wv-text) !important; }
+.dark .text-gray-700   { color: var(--wv-text-secondary) !important; }
+.dark .text-gray-600   { color: var(--wv-text-secondary) !important; }
+.dark .text-gray-500   { color: var(--wv-text-muted) !important; }
+.dark .text-gray-400   { color: var(--wv-text-muted) !important; }
+.dark .text-black       { color: var(--wv-text) !important; }
+.dark .font-medium.text-gray-900 { color: var(--wv-text) !important; }
+.dark .font-semibold    { color: inherit; }
+
+/* Borders */
+.dark .border-gray-200 { border-color: var(--wv-border) !important; }
+.dark .border-gray-100 { border-color: var(--wv-border) !important; }
+.dark .border-gray-300 { border-color: var(--wv-border) !important; }
+.dark .divide-gray-200 > * + * { border-color: var(--wv-border) !important; }
+.dark .divide-y > * + * { border-color: var(--wv-border) !important; }
+
+/* Hover states */
+.dark .hover\:bg-gray-50:hover  { background-color: var(--wv-surface-2) !important; }
+.dark .hover\:bg-gray-100:hover { background-color: var(--wv-surface-2) !important; }
+.dark .hover\:bg-red-50:hover   { background-color: rgba(220,38,38,0.12) !important; }
+
+/* Tables */
+.dark table th {
+  background-color: var(--wv-surface-2) !important;
+  color: var(--wv-text-muted) !important;
+  border-color: var(--wv-border) !important;
+}
+.dark table td {
+  border-color: var(--wv-border) !important;
+}
+.dark table tr {
+  border-color: var(--wv-border) !important;
+}
+.dark table tbody tr:hover {
+  background-color: var(--wv-surface-2) !important;
+}
+
+/* Form inputs */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: var(--wv-input-bg) !important;
+  color: var(--wv-text) !important;
+  border-color: var(--wv-border) !important;
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--wv-text-muted) !important;
+}
+
+/* Dialogs & Sheets (Radix) */
+.dark [data-radix-dialog-content],
+.dark [role="dialog"] {
+  background-color: var(--wv-surface) !important;
+  color: var(--wv-text) !important;
+  border-color: var(--wv-border) !important;
+}
+
+/* shadcn Sheet */
+.dark [data-state] .bg-background {
+  background-color: var(--wv-surface) !important;
+}
+
+/* Cards (catch-all for any Card component) */
+.dark .rounded-xl,
+.dark .rounded-lg {
+  border-color: var(--wv-border);
+}
+
+/* Tabs */
+.dark [role="tablist"] {
+  background-color: var(--wv-surface-2) !important;
+  border-color: var(--wv-border) !important;
+}
+.dark [role="tab"][data-state="active"] {
+  background-color: var(--wv-surface) !important;
+  color: var(--wv-text) !important;
+}
+.dark [role="tab"] {
+  color: var(--wv-text-muted) !important;
+}
+
+/* Badges */
+.dark .bg-green-100 .text-green-800,
+.dark .bg-green-100 .text-green-700 {
+  color: #34D399 !important;
+}
+.dark .bg-red-100 .text-red-800,
+.dark .bg-red-100 .text-red-700 {
+  color: #F87171 !important;
+}
+
 /* ── Z-index stacking layer fixes ──────────────────────────────────────────
    Radix UI portals render outside the normal DOM tree but can still be
    clipped by transformed/overflow-hidden ancestors. Force every overlay

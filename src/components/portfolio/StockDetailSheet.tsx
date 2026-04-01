@@ -64,7 +64,7 @@ function txnBg(txn: Transaction): string {
   if (notes.includes('bonus'))  return 'rgba(201,168,76,0.12)';
   if (notes.includes('split'))  return 'rgba(99,102,241,0.10)';
   if (notes.includes('rights')) return 'rgba(46,139,139,0.10)';
-  return TXN_CONFIG[txn.type]?.bg ?? '#F3F4F6';
+  return TXN_CONFIG[txn.type]?.bg ?? 'var(--wv-border)';
 }
 function txnColor(txn: Transaction): string {
   const notes = txn.notes?.toLowerCase() ?? '';
@@ -199,7 +199,7 @@ export function StockDetailSheet({
   return (
     <Sheet open={open} onOpenChange={open => { if (!open) onClose(); }}>
       <SheetContent side="right" className="w-full sm:max-w-lg p-0 overflow-y-auto"
-        style={{ backgroundColor: '#F7F5F0', border: 'none' }}>
+        style={{ backgroundColor: 'var(--wv-surface-2)', border: 'none' }}>
 
         {/* Header */}
         <div className="sticky top-0 z-10 px-5 py-4 flex items-start gap-3"
@@ -227,8 +227,8 @@ export function StockDetailSheet({
                     onBlur={() => setEditingSector(false)}
                     className="h-6 text-[10px] rounded px-1 border-none outline-none"
                     style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'white' }}>
-                    <option value="" style={{ color: '#1A1A2E' }}>Select sector…</option>
-                    {SECTORS.map(s => <option key={s} value={s} style={{ color: '#1A1A2E' }}>{s}</option>)}
+                    <option value="" style={{ color: 'var(--wv-text)' }}>Select sector…</option>
+                    {SECTORS.map(s => <option key={s} value={s} style={{ color: 'var(--wv-text)' }}>{s}</option>)}
                   </select>
                 </div>
               ) : sector ? (
@@ -301,7 +301,7 @@ export function StockDetailSheet({
               { label: 'Portfolio',    value: holding.portfolios?.name ?? '—' },
             ].map(({ label, value, color }) => (
               <div key={label}>
-                <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{label}</p>
+                <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{label}</p>
                 <p className="text-sm font-bold mt-0.5" style={{ color: color ?? '#1A1A2E' }}>{value}</p>
               </div>
             ))}
@@ -309,25 +309,25 @@ export function StockDetailSheet({
 
           {taxSplit !== null && (taxSplit.stcgQty > 0 || taxSplit.ltcgQty > 0) ? (
             <div className="wv-card p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#9CA3AF' }}>
+              <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--wv-text-muted)' }}>
                 Tax Position
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.12)' }}>
                   <p className="text-[10px] font-bold" style={{ color: '#DC2626' }}>STCG (&lt;1 yr)</p>
-                  <p className="text-sm font-bold mt-1" style={{ color: '#1A1A2E' }}>
+                  <p className="text-sm font-bold mt-1" style={{ color: 'var(--wv-text)' }}>
                     {taxSplit.stcgQty.toLocaleString('en-IN')} shares
                   </p>
-                  <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>
                     Cost: {formatLargeINR(taxSplit.stcgInvested)}
                   </p>
                 </div>
                 <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.12)' }}>
                   <p className="text-[10px] font-bold" style={{ color: '#059669' }}>LTCG (≥1 yr)</p>
-                  <p className="text-sm font-bold mt-1" style={{ color: '#1A1A2E' }}>
+                  <p className="text-sm font-bold mt-1" style={{ color: 'var(--wv-text)' }}>
                     {taxSplit.ltcgQty.toLocaleString('en-IN')} shares
                   </p>
-                  <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>
                     Cost: {formatLargeINR(taxSplit.ltcgInvested)}
                   </p>
                 </div>
@@ -338,23 +338,23 @@ export function StockDetailSheet({
           {/* Additional info */}
           {(isin || demat || bseCode) ? (
             <div className="wv-card p-4 space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#9CA3AF' }}>Details</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--wv-text-muted)' }}>Details</p>
               {isin ? (
                 <div className="flex justify-between">
-                  <span className="text-xs" style={{ color: '#6B7280' }}>ISIN</span>
-                  <span className="text-xs font-mono" style={{ color: '#1A1A2E' }}>{isin}</span>
+                  <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>ISIN</span>
+                  <span className="text-xs font-mono" style={{ color: 'var(--wv-text)' }}>{isin}</span>
                 </div>
               ) : null}
               {demat ? (
                 <div className="flex justify-between">
-                  <span className="text-xs" style={{ color: '#6B7280' }}>Demat / DP ID</span>
-                  <span className="text-xs font-mono" style={{ color: '#1A1A2E' }}>{demat}</span>
+                  <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Demat / DP ID</span>
+                  <span className="text-xs font-mono" style={{ color: 'var(--wv-text)' }}>{demat}</span>
                 </div>
               ) : null}
               {bseCode ? (
                 <div className="flex justify-between">
-                  <span className="text-xs" style={{ color: '#6B7280' }}>BSE Code</span>
-                  <span className="text-xs" style={{ color: '#1A1A2E' }}>{bseCode}</span>
+                  <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>BSE Code</span>
+                  <span className="text-xs" style={{ color: 'var(--wv-text)' }}>{bseCode}</span>
                 </div>
               ) : null}
             </div>
@@ -363,19 +363,19 @@ export function StockDetailSheet({
           {/* Transaction history */}
           <div className="wv-card">
             <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: '#F0EDE6' }}>
-              <p className="text-xs font-semibold" style={{ color: '#1B2A4A' }}>
+              <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>
                 Transaction History
-                <span className="ml-2 text-[10px] font-normal" style={{ color: '#9CA3AF' }}>
+                <span className="ml-2 text-[10px] font-normal" style={{ color: 'var(--wv-text-muted)' }}>
                   {sorted.length} record{sorted.length !== 1 ? 's' : ''}
                 </span>
               </p>
-              <BarChart3 className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
+              <BarChart3 className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />
             </div>
 
             {sorted.length === 0 ? (
               <div className="px-4 py-8 text-center">
-                <AlertCircle className="w-5 h-5 mx-auto mb-2" style={{ color: '#9CA3AF' }} />
-                <p className="text-xs" style={{ color: '#9CA3AF' }}>No transactions yet</p>
+                <AlertCircle className="w-5 h-5 mx-auto mb-2" style={{ color: 'var(--wv-text-muted)' }} />
+                <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>No transactions yet</p>
               </div>
             ) : (
               <div className="divide-y" style={{ borderColor: '#F7F5F0' }}>
@@ -406,40 +406,40 @@ export function StockDetailSheet({
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline gap-2 flex-wrap">
-                            <span className="text-xs font-semibold" style={{ color: '#1A1A2E' }}>
+                            <span className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>
                               {Number(t.quantity).toLocaleString('en-IN', { maximumFractionDigits: 4 })} shares
                             </span>
                             {!isBonus && Number(t.price) > 0 && (
-                              <span className="text-[10px]" style={{ color: '#6B7280' }}>
+                              <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
                                 @ ₹{Number(t.price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                               </span>
                             )}
                             {amt > 0 && !isBonus && (
-                              <span className="text-[10px] font-medium" style={{ color: '#1A1A2E' }}>
+                              <span className="text-[10px] font-medium" style={{ color: 'var(--wv-text)' }}>
                                 = {formatLargeINR(amt + Number(t.fees || 0))}
                               </span>
                             )}
                           </div>
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                            <span className="text-[10px]" style={{ color: '#9CA3AF' }}>{fmtDate(t.date)}</span>
+                            <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{fmtDate(t.date)}</span>
                             {Number(t.fees) > 0 && (
-                              <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                              <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                                 charges: ₹{Number(t.fees).toFixed(2)}
                               </span>
                             )}
                             {wb && (
-                              <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                              <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                                 bal: {wb._runningBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                               </span>
                             )}
                             {label === 'Buy' && (
-                              <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                              <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                                 held: {holdingPeriodStr(t.date)}
                               </span>
                             )}
                           </div>
                           {t.notes && !t.notes.startsWith('Buy') && !t.notes.startsWith('Sell at') && (
-                            <p className="text-[10px] mt-0.5 truncate" style={{ color: '#9CA3AF' }}>{t.notes}</p>
+                            <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--wv-text-muted)' }}>{t.notes}</p>
                           )}
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
@@ -473,7 +473,7 @@ export function StockDetailSheet({
               <button
                 onClick={() => setShowAllTxns(!showAllTxns)}
                 className="w-full px-4 py-2.5 text-[11px] font-medium flex items-center justify-center gap-1 border-t"
-                style={{ borderColor: '#F0EDE6', color: '#6B7280' }}>
+                style={{ borderColor: '#F0EDE6', color: 'var(--wv-text-secondary)' }}>
                 {showAllTxns
                   ? <><ChevronUp className="w-3 h-3" /> Show less</>
                   : <><ChevronDown className="w-3 h-3" /> Show all {sorted.length} transactions</>}
@@ -490,7 +490,7 @@ export function StockDetailSheet({
               <Plus className="w-3.5 h-3.5" />Add More Shares
             </Button>
             <Button variant="outline" className="h-9 text-xs gap-1.5"
-              style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
+              style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}
               onClick={() => { onClose(); router.push(`/add-assets/indian-stocks`); }}>
               Record Corporate Action
             </Button>

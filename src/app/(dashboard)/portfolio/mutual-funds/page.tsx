@@ -77,7 +77,7 @@ const CAT_COLORS: Record<string, { bg: string; text: string }> = {
   'Sectoral/Thematic':  { bg: 'rgba(234,88,12,0.10)',   text: '#C2410C' },
   Arbitrage:            { bg: 'rgba(46,139,139,0.08)',  text: '#2E8B8B' },
 };
-function catStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: '#F3F4F6', text: '#6B7280' }; }
+function catStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: 'var(--wv-border)', text: '#6B7280' }; }
 
 function ActionMenu({
   holdingId, onDelete, onViewDetails, onAddMore, onSellRedeem,
@@ -101,14 +101,14 @@ function ActionMenu({
     <div className="relative">
       <button onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
         className="p-1 rounded hover:bg-gray-100 transition-colors">
-        <MoreHorizontal className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
+        <MoreHorizontal className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />
       </button>
       {open && (
         <>
           {/* backdrop */}
           <div className="fixed inset-0" style={{ zIndex: 9990 }} onClick={() => setOpen(false)} />
           <div className="absolute right-0 bg-white rounded-xl border py-1 min-w-[150px]"
-            style={{ borderColor: '#E8E5DD', top: '100%', zIndex: 9999,
+            style={{ borderColor: 'var(--wv-border)', top: '100%', zIndex: 9999,
                      boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
             {actions.map(({ label, action, danger }) => (
               <button key={label}
@@ -149,7 +149,7 @@ function SipBadge({ metadata }: { metadata: Record<string, unknown> }) {
   if (activeCount === 0) {
     return (
       <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
-        style={{ backgroundColor: '#F3F4F6', color: '#9CA3AF', textDecoration: 'line-through' }}>
+        style={{ backgroundColor: 'var(--wv-border)', color: 'var(--wv-text-muted)', textDecoration: 'line-through' }}>
         SIP
       </span>
     );
@@ -200,11 +200,11 @@ function DonutChart({
   if (data.length === 0) {
     return (
       <div className="wv-card flex flex-col" style={{ padding: 16, overflow: 'hidden', minHeight: 220 }}>
-        <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>
-          {title} <span style={{ color: '#9CA3AF', fontWeight: 400 }}>({modeLabel})</span>
+        <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>
+          {title} <span style={{ color: 'var(--wv-text-muted)', fontWeight: 400 }}>({modeLabel})</span>
         </p>
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-xs" style={{ color: '#9CA3AF' }}>No data</p>
+          <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>No data</p>
         </div>
       </div>
     );
@@ -212,8 +212,8 @@ function DonutChart({
 
   return (
     <div className="wv-card" style={{ padding: 16, overflow: 'hidden' }}>
-      <p className="text-xs font-semibold mb-3" style={{ color: '#1B2A4A' }}>
-        {title} <span style={{ color: '#9CA3AF', fontWeight: 400 }}>({modeLabel})</span>
+      <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>
+        {title} <span style={{ color: 'var(--wv-text-muted)', fontWeight: 400 }}>({modeLabel})</span>
       </p>
 
       {/* Donut — fixed 150×150, centered */}
@@ -238,10 +238,10 @@ function DonutChart({
               formatter={(value) => [fmt(Number(value)), '']}
               contentStyle={{
                 fontSize: 11, borderRadius: 8,
-                border: '1px solid #E8E5DD',
+                border: '1px solid var(--wv-border)',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
               }}
-              itemStyle={{ color: '#1A1A2E' }}
+              itemStyle={{ color: 'var(--wv-text)' }}
             />
           </PieChart>
         </ResponsiveContainer>
@@ -255,13 +255,13 @@ function DonutChart({
           return (
             <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
               <span style={{ flexShrink: 0, width: 8, height: 8, borderRadius: 2, backgroundColor: color, display: 'inline-block' }} />
-              <span style={{ flex: 1, fontSize: 11, color: '#4B5563', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ flex: 1, fontSize: 11, color: 'var(--wv-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {entry.name}
               </span>
-              <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#1A1A2E', fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, color: 'var(--wv-text)', fontVariantNumeric: 'tabular-nums' }}>
                 {fmt(entry.value)}
               </span>
-              <span style={{ flexShrink: 0, fontSize: 10, color: '#9CA3AF', width: 36, textAlign: 'right' }}>
+              <span style={{ flexShrink: 0, fontSize: 10, color: 'var(--wv-text-muted)', width: 36, textAlign: 'right' }}>
                 {pct}%
               </span>
             </div>
@@ -317,7 +317,7 @@ function AllocationCharts({
           className="px-3 py-1 rounded-full text-[11px] font-medium transition-all"
           style={mode === 'market'
             ? { backgroundColor: '#1B2A4A', color: '#fff' }
-            : { color: '#6B7280' }}
+            : { color: 'var(--wv-text-secondary)' }}
         >
           Market Value
         </button>
@@ -326,7 +326,7 @@ function AllocationCharts({
           className="px-3 py-1 rounded-full text-[11px] font-medium transition-all"
           style={mode === 'invested'
             ? { backgroundColor: '#1B2A4A', color: '#fff' }
-            : { color: '#6B7280' }}
+            : { color: 'var(--wv-text-secondary)' }}
         >
           Invested
         </button>
@@ -752,7 +752,7 @@ export default function MutualFundsPortfolioPage() {
         style={{
           backgroundColor: active ? '#1B2A4A' : '#F7F5F0',
           color: active ? 'white' : '#6B7280',
-          border: '1px solid ' + (active ? '#1B2A4A' : '#E8E5DD'),
+          border: '1px solid ' + (active ? '#1B2A4A' : 'var(--wv-border)'),
         }}
       >
         {label}
@@ -798,17 +798,17 @@ export default function MutualFundsPortfolioPage() {
       {/* ── Page header ────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-semibold" style={{ color: '#1B2A4A' }}>Mutual Funds</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#9CA3AF' }}>Live NAVs from mfapi.in · {totalUniqueFundCount} fund{totalUniqueFundCount === 1 ? '' : 's'} tracked</p>
+          <h1 className="font-display text-2xl font-semibold" style={{ color: 'var(--wv-text)' }}>Mutual Funds</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>Live NAVs from mfapi.in · {totalUniqueFundCount} fund{totalUniqueFundCount === 1 ? '' : 's'} tracked</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={exportCsv} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-colors" style={{ borderColor: '#E8E5DD', color: '#6B7280', backgroundColor: 'white' }}>
+          <button onClick={exportCsv} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-colors" style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)', backgroundColor: 'white' }}>
             <Download className="w-3.5 h-3.5" /> Export CSV
           </button>
-          <button onClick={refreshAllNavs} disabled={navRefreshing} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: '#F7F5F0', color: '#6B7280' }}>
+          <button onClick={refreshAllNavs} disabled={navRefreshing} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-secondary)' }}>
             <RefreshCw className={`w-3.5 h-3.5 ${navRefreshing ? 'animate-spin' : ''}`} /> Refresh NAVs
           </button>
-          <button onClick={() => router.push('/add-assets/mutual-funds')} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white" style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>
+          <button onClick={() => router.push('/add-assets/mutual-funds')} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white" style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}>
             <PlusCircle className="w-3.5 h-3.5" /> Add Fund
           </button>
         </div>
@@ -817,12 +817,12 @@ export default function MutualFundsPortfolioPage() {
       {/* ── Empty state ──────────────────────────────────────────────────────────── */}
       {holdings.length === 0 && (
         <div className="wv-card p-16 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#F7F5F0' }}>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
             <TrendingUp className="w-8 h-8" style={{ color: '#C9A84C' }} />
           </div>
-          <p className="font-semibold text-lg mb-1" style={{ color: '#1B2A4A' }}>No mutual fund holdings yet</p>
-          <p className="text-sm mb-6" style={{ color: '#9CA3AF' }}>Add your first fund to start tracking your portfolio with live NAVs and XIRR</p>
-          <button onClick={() => router.push('/add-assets/mutual-funds')} className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold" style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>
+          <p className="font-semibold text-lg mb-1" style={{ color: 'var(--wv-text)' }}>No mutual fund holdings yet</p>
+          <p className="text-sm mb-6" style={{ color: 'var(--wv-text-muted)' }}>Add your first fund to start tracking your portfolio with live NAVs and XIRR</p>
+          <button onClick={() => router.push('/add-assets/mutual-funds')} className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold" style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}>
             <PlusCircle className="w-4 h-4" /> Add First Fund
           </button>
         </div>
@@ -847,7 +847,7 @@ export default function MutualFundsPortfolioPage() {
                   { label: 'Day P&L',          value: (totalDayPnl >= 0 ? '+' : '') + formatLargeINR(totalDayPnl), color: totalDayPnl >= 0 ? '#059669' : '#DC2626' },
                 ].map((c) => (
                   <div key={c.label} className="wv-card p-4">
-                    <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: '#9CA3AF' }}>{c.label}</p>
+                    <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--wv-text-muted)' }}>{c.label}</p>
                     <p className="font-display text-lg font-semibold" style={{ color: c.color ?? '#1B2A4A' }}>{c.value}</p>
                   </div>
                 ))}
@@ -865,13 +865,13 @@ export default function MutualFundsPortfolioPage() {
             <div className="flex items-center gap-3 flex-wrap">
               {/* Search */}
               <div className="relative flex-1 min-w-48">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />
                 <input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search funds…"
                   className="w-full pl-8 pr-3 py-1.5 rounded-lg text-xs outline-none"
-                  style={{ border: '1px solid #E8E5DD', backgroundColor: '#F7F5F0', color: '#1A1A2E' }}
+                  style={{ border: '1px solid var(--wv-border)', backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text)' }}
                 />
               </div>
               {/* Sort */}
@@ -879,7 +879,7 @@ export default function MutualFundsPortfolioPage() {
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
                 className="px-3 py-1.5 rounded-lg text-xs outline-none"
-                style={{ border: '1px solid #E8E5DD', backgroundColor: '#F7F5F0', color: '#6B7280' }}
+                style={{ border: '1px solid var(--wv-border)', backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-secondary)' }}
               >
                 <option value="value">Sort: Value ↓</option>
                 <option value="pnlPct">Sort: P&L% ↓</option>
@@ -889,8 +889,8 @@ export default function MutualFundsPortfolioPage() {
               </select>
               {/* Filter count + clear */}
               <div className="flex items-center gap-2">
-                <span className="text-[11px]" style={{ color: '#9CA3AF' }}>
-                  Showing <strong style={{ color: '#1A1A2E' }}>{filteredCount}</strong> of {totalCount}
+                <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>
+                  Showing <strong style={{ color: 'var(--wv-text)' }}>{filteredCount}</strong> of {totalCount}
                 </span>
                 {isFiltered && (
                   <button onClick={clearFilters}
@@ -905,7 +905,7 @@ export default function MutualFundsPortfolioPage() {
             {/* Broker pills — always show if >1 broker */}
             {brokers.length > 1 && (
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: '#9CA3AF' }}>Distributor</span>
+                <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: 'var(--wv-text-muted)' }}>Distributor</span>
                 {brokers.filter(b => b !== 'All').map(b => (
                   <Pill key={b} label={b} active={filterBrokers.has(b)}
                     onClick={() => toggleSet(filterBrokers, setFilterBrokers, b)} />
@@ -916,7 +916,7 @@ export default function MutualFundsPortfolioPage() {
             {/* Portfolio pills */}
             {portfolios.length > 1 && (
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: '#9CA3AF' }}>Portfolio</span>
+                <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: 'var(--wv-text-muted)' }}>Portfolio</span>
                 {portfolios.filter(p => p !== 'All').map(p => (
                   <Pill key={p} label={p} active={filterPortfolios.has(p)}
                     onClick={() => toggleSet(filterPortfolios, setFilterPortfolios, p)} />
@@ -927,7 +927,7 @@ export default function MutualFundsPortfolioPage() {
             {/* Category pills — always show if any categories exist */}
             {categories.length > 1 && (
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: '#9CA3AF' }}>Category</span>
+                <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: 'var(--wv-text-muted)' }}>Category</span>
                 {categories.filter(c => c !== 'All').map(c => (
                   <Pill key={c} label={c} active={filterCategories.has(c)}
                     onClick={() => toggleSet(filterCategories, setFilterCategories, c)} />
@@ -987,7 +987,7 @@ export default function MutualFundsPortfolioPage() {
                   <col style={{ width: '3%'  }} /> {/* Actions */}
                 </colgroup>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #E8E5DD', backgroundColor: '#F7F5F0' }}>
+                  <tr style={{ borderBottom: '1px solid var(--wv-border)', backgroundColor: 'var(--wv-surface-2)' }}>
                     {[
                       { label: 'Fund',          align: 'left'  },
                       { label: 'Distributor',   align: 'left'  },
@@ -1004,7 +1004,7 @@ export default function MutualFundsPortfolioPage() {
                       { label: '',              align: 'left'  },
                     ].map(({ label, align }) => (
                       <th key={label} className="py-2.5 font-medium whitespace-nowrap"
-                        style={{ color: '#9CA3AF', paddingLeft: 8, paddingRight: 8, textAlign: align as 'left' | 'right' }}>
+                        style={{ color: 'var(--wv-text-muted)', paddingLeft: 8, paddingRight: 8, textAlign: align as 'left' | 'right' }}>
                         {label}
                       </th>
                     ))}
@@ -1012,7 +1012,7 @@ export default function MutualFundsPortfolioPage() {
                 </thead>
                 <tbody>
                   {groupedFiltered.length === 0 ? (
-                    <tr><td colSpan={13} className="px-4 py-8 text-center text-xs" style={{ color: '#9CA3AF' }}>No funds match the current filters</td></tr>
+                    <tr><td colSpan={13} className="px-4 py-8 text-center text-xs" style={{ color: 'var(--wv-text-muted)' }}>No funds match the current filters</td></tr>
                   ) : groupedFiltered.map((group) => {
                     const renderFundRow = (h: HoldingRow, extraStyle?: React.CSSProperties) => {
                       const rowBg = h.gainLoss != null
@@ -1025,9 +1025,9 @@ export default function MutualFundsPortfolioPage() {
                           className="hover:bg-[#FAFAF8] transition-colors"
                           onClick={() => setDetailId(h.id)}>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12 }}>
-                            <p className="leading-snug" style={{ color: '#1A1A2E', fontWeight: 500, whiteSpace: 'normal', wordBreak: 'break-word' }}>{h.name}</p>
+                            <p className="leading-snug" style={{ color: 'var(--wv-text)', fontWeight: 500, whiteSpace: 'normal', wordBreak: 'break-word' }}>{h.name}</p>
                             {h.metadata?.fund_house != null && (
-                              <p className="text-[10px] mt-0.5 leading-tight" style={{ color: '#9CA3AF' }}>{String(h.metadata.fund_house)}</p>
+                              <p className="text-[10px] mt-0.5 leading-tight" style={{ color: 'var(--wv-text-muted)' }}>{String(h.metadata.fund_house)}</p>
                             )}
                             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                               {cat && <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: catStyle(cat).bg, color: catStyle(cat).text }}>{cat}</span>}
@@ -1035,14 +1035,14 @@ export default function MutualFundsPortfolioPage() {
                               {h.metadata?.folio != null && <span className="text-[10px]" style={{ color: '#D1D5DB' }}>Folio: {String(h.metadata.folio)}</span>}
                             </div>
                           </td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'normal', wordBreak: 'break-word' }}>{h.brokers?.name ?? '—'}</td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'nowrap', textAlign: 'right' }}>{Number(h.quantity).toFixed(4)}</td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'nowrap', textAlign: 'right' }}>₹{Number(h.avg_buy_price).toFixed(4)}</td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#1A1A2E', fontWeight: 500, whiteSpace: 'nowrap', textAlign: 'right' }}>{formatLargeINR(h.investedValue)}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text-secondary)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{h.brokers?.name ?? '—'}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text-secondary)', whiteSpace: 'nowrap', textAlign: 'right' }}>{Number(h.quantity).toFixed(4)}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text-secondary)', whiteSpace: 'nowrap', textAlign: 'right' }}>₹{Number(h.avg_buy_price).toFixed(4)}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text)', fontWeight: 500, whiteSpace: 'nowrap', textAlign: 'right' }}>{formatLargeINR(h.investedValue)}</td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
-                            {h.navLoading ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#9CA3AF' }} /> : h.currentNav ? <span style={{ color: '#1A1A2E' }}>₹{h.currentNav.toFixed(4)}</span> : <span style={{ color: '#9CA3AF' }}>—</span>}
+                            {h.navLoading ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: 'var(--wv-text-muted)' }} /> : h.currentNav ? <span style={{ color: 'var(--wv-text)' }}>₹{h.currentNav.toFixed(4)}</span> : <span style={{ color: 'var(--wv-text-muted)' }}>—</span>}
                           </td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#1A1A2E', fontWeight: 500, whiteSpace: 'nowrap', textAlign: 'right' }}>{h.currentValue ? formatLargeINR(h.currentValue) : '—'}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text)', fontWeight: 500, whiteSpace: 'nowrap', textAlign: 'right' }}>{h.currentValue ? formatLargeINR(h.currentValue) : '—'}</td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
                             {h.dayChange != null ? (
                               <span className="font-semibold" style={{ color: (Number(h.quantity) * h.dayChange) >= 0 ? '#059669' : '#DC2626' }}>
@@ -1057,9 +1057,9 @@ export default function MutualFundsPortfolioPage() {
                             {h.gainLossPct != null ? <span className="font-semibold" style={{ color: h.gainLossPct >= 0 ? '#059669' : '#DC2626' }}>{h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}%</span> : '—'}
                           </td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
-                            {h.xirr != null ? <span style={{ color: h.xirr >= 0 ? '#059669' : '#DC2626' }}>{formatPercentage(h.xirr * 100)}</span> : <span style={{ color: '#9CA3AF' }}>—</span>}
+                            {h.xirr != null ? <span style={{ color: h.xirr >= 0 ? '#059669' : '#DC2626' }}>{formatPercentage(h.xirr * 100)}</span> : <span style={{ color: 'var(--wv-text-muted)' }}>—</span>}
                           </td>
-                          <td className="text-[11px]" style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#9CA3AF', whiteSpace: 'nowrap' }}>{h.portfolios?.name ?? '—'}</td>
+                          <td className="text-[11px]" style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text-muted)', whiteSpace: 'nowrap' }}>{h.portfolios?.name ?? '—'}</td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12 }} onClick={e => e.stopPropagation()}>
                             <ActionMenu holdingId={h.id} onDelete={deleteHolding}
                               onViewDetails={(id) => { setOpenAsRedeem(false); setDetailId(id); }}
@@ -1089,23 +1089,23 @@ export default function MutualFundsPortfolioPage() {
                             <div className="flex items-center gap-2">
                               {isExpanded ? <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} /> : <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} />}
                               <div>
-                                <p className="leading-snug font-semibold" style={{ color: '#1A1A2E', whiteSpace: 'normal', wordBreak: 'break-word' }}>{group.name} — Total</p>
-                                <p className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>{group.holdings.length} distributors</p>
+                                <p className="leading-snug font-semibold" style={{ color: 'var(--wv-text)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{group.name} — Total</p>
+                                <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{group.holdings.length} distributors</p>
                                 {cat && <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full mt-1 inline-block" style={{ backgroundColor: catStyle(cat).bg, color: catStyle(cat).text }}>{cat}</span>}
                               </div>
                             </div>
                           </td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12 }}><span className="font-semibold" style={{ color: '#C9A84C' }}>Consolidated</span></td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'right', color: '#1A1A2E' }}>{group.totalUnits.toFixed(4)}</td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#6B7280', whiteSpace: 'nowrap', textAlign: 'right' }}>₹{wtdAvg.toFixed(4)}</td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'right', color: '#1A1A2E' }}>{formatLargeINR(group.totalInvested)}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'right', color: 'var(--wv-text)' }}>{group.totalUnits.toFixed(4)}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text-secondary)', whiteSpace: 'nowrap', textAlign: 'right' }}>₹{wtdAvg.toFixed(4)}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'right', color: 'var(--wv-text)' }}>{formatLargeINR(group.totalInvested)}</td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
-                            {group.navLoading ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#9CA3AF' }} /> : group.currentNav ? <span style={{ color: '#1A1A2E' }}>₹{group.currentNav.toFixed(4)}</span> : <span style={{ color: '#9CA3AF' }}>—</span>}
+                            {group.navLoading ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: 'var(--wv-text-muted)' }} /> : group.currentNav ? <span style={{ color: 'var(--wv-text)' }}>₹{group.currentNav.toFixed(4)}</span> : <span style={{ color: 'var(--wv-text-muted)' }}>—</span>}
                           </td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'right', color: '#1A1A2E' }}>{group.totalCurrentValue != null ? formatLargeINR(group.totalCurrentValue) : '—'}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'right', color: 'var(--wv-text)' }}>{group.totalCurrentValue != null ? formatLargeINR(group.totalCurrentValue) : '—'}</td>
                           {(() => {
                             const hasDay = group.holdings.some(h => h.dayChange != null);
-                            if (!hasDay) return <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right', color: '#9CA3AF' }}>—</td>;
+                            if (!hasDay) return <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right', color: 'var(--wv-text-muted)' }}>—</td>;
                             const groupDayPnl = group.holdings.reduce((s, h) => s + (h.dayChange != null ? Number(h.quantity) * h.dayChange : 0), 0);
                             return (
                               <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
@@ -1121,8 +1121,8 @@ export default function MutualFundsPortfolioPage() {
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
                             {tGainPct != null ? <span className="font-semibold" style={{ color: tGainPct >= 0 ? '#059669' : '#DC2626' }}>{tGainPct >= 0 ? '+' : ''}{tGainPct.toFixed(2)}%</span> : '—'}
                           </td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#9CA3AF' }}>—</td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: '#9CA3AF' }}>—</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text-muted)' }}>—</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text-muted)' }}>—</td>
                           <td />
                         </tr>
                       </React.Fragment>
@@ -1134,13 +1134,13 @@ export default function MutualFundsPortfolioPage() {
 
             {/* Table footer */}
             {filtered.length > 0 && (
-              <div className="px-5 py-3 flex items-center justify-between" style={{ borderTop: '2px solid #E8E5DD', backgroundColor: '#F7F5F0' }}>
-                <span className="text-xs font-semibold" style={{ color: '#1B2A4A' }}>
+              <div className="px-5 py-3 flex items-center justify-between" style={{ borderTop: '2px solid var(--wv-border)', backgroundColor: 'var(--wv-surface-2)' }}>
+                <span className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>
                   {uniqueFundCount} fund{uniqueFundCount === 1 ? '' : 's'} · Total
                 </span>
                 <div className="flex items-center gap-6 text-xs">
-                  <span style={{ color: '#6B7280' }}>Invested: <strong style={{ color: '#1B2A4A' }}>{formatLargeINR(totalInvested)}</strong></span>
-                  <span style={{ color: '#6B7280' }}>Current: <strong style={{ color: '#1B2A4A' }}>{formatLargeINR(totalCurrentValue)}</strong></span>
+                  <span style={{ color: 'var(--wv-text-secondary)' }}>Invested: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalInvested)}</strong></span>
+                  <span style={{ color: 'var(--wv-text-secondary)' }}>Current: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalCurrentValue)}</strong></span>
                   <span style={{ color: totalGainLoss >= 0 ? '#059669' : '#DC2626' }}>P&L: <strong>{totalGainLoss >= 0 ? '+' : ''}{formatLargeINR(totalGainLoss)} ({totalGainLossPct >= 0 ? '+' : ''}{totalGainLossPct.toFixed(2)}%)</strong></span>
                 </div>
               </div>
@@ -1154,19 +1154,19 @@ export default function MutualFundsPortfolioPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #E8E5DD' }}>
+                    <tr style={{ borderBottom: '1px solid var(--wv-border)' }}>
                       {['Distributor', 'Funds', 'Invested', 'Current Value', 'P&L', 'P&L %'].map(h => (
-                        <th key={h} className="text-left px-3 py-2 font-medium" style={{ color: '#9CA3AF' }}>{h}</th>
+                        <th key={h} className="text-left px-3 py-2 font-medium" style={{ color: 'var(--wv-text-muted)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {brokerStats.map(b => (
                       <tr key={b.name} style={{ borderBottom: '1px solid #F7F5F0' }}>
-                        <td className="px-3 py-2.5 font-medium" style={{ color: '#1A1A2E' }}>{b.name}</td>
-                        <td className="px-3 py-2.5" style={{ color: '#6B7280' }}>{b.count}</td>
-                        <td className="px-3 py-2.5" style={{ color: '#6B7280' }}>{formatLargeINR(b.invested)}</td>
-                        <td className="px-3 py-2.5 font-medium" style={{ color: '#1A1A2E' }}>{formatLargeINR(b.current)}</td>
+                        <td className="px-3 py-2.5 font-medium" style={{ color: 'var(--wv-text)' }}>{b.name}</td>
+                        <td className="px-3 py-2.5" style={{ color: 'var(--wv-text-secondary)' }}>{b.count}</td>
+                        <td className="px-3 py-2.5" style={{ color: 'var(--wv-text-secondary)' }}>{formatLargeINR(b.invested)}</td>
+                        <td className="px-3 py-2.5 font-medium" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(b.current)}</td>
                         <td className="px-3 py-2.5 font-semibold" style={{ color: b.pnl >= 0 ? '#059669' : '#DC2626' }}>
                           {b.pnl >= 0 ? '+' : ''}{formatLargeINR(b.pnl)}
                         </td>

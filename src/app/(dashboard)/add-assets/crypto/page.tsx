@@ -239,7 +239,7 @@ function CryptoFormContent() {
       if (!profile?.family_id) throw new Error('No family found');
 
       const targetUserId = member || user.id;
-      const familyId = profile.family_id;
+      const familyId = selectedFamily || profile.family_id;
 
       // Find or create portfolio
       const { data: existingPortfolio } = await supabase
@@ -296,7 +296,7 @@ function CryptoFormContent() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: '#F7F5F0' }}>
+    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
       <div className="max-w-2xl mx-auto space-y-5">
 
         {/* Header */}
@@ -306,8 +306,8 @@ function CryptoFormContent() {
             <Bitcoin className="w-5 h-5" style={{ color: '#f59e0b' }} />
           </div>
           <div>
-            <h1 className="text-lg font-bold" style={{ color: '#1B2A4A' }}>Add Cryptocurrency</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Track your crypto holdings across exchanges</p>
+            <h1 className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>Add Cryptocurrency</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Track your crypto holdings across exchanges</p>
           </div>
         </div>
 
@@ -316,14 +316,14 @@ function CryptoFormContent() {
 
         {/* Step 1 — Family & Portfolio */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 1 — Family &amp; Portfolio
           </p>
 
           {/* Family selector */}
           {families.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family</Label>
               <div className="flex flex-wrap gap-2">
                 {families.map(f => (
                   <button key={f.id}
@@ -332,7 +332,7 @@ function CryptoFormContent() {
                     style={{
                       backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
                       color: selectedFamily === f.id ? 'white' : '#6B7280',
-                      borderColor: selectedFamily === f.id ? '#1B2A4A' : '#E8E5DD',
+                      borderColor: selectedFamily === f.id ? '#1B2A4A' : 'var(--wv-border)',
                     }}>
                     {f.name}
                   </button>
@@ -344,7 +344,7 @@ function CryptoFormContent() {
           {/* Family member */}
           {members.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
               <Select value={member} onValueChange={setMember}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -356,7 +356,7 @@ function CryptoFormContent() {
 
           {/* Portfolio name */}
           <div className="space-y-1.5">
-            <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio Name</Label>
+            <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio Name</Label>
             <Input
               value={portfolioName}
               onChange={e => setPortfolioName(e.target.value)}
@@ -369,7 +369,7 @@ function CryptoFormContent() {
 
         {/* Step 2 — Crypto Details */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 2 — Crypto Details
           </p>
 
@@ -377,7 +377,7 @@ function CryptoFormContent() {
             {/* Row: Exchange + Coin */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Exchange <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Exchange <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Select value={exchange} onValueChange={setExchange}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -386,7 +386,7 @@ function CryptoFormContent() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Coin <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Coin <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Select value={coinSelect} onValueChange={setCoinSelect}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -404,7 +404,7 @@ function CryptoFormContent() {
             {isOtherCoin && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Coin Symbol <span style={{ color: '#DC2626' }}>*</span></Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Coin Symbol <span style={{ color: '#DC2626' }}>*</span></Label>
                   <Input
                     value={customCoinSymbol}
                     onChange={e => setCustomCoinSymbol(e.target.value)}
@@ -414,7 +414,7 @@ function CryptoFormContent() {
                   <FieldError msg={errors.coinSymbol} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: '#6B7280' }}>Coin Name <span style={{ color: '#DC2626' }}>*</span></Label>
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Coin Name <span style={{ color: '#DC2626' }}>*</span></Label>
                   <Input
                     value={customCoinName}
                     onChange={e => setCustomCoinName(e.target.value)}
@@ -429,7 +429,7 @@ function CryptoFormContent() {
             {/* Row: Quantity + Buy Price */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Quantity <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Quantity <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={quantity}
@@ -442,7 +442,7 @@ function CryptoFormContent() {
                 <FieldError msg={errors.quantity} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Buy Price per Coin (INR) <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Buy Price per Coin (INR) <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={buyPrice}
@@ -458,7 +458,7 @@ function CryptoFormContent() {
 
             {/* Buy Date */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Buy Date <span style={{ color: '#DC2626' }}>*</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Buy Date <span style={{ color: '#DC2626' }}>*</span></Label>
               <Input
                 type="date"
                 value={buyDate}
@@ -470,7 +470,7 @@ function CryptoFormContent() {
 
             {/* Wallet Address */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Wallet Address <span className="text-gray-400">(optional)</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Wallet Address <span className="text-gray-400">(optional)</span></Label>
               <Input
                 value={walletAddress}
                 onChange={e => setWalletAddress(e.target.value)}
@@ -481,7 +481,7 @@ function CryptoFormContent() {
 
             {/* Notes */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Notes <span className="text-gray-400">(optional)</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes <span className="text-gray-400">(optional)</span></Label>
               <Input
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
@@ -500,15 +500,15 @@ function CryptoFormContent() {
             </p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Quantity</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{quantityNum.toLocaleString('en-IN', { maximumFractionDigits: 8 })}</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Quantity</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{quantityNum.toLocaleString('en-IN', { maximumFractionDigits: 8 })}</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Buy Price / Coin</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(buyPriceNum)}</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Buy Price / Coin</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(buyPriceNum)}</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(201,168,76,0.08)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Total Investment</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Total Investment</p>
                 <p className="text-sm font-bold" style={{ color: '#C9A84C' }}>{formatLargeINR(totalInvestment)}</p>
               </div>
             </div>

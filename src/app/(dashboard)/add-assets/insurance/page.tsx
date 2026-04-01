@@ -348,18 +348,18 @@ function InsuranceFormContent() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: '#F7F5F0' }}>
+    <div className="min-h-screen py-6 px-4" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
       <div className="max-w-2xl mx-auto space-y-5">
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-            <Shield className="w-5 h-5" style={{ color: '#1B2A4A' }} />
+            style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+            <Shield className="w-5 h-5" style={{ color: 'var(--wv-text)' }} />
           </div>
           <div>
-            <h1 className="text-lg font-bold" style={{ color: '#1B2A4A' }}>Add Insurance Policy</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Add life, health, vehicle, or property insurance</p>
+            <h1 className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>Add Insurance Policy</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Add life, health, vehicle, or property insurance</p>
           </div>
         </div>
 
@@ -368,14 +368,14 @@ function InsuranceFormContent() {
 
         {/* Step 1 — Family & Member */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 1 — Family &amp; Member
           </p>
 
           {/* Family selector */}
           {families.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family</Label>
               <div className="flex flex-wrap gap-2">
                 {families.map(f => (
                   <button key={f.id}
@@ -384,7 +384,7 @@ function InsuranceFormContent() {
                     style={{
                       backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
                       color: selectedFamily === f.id ? 'white' : '#6B7280',
-                      borderColor: selectedFamily === f.id ? '#1B2A4A' : '#E8E5DD',
+                      borderColor: selectedFamily === f.id ? '#1B2A4A' : 'var(--wv-border)',
                     }}>
                     {f.name}
                   </button>
@@ -396,7 +396,7 @@ function InsuranceFormContent() {
           {/* Family member */}
           {members.length > 1 && (
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
               <Select value={member} onValueChange={setMember}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -410,7 +410,7 @@ function InsuranceFormContent() {
 
         {/* Step 2 — Policy Category */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 2 — Policy Category
           </p>
           <div className="flex flex-wrap gap-2">
@@ -422,7 +422,7 @@ function InsuranceFormContent() {
                 style={{
                   backgroundColor: category === c.key ? '#1B2A4A' : 'transparent',
                   color: category === c.key ? 'white' : '#6B7280',
-                  borderColor: category === c.key ? '#1B2A4A' : '#E8E5DD',
+                  borderColor: category === c.key ? '#1B2A4A' : 'var(--wv-border)',
                 }}
               >
                 {c.label}
@@ -433,7 +433,7 @@ function InsuranceFormContent() {
 
         {/* Step 3 — Policy Details */}
         <div className="wv-card p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
             Step 3 — Policy Details
           </p>
 
@@ -441,7 +441,7 @@ function InsuranceFormContent() {
             {/* Provider + Policy Name */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Provider / Insurer <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Provider / Insurer <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   value={provider}
                   onChange={e => setProvider(e.target.value)}
@@ -451,7 +451,7 @@ function InsuranceFormContent() {
                 <FieldError msg={errors.provider} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Policy Name <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Policy Name <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   value={policyName}
                   onChange={e => setPolicyName(e.target.value)}
@@ -464,7 +464,7 @@ function InsuranceFormContent() {
 
             {/* Policy Number */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Policy Number <span className="text-gray-400">(optional)</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Policy Number <span className="text-gray-400">(optional)</span></Label>
               <Input
                 value={policyNumber}
                 onChange={e => setPolicyNumber(e.target.value)}
@@ -476,7 +476,7 @@ function InsuranceFormContent() {
             {/* Sum Assured + Premium */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Sum Assured (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Sum Assured (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={sumAssured}
@@ -492,7 +492,7 @@ function InsuranceFormContent() {
                 <FieldError msg={errors.sumAssured} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Premium (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Premium (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={premium}
@@ -511,7 +511,7 @@ function InsuranceFormContent() {
 
             {/* Premium Frequency */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Premium Frequency</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Premium Frequency</Label>
               <Select value={premiumFrequency} onValueChange={setPremiumFrequency}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -523,7 +523,7 @@ function InsuranceFormContent() {
             {/* Start Date + End Date */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Start Date <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Start Date <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="date"
                   value={startDate}
@@ -533,7 +533,7 @@ function InsuranceFormContent() {
                 <FieldError msg={errors.startDate} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>End Date <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>End Date <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="date"
                   value={endDate}
@@ -547,7 +547,7 @@ function InsuranceFormContent() {
             {/* Nominee Name + Relationship */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Nominee Name</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Nominee Name</Label>
                 <Input
                   value={nomineeName}
                   onChange={e => setNomineeName(e.target.value)}
@@ -556,7 +556,7 @@ function InsuranceFormContent() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Nominee Relationship</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Nominee Relationship</Label>
                 <Select value={nomineeRelationship} onValueChange={setNomineeRelationship}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
@@ -584,7 +584,7 @@ function InsuranceFormContent() {
               {category === 'life_term' && (
                 <>
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Term (Years)</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Term (Years)</Label>
                     <Input
                       type="number"
                       value={termYears}
@@ -596,7 +596,7 @@ function InsuranceFormContent() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Riders</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Riders</Label>
                     <div className="flex flex-wrap gap-4">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -606,7 +606,7 @@ function InsuranceFormContent() {
                           className="rounded border-gray-300"
                           style={{ accentColor: '#1B2A4A' }}
                         />
-                        <span className="text-xs" style={{ color: '#4B5563' }}>Critical Illness</span>
+                        <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Critical Illness</span>
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -616,7 +616,7 @@ function InsuranceFormContent() {
                           className="rounded border-gray-300"
                           style={{ accentColor: '#1B2A4A' }}
                         />
-                        <span className="text-xs" style={{ color: '#4B5563' }}>Accidental Death</span>
+                        <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Accidental Death</span>
                       </label>
                     </div>
                   </div>
@@ -627,7 +627,7 @@ function InsuranceFormContent() {
               {category === 'life_ulip' && (
                 <>
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Fund Value (₹)</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Fund Value (₹)</Label>
                     <Input
                       type="number"
                       value={fundValue}
@@ -642,7 +642,7 @@ function InsuranceFormContent() {
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Fund Options</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Fund Options</Label>
                     <Input
                       value={fundOptions}
                       onChange={e => setFundOptions(e.target.value)}
@@ -657,7 +657,7 @@ function InsuranceFormContent() {
               {category === 'health' && (
                 <>
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Plan Type</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Plan Type</Label>
                     <Select value={healthPlanType} onValueChange={setHealthPlanType}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -666,7 +666,7 @@ function InsuranceFormContent() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Room Rent Limit</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Room Rent Limit</Label>
                     <Input
                       value={roomRentLimit}
                       onChange={e => setRoomRentLimit(e.target.value)}
@@ -676,7 +676,7 @@ function InsuranceFormContent() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Co-pay %</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Co-pay %</Label>
                       <Input
                         type="number"
                         value={coPayPercent}
@@ -689,7 +689,7 @@ function InsuranceFormContent() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>No Claim Bonus %</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>No Claim Bonus %</Label>
                       <Input
                         type="number"
                         value={ncbPercent}
@@ -710,7 +710,7 @@ function InsuranceFormContent() {
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Vehicle Type</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Vehicle Type</Label>
                       <Select value={vehicleType} onValueChange={setVehicleType}>
                         <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -719,7 +719,7 @@ function InsuranceFormContent() {
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Insurance Type</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Insurance Type</Label>
                       <Select value={vehicleInsuranceType} onValueChange={setVehicleInsuranceType}>
                         <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -730,7 +730,7 @@ function InsuranceFormContent() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Make</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Make</Label>
                       <Input
                         value={vehicleMake}
                         onChange={e => setVehicleMake(e.target.value)}
@@ -739,7 +739,7 @@ function InsuranceFormContent() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Model</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Model</Label>
                       <Input
                         value={vehicleModel}
                         onChange={e => setVehicleModel(e.target.value)}
@@ -750,7 +750,7 @@ function InsuranceFormContent() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Year</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Year</Label>
                       <Input
                         type="number"
                         value={vehicleYear}
@@ -762,7 +762,7 @@ function InsuranceFormContent() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Registration Number</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Registration Number</Label>
                       <Input
                         value={regNumber}
                         onChange={e => setRegNumber(e.target.value)}
@@ -772,7 +772,7 @@ function InsuranceFormContent() {
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>IDV - Insured Declared Value (₹)</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>IDV - Insured Declared Value (₹)</Label>
                     <Input
                       type="number"
                       value={idv}
@@ -793,7 +793,7 @@ function InsuranceFormContent() {
               {category === 'property' && (
                 <>
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Cover Type</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Cover Type</Label>
                     <Select value={coverType} onValueChange={setCoverType}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -804,7 +804,7 @@ function InsuranceFormContent() {
                   <div className="grid grid-cols-2 gap-4">
                     {(coverType === 'Structure' || coverType === 'Both') && (
                       <div className="space-y-1.5">
-                        <Label className="text-xs" style={{ color: '#6B7280' }}>Structure Value (₹)</Label>
+                        <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Structure Value (₹)</Label>
                         <Input
                           type="number"
                           value={structureValue}
@@ -821,7 +821,7 @@ function InsuranceFormContent() {
                     )}
                     {(coverType === 'Contents' || coverType === 'Both') && (
                       <div className="space-y-1.5">
-                        <Label className="text-xs" style={{ color: '#6B7280' }}>Contents Value (₹)</Label>
+                        <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Contents Value (₹)</Label>
                         <Input
                           type="number"
                           value={contentsValue}
@@ -851,19 +851,19 @@ function InsuranceFormContent() {
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Sum Assured</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(sumAssuredNum)}</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Sum Assured</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(sumAssuredNum)}</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(5,150,105,0.06)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Premium ({premiumFrequency})</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Premium ({premiumFrequency})</p>
                 <p className="text-sm font-bold" style={{ color: '#059669' }}>{formatLargeINR(premiumNum)}</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(27,42,74,0.04)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Annual Premium</p>
-                <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(annualPremium)}</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Annual Premium</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(annualPremium)}</p>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(201,168,76,0.08)' }}>
-                <p className="text-[10px] font-medium mb-1" style={{ color: '#9CA3AF' }}>Category</p>
+                <p className="text-[10px] font-medium mb-1" style={{ color: 'var(--wv-text-muted)' }}>Category</p>
                 <p className="text-sm font-bold" style={{ color: '#C9A84C' }}>
                   {CATEGORIES.find(c => c.key === category)?.label}
                 </p>

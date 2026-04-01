@@ -118,7 +118,7 @@ function ChargeRow({ label, value, onChange, autoCalc, onAutoClick }: {
 }) {
   return (
     <div className="flex items-center gap-2">
-      <Label className="text-xs w-36 flex-shrink-0" style={{ color: '#6B7280' }}>{label}</Label>
+      <Label className="text-xs w-36 flex-shrink-0" style={{ color: 'var(--wv-text-secondary)' }}>{label}</Label>
       <div className="flex-1 relative">
         <Input
           type="number" step="0.01" min="0"
@@ -134,7 +134,7 @@ function ChargeRow({ label, value, onChange, autoCalc, onAutoClick }: {
         )}
       </div>
       {autoCalc !== undefined && (
-        <span className="text-[10px] w-20 text-right flex-shrink-0" style={{ color: '#9CA3AF' }}>
+        <span className="text-[10px] w-20 text-right flex-shrink-0" style={{ color: 'var(--wv-text-muted)' }}>
           calc: ₹{autoCalc}
         </span>
       )}
@@ -371,6 +371,8 @@ function IndianStocksFormContent() {
   useEffect(() => {
     if (!selectedFamily) return;
     setFamilyId(selectedFamily);
+    setPortfolioName('');
+    setBrokerId(null);
     const targetFamily = selectedFamily;
     (async () => {
       console.log('Fetching members for family:', targetFamily);
@@ -616,6 +618,7 @@ function IndianStocksFormContent() {
         portfolioName:   portfolioName,
         brokerId,
         memberId:        member,
+        familyId:        familyId || undefined,
         currentPrice: stockPrice?.price ?? null,
         bonusRatio,  splitRatio,  splitFactor,
         rightsRatio, rightsPrice,
@@ -686,19 +689,19 @@ function IndianStocksFormContent() {
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: 'rgba(27,42,74,0.08)' }}>
-          <TrendingUp className="w-5 h-5" style={{ color: '#1B2A4A' }} />
+          style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+          <TrendingUp className="w-5 h-5" style={{ color: 'var(--wv-text)' }} />
         </div>
         <div>
-          <h1 className="font-display text-xl font-semibold" style={{ color: '#1A1A2E' }}>{isEditMode ? 'Edit Transaction' : 'Indian Stocks'}</h1>
-          <p className="text-xs" style={{ color: '#9CA3AF' }}>{isEditMode ? 'Update the details of this transaction' : 'Track NSE/BSE equity holdings across all transaction types'}</p>
+          <h1 className="font-display text-xl font-semibold" style={{ color: 'var(--wv-text)' }}>{isEditMode ? 'Edit Transaction' : 'Indian Stocks'}</h1>
+          <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>{isEditMode ? 'Update the details of this transaction' : 'Track NSE/BSE equity holdings across all transaction types'}</p>
         </div>
       </div>
 
       {toast && <ToastBanner toast={toast} onClose={() => setToast(null)} />}
 
       <Tabs defaultValue="manual">
-        <TabsList className="mb-5 w-full" style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
+        <TabsList className="mb-5 w-full" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
           <TabsTrigger value="manual" className="flex-1 gap-1.5 text-xs data-[state=active]:bg-white">
             <TrendingUp className="w-3.5 h-3.5" />Manual Entry
           </TabsTrigger>
@@ -715,14 +718,14 @@ function IndianStocksFormContent() {
 
           {/* Step 1 — Portfolio & Broker */}
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
               Step 1 — Portfolio &amp; Distributor
             </p>
 
             {/* Family selector */}
             {families.length > 1 && (
               <div className="space-y-1.5 mb-4">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Family</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family</Label>
                 <div className="flex flex-wrap gap-2">
                   {families.map(f => (
                     <button key={f.id}
@@ -731,7 +734,7 @@ function IndianStocksFormContent() {
                       style={{
                         backgroundColor: selectedFamily === f.id ? '#1B2A4A' : 'transparent',
                         color: selectedFamily === f.id ? 'white' : '#6B7280',
-                        borderColor: selectedFamily === f.id ? '#1B2A4A' : '#E8E5DD',
+                        borderColor: selectedFamily === f.id ? '#1B2A4A' : 'var(--wv-border)',
                       }}>
                       {f.name}
                     </button>
@@ -743,7 +746,7 @@ function IndianStocksFormContent() {
             {/* Family member */}
             {members.length > 1 && (
               <div className="space-y-1.5 mb-4">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>Family Member</Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Family Member</Label>
                 <Select value={member} onValueChange={setMember}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -755,7 +758,7 @@ function IndianStocksFormContent() {
 
             {/* Portfolio */}
             <div className="space-y-1.5 mb-4">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Portfolio</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio</Label>
               <PortfolioSelector
                 familyId={familyId}
                 memberId={member}
@@ -767,7 +770,7 @@ function IndianStocksFormContent() {
 
             {/* Broker */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: '#6B7280' }}>Distributor / Demat Account</Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Distributor / Demat Account</Label>
               <BrokerSelector
                 familyId={familyId}
                 selectedBrokerId={brokerId}
@@ -779,13 +782,13 @@ function IndianStocksFormContent() {
 
           {/* Step 2 — Stock Search */}
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
               Step 2 — Search Stock
             </p>
 
             <div className="relative">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#9CA3AF' }} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--wv-text-muted)' }} />
                 <Input
                   value={query}
                   onChange={e => { if (!isEditMode && !preloadHoldingId) { setQuery(e.target.value); setSelectedStock(null); setStockPrice(null); } }}
@@ -795,8 +798,8 @@ function IndianStocksFormContent() {
                   className={`h-9 text-xs pl-9 pr-8 ${isEditMode || preloadHoldingId ? 'bg-[#F7F5F0] cursor-not-allowed' : ''}`}
                 />
                 {searching
-                  ? <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin" style={{ color: '#9CA3AF' }} />
-                  : <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#9CA3AF' }} />
+                  ? <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin" style={{ color: 'var(--wv-text-muted)' }} />
+                  : <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--wv-text-muted)' }} />
                 }
               </div>
 
@@ -805,7 +808,7 @@ function IndianStocksFormContent() {
                 <>
                   <div className="fixed inset-0" style={{ zIndex: 9990 }} onClick={() => setShowDrop(false)} />
                   <div className="absolute top-full mt-1 left-0 right-0 rounded-xl border bg-white"
-                    style={{ borderColor: '#E8E5DD', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+                    style={{ borderColor: 'var(--wv-border)', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
                     {results.map((s) => (
                       <button key={s.symbol}
                         className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[#F7F5F0] text-left border-b last:border-0 transition-colors"
@@ -817,12 +820,12 @@ function IndianStocksFormContent() {
                             {s.symbol.slice(0, 2)}
                           </div>
                           <div>
-                            <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>{s.symbol}</p>
-                            <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{s.companyName}</p>
+                            <p className="text-xs font-bold" style={{ color: 'var(--wv-text)' }}>{s.symbol}</p>
+                            <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{s.companyName}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-[10px] font-medium" style={{ color: '#6B7280' }}>{s.exchange}</p>
+                          <p className="text-[10px] font-medium" style={{ color: 'var(--wv-text-secondary)' }}>{s.exchange}</p>
                           <p className="text-[10px]" style={{ color: sectorColor(s.sector) }}>{s.sector}</p>
                         </div>
                       </button>
@@ -843,28 +846,28 @@ function IndianStocksFormContent() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-bold" style={{ color: '#1A1A2E' }}>{selectedStock.companyName}</p>
+                    <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{selectedStock.companyName}</p>
                     <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
                       style={{ backgroundColor: sectorColor(selectedStock.sector) + '22', color: sectorColor(selectedStock.sector) }}>
                       {selectedStock.sector}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                    <span className="text-[10px]" style={{ color: '#6B7280' }}>
+                    <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
                       {selectedStock.symbol} · {selectedStock.exchange} · {selectedStock.industry}
                     </span>
                     {selectedStock.isin && (
-                      <span className="text-[10px]" style={{ color: '#9CA3AF' }}>ISIN: {selectedStock.isin}</span>
+                      <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>ISIN: {selectedStock.isin}</span>
                     )}
                   </div>
                   {priceLoading ? (
                     <div className="flex items-center gap-1 mt-1">
                       <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#C9A84C' }} />
-                      <span className="text-[10px]" style={{ color: '#9CA3AF' }}>Fetching price…</span>
+                      <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Fetching price…</span>
                     </div>
                   ) : stockPrice ? (
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-sm font-bold" style={{ color: '#1A1A2E' }}>
+                      <span className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>
                         ₹{stockPrice.price.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                       </span>
                       <span className={`text-xs font-medium flex items-center gap-0.5`}
@@ -874,7 +877,7 @@ function IndianStocksFormContent() {
                           : <TrendingDown className="w-3 h-3" />}
                         {stockPrice.changePct >= 0 ? '+' : ''}{stockPrice.changePct}%
                       </span>
-                      <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                      <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                         H: ₹{stockPrice.dayHigh.toLocaleString('en-IN')} · L: ₹{stockPrice.dayLow.toLocaleString('en-IN')}
                       </span>
                     </div>
@@ -882,7 +885,7 @@ function IndianStocksFormContent() {
                 </div>
                 <button className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-100"
                   onClick={() => { setSelectedStock(null); setQuery(''); setStockPrice(null); }}>
-                  <X className="w-3.5 h-3.5" style={{ color: '#9CA3AF' }} />
+                  <X className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-muted)' }} />
                 </button>
               </div>
             )}
@@ -890,7 +893,7 @@ function IndianStocksFormContent() {
             {/* Editable sector */}
             {selectedStock && (
               <div className="mt-3 space-y-1.5">
-                <Label className="text-xs" style={{ color: '#6B7280' }}>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                   Sector {selectedStock.sector && <AutoTag label="from search" />}
                 </Label>
                 <div className="flex gap-2">
@@ -898,7 +901,7 @@ function IndianStocksFormContent() {
                     value={sectorOverride ?? selectedStock.sector ?? ''}
                     onChange={e => setSectorOverride(e.target.value)}
                     className="h-9 text-xs rounded-lg border px-2 flex-1"
-                    style={{ borderColor: '#E8E5DD', color: '#1A1A2E', backgroundColor: 'white' }}>
+                    style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)', backgroundColor: 'white' }}>
                     <option value="">Select sector...</option>
                     {['IT', 'Banking', 'Pharma', 'Auto', 'FMCG', 'Energy', 'Metals', 'Chemicals',
                       'Industrials', 'Infrastructure', 'Real Estate', 'Media', 'Telecom', 'Textiles',
@@ -921,7 +924,7 @@ function IndianStocksFormContent() {
           {/* Step 3 — Transaction Details */}
           {selectedStock && (
             <div className="wv-card p-5">
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
                 Step 3 — Transaction Details
               </p>
             {preloadHoldingId && selectedStock && (
@@ -939,7 +942,7 @@ function IndianStocksFormContent() {
                     style={{
                       backgroundColor: txnType === t.key ? '#1B2A4A' : 'transparent',
                       color:           txnType === t.key ? 'white'   : '#6B7280',
-                      borderColor:     txnType === t.key ? '#1B2A4A' : '#E8E5DD',
+                      borderColor:     txnType === t.key ? '#1B2A4A' : 'var(--wv-border)',
                     }}>
                     {t.label}
                   </button>
@@ -951,7 +954,7 @@ function IndianStocksFormContent() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Date</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Date</Label>
                       <Input
                         type="date" value={date} onChange={e => setDate(e.target.value)}
                         className="h-9 text-xs"
@@ -959,7 +962,7 @@ function IndianStocksFormContent() {
                       <FieldError msg={errors.date} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                         Quantity (shares)
                       </Label>
                       <Input
@@ -970,7 +973,7 @@ function IndianStocksFormContent() {
                       <FieldError msg={errors.quantity} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                         {txnType === 'sell' ? 'Sell' : txnType === 'rights' ? 'Rights'  : 'Buy'} Price (₹)
                         {priceLoaded && <AutoTag label="auto-fetched" />}
                       </Label>
@@ -986,7 +989,7 @@ function IndianStocksFormContent() {
                   {/* ISIN auto-filled */}
                   {selectedStock.isin && (
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
                         ISIN <AutoTag label="auto-filled" />
                       </Label>
                       <Input value={selectedStock.isin} readOnly className="h-8 text-xs font-mono bg-[#F7F5F0]" />
@@ -996,7 +999,7 @@ function IndianStocksFormContent() {
                   {/* Charges */}
                   <div className="pt-3 border-t space-y-2.5" style={{ borderColor: '#F0EDE6' }}>
                     <div className="flex items-center justify-between mb-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>Charges</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--wv-text-muted)' }}>Charges</p>
                       {value > 0 && (
                         <button onClick={applyAutoCharges}
                           className="text-[10px] px-2 py-0.5 rounded font-medium"
@@ -1023,16 +1026,16 @@ function IndianStocksFormContent() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Bonus Ratio</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Bonus Ratio</Label>
                       <Input value={bonusRatio} onChange={e => setBonusRatio(e.target.value)} placeholder="1:2 (1 bonus per 2 held)" className="h-9 text-xs" />
                       <FieldError msg={errors.bonusRatio} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Existing Quantity (your holdings)</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Existing Quantity (your holdings)</Label>
                       <Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="500" className="h-9 text-xs" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Record Date</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Record Date</Label>
                       <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-xs" />
                       <FieldError msg={errors.date} />
                     </div>
@@ -1056,16 +1059,16 @@ function IndianStocksFormContent() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Split Ratio (New : Old)</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Split Ratio (New : Old)</Label>
                       <Input value={splitRatio} onChange={e => setSplitRatio(e.target.value)} placeholder="5:1 (1 share → 5 shares)" className="h-9 text-xs" />
                       <FieldError msg={errors.splitRatio} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Existing Quantity</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Existing Quantity</Label>
                       <Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="100" className="h-9 text-xs" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Record Date</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Record Date</Label>
                       <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-xs" />
                       <FieldError msg={errors.date} />
                     </div>
@@ -1076,7 +1079,7 @@ function IndianStocksFormContent() {
                     const newQty = Math.round(parseFloat(quantity) * factor);
                     return (
                       <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.08)' }}>
-                        <p className="text-xs" style={{ color: '#1B2A4A' }}>
+                        <p className="text-xs" style={{ color: 'var(--wv-text)' }}>
                           {quantity} shares → <strong>{newQty} shares</strong> · Avg price adjusted by ÷{factor.toFixed(2)}
                         </p>
                       </div>
@@ -1089,11 +1092,11 @@ function IndianStocksFormContent() {
               {txnType === 'rights' && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Rights Ratio</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Rights Ratio</Label>
                     <Input value={rightsRatio} onChange={e => setRightsRatio(e.target.value)} placeholder="1:5 (1 right per 5 held)" className="h-9 text-xs" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs" style={{ color: '#6B7280' }}>Rights Issue Price (₹)</Label>
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Rights Issue Price (₹)</Label>
                     <Input type="number" step="0.01" value={rightsPrice} onChange={e => setRightsPrice(e.target.value)} placeholder="100.00" className="h-9 text-xs" />
                   </div>
                 </div>
@@ -1104,12 +1107,12 @@ function IndianStocksFormContent() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Dividend per Share (₹)</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Dividend per Share (₹)</Label>
                       <Input type="number" step="0.01" value={divPerShare} onChange={e => setDivPerShare(e.target.value)} placeholder="5.00" className="h-9 text-xs" />
                       <FieldError msg={errors.divPerShare} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Dividend Type</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Dividend Type</Label>
                       <Select value={divType} onValueChange={setDivType}>
                         <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -1118,11 +1121,11 @@ function IndianStocksFormContent() {
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Ex-Dividend Date</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Ex-Dividend Date</Label>
                       <Input type="date" value={exDate} onChange={e => setExDate(e.target.value)} className="h-9 text-xs" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs" style={{ color: '#6B7280' }}>Payment Date</Label>
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Payment Date</Label>
                       <Input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="h-9 text-xs" />
                     </div>
                   </div>
@@ -1142,20 +1145,20 @@ function IndianStocksFormContent() {
                 <div className="mt-4 p-3 rounded-xl grid grid-cols-4 gap-3"
                   style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.08)' }}>
                   <div>
-                    <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                    <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                       {txnType === 'buy' ? 'Invested' : 'Sale Value'}
                     </p>
-                    <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>{formatLargeINR(value)}</p>
+                    <p className="text-xs font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(value)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px]" style={{ color: '#9CA3AF' }}>Total Charges</p>
-                    <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>₹{totalFees.toFixed(2)}</p>
+                    <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Total Charges</p>
+                    <p className="text-xs font-bold" style={{ color: 'var(--wv-text)' }}>₹{totalFees.toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                    <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                       {txnType === 'buy' ? 'Total Cost' : 'Net Proceeds'}
                     </p>
-                    <p className="text-xs font-bold" style={{ color: '#1A1A2E' }}>{formatLargeINR(txnType === 'buy' ? totalCost : value - totalFees)}</p>
+                    <p className="text-xs font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(txnType === 'buy' ? totalCost : value - totalFees)}</p>
                   </div>
                 </div>
               )}
@@ -1165,9 +1168,9 @@ function IndianStocksFormContent() {
           {/* Holder details are managed at the Distributor (broker) level */}
           {selectedStock && (
             <div className="px-4 py-3 rounded-xl flex items-center gap-2 text-xs"
-              style={{ backgroundColor: '#F7F5F0', border: '1px solid #E8E5DD' }}>
-              <User className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#9CA3AF' }} />
-              <span style={{ color: '#6B7280' }}>Holder &amp; demat details are managed per distributor.</span>
+              style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+              <User className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--wv-text-muted)' }} />
+              <span style={{ color: 'var(--wv-text-secondary)' }}>Holder &amp; demat details are managed per distributor.</span>
               <button
                 type="button"
                 onClick={() => router.push('/settings?tab=distributors')}
@@ -1182,14 +1185,14 @@ function IndianStocksFormContent() {
           {selectedStock && (
             <div className="flex gap-3">
               <Button onClick={() => handleSave(false)} disabled={saving} className="flex-1 h-10 text-xs font-semibold"
-                style={{ backgroundColor: '#C9A84C', color: '#1B2A4A' }}>
+                style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}>
                 {saving ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Saving…</> : `Save ${txnType.charAt(0).toUpperCase() + txnType.slice(1)}`}
               </Button>
               <Button onClick={() => handleSave(true)} disabled={saving} className="flex-1 h-10 text-xs font-semibold text-white"
                 style={{ backgroundColor: '#1B2A4A' }}>
                 Save &amp; Add Another
               </Button>
-              <Button variant="outline" className="h-10 text-xs px-4" style={{ borderColor: '#E8E5DD', color: '#6B7280' }}
+              <Button variant="outline" className="h-10 text-xs px-4" style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}
                 onClick={() => router.back()}>
                 Cancel
               </Button>
@@ -1200,14 +1203,14 @@ function IndianStocksFormContent() {
         {/* ── Tab 2: Import ─────────────────────────────────────────────────── */}
         <TabsContent value="import">
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
               Import Contract Note / Trade Statement
             </p>
             <div className="grid grid-cols-2 gap-3 mb-5">
               {['Zerodha Tradebook CSV','Groww Trade Report','Angel One Report','ICICI Direct CAS','HDFC Securities','Upstox Trade Report'].map(fmt => (
-                <div key={fmt} className="p-3 rounded-xl border flex items-center gap-2" style={{ borderColor: '#E8E5DD' }}>
+                <div key={fmt} className="p-3 rounded-xl border flex items-center gap-2" style={{ borderColor: 'var(--wv-border)' }}>
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#C9A84C' }} />
-                  <span className="text-xs" style={{ color: '#6B7280' }}>{fmt}</span>
+                  <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{fmt}</span>
                 </div>
               ))}
             </div>
@@ -1215,16 +1218,16 @@ function IndianStocksFormContent() {
               style={{ borderColor: 'rgba(201,168,76,0.3)', backgroundColor: 'rgba(201,168,76,0.04)' }}>
               <Building2 className="w-8 h-8" style={{ color: '#C9A84C' }} />
               <p className="text-sm font-semibold" style={{ color: '#C9A84C' }}>Coming Soon</p>
-              <p className="text-xs text-center" style={{ color: '#9CA3AF' }}>
+              <p className="text-xs text-center" style={{ color: 'var(--wv-text-muted)' }}>
                 Upload your broker tradebook CSV or contract note PDF.<br />
                 We&apos;ll parse and auto-map all your transactions.
               </p>
             </div>
             <label className="flex flex-col items-center justify-center w-full h-32 rounded-xl border-2 border-dashed cursor-not-allowed opacity-50"
-              style={{ borderColor: '#E8E5DD' }}>
-              <Upload className="w-7 h-7 mb-2" style={{ color: '#9CA3AF' }} />
-              <p className="text-sm font-medium" style={{ color: '#6B7280' }}>Upload statement</p>
-              <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>.xlsx, .csv, .pdf</p>
+              style={{ borderColor: 'var(--wv-border)' }}>
+              <Upload className="w-7 h-7 mb-2" style={{ color: 'var(--wv-text-muted)' }} />
+              <p className="text-sm font-medium" style={{ color: 'var(--wv-text-secondary)' }}>Upload statement</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--wv-text-muted)' }}>.xlsx, .csv, .pdf</p>
             </label>
           </div>
         </TabsContent>
@@ -1232,7 +1235,7 @@ function IndianStocksFormContent() {
         {/* ── Tab 3: Broker Sync ─────────────────────────────────────────────── */}
         <TabsContent value="sync">
           <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#9CA3AF' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
               Broker API Sync
             </p>
             <div className="grid grid-cols-2 gap-3">
@@ -1244,7 +1247,7 @@ function IndianStocksFormContent() {
                 { name: 'HDFC Securities',color: '#003087', letter: 'H', status: 'Soon' },
                 { name: 'Upstox',         color: '#5D47D4', letter: 'U', status: 'Soon' },
               ].map(api => (
-                <div key={api.name} className="p-4 rounded-xl border" style={{ borderColor: '#E8E5DD' }}>
+                <div key={api.name} className="p-4 rounded-xl border" style={{ borderColor: 'var(--wv-border)' }}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
                       style={{ backgroundColor: api.color }}>
@@ -1255,9 +1258,9 @@ function IndianStocksFormContent() {
                       Coming Soon
                     </span>
                   </div>
-                  <p className="text-xs font-semibold mb-3" style={{ color: '#1A1A2E' }}>{api.name}</p>
+                  <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>{api.name}</p>
                   <Button disabled className="w-full h-7 text-[11px]"
-                    style={{ backgroundColor: '#F7F5F0', color: '#9CA3AF' }}>
+                    style={{ backgroundColor: 'var(--wv-surface-2)', color: 'var(--wv-text-muted)' }}>
                     Connect
                   </Button>
                 </div>

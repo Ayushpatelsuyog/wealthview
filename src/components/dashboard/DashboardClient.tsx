@@ -135,7 +135,7 @@ export function DashboardClient() {
     return (
       <div className="p-6 flex items-center justify-center min-h-64">
         <div className="text-center">
-          <p className="text-sm mb-3" style={{ color: '#6B7280' }}>{error}</p>
+          <p className="text-sm mb-3" style={{ color: 'var(--wv-text-secondary)' }}>{error}</p>
           <button
             onClick={() => load(true)}
             className="text-xs font-semibold px-4 py-2 rounded-lg"
@@ -155,7 +155,7 @@ export function DashboardClient() {
       {/* Toolbar: last updated + refresh */}
       <div className="flex items-center justify-end gap-3">
         {snap.lastUpdated && (
-          <span className="text-[11px]" style={{ color: '#9CA3AF' }}>
+          <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>
             Last updated: {formatTime(snap.lastUpdated)}
           </span>
         )}
@@ -163,7 +163,7 @@ export function DashboardClient() {
           onClick={() => load(true)}
           disabled={isRefreshing}
           className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg transition-opacity disabled:opacity-50"
-          style={{ color: '#6B7280', backgroundColor: '#F7F5F0' }}
+          style={{ color: 'var(--wv-text-secondary)', backgroundColor: 'var(--wv-surface-2)' }}
         >
           <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
           Refresh

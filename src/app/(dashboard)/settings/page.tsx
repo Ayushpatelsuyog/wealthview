@@ -537,7 +537,7 @@ function SettingsContent() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1B2A4A' }} />
+        <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--wv-text)' }} />
       </div>
     );
   }
@@ -758,7 +758,7 @@ function SettingsContent() {
               {/* Add Member inline form */}
               {showAddMember && (
                 <div className="border rounded-lg p-4 space-y-3" style={{ borderColor: '#C9A84C', backgroundColor: '#FDFBF5' }}>
-                  <p className="text-xs font-semibold" style={{ color: '#1B2A4A' }}>New Family Member</p>
+                  <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>New Family Member</p>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1">
                       <Label className="text-xs">Full Name <span className="text-red-400">*</span></Label>
@@ -848,7 +848,7 @@ function SettingsContent() {
                     const isExpanded = expandedBroker === broker.id;
                     const isSaving = brokerSaving[broker.id] ?? false;
                     return (
-                      <div key={broker.id} className="border rounded-xl overflow-hidden" style={{ borderColor: '#E8E5DD' }}>
+                      <div key={broker.id} className="border rounded-xl overflow-hidden" style={{ borderColor: 'var(--wv-border)' }}>
                         {/* Header */}
                         <button
                           className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
@@ -874,7 +874,7 @@ function SettingsContent() {
                           <div className="px-4 pb-4 space-y-4 border-t" style={{ borderColor: '#F0EDE6' }}>
                             {/* Demat / DP Info */}
                             <div className="mt-4">
-                              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#9CA3AF' }}>Demat Account</p>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--wv-text-muted)' }}>Demat Account</p>
                               <div className="grid grid-cols-2 gap-3">
                                 {[
                                   { key: 'dp_id' as keyof CmlFields, label: 'DP ID (Depository Participant ID)', ph: 'e.g. IN301549' },
@@ -897,7 +897,7 @@ function SettingsContent() {
                                           checked={cml.depository === dep}
                                           onChange={() => updateCml(broker.id, 'depository', dep)}
                                           className="w-3.5 h-3.5" />
-                                        <span className="text-xs font-medium" style={{ color: '#1A1A2E' }}>{dep}</span>
+                                        <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{dep}</span>
                                       </label>
                                     ))}
                                   </div>
@@ -907,7 +907,7 @@ function SettingsContent() {
 
                             {/* Holder Info */}
                             <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#9CA3AF' }}>Holder Details</p>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--wv-text-muted)' }}>Holder Details</p>
                               <div className="grid grid-cols-2 gap-3">
                                 {[
                                   { key: 'first_holder' as keyof CmlFields, label: 'First Holder Name', ph: 'Full name' },
@@ -927,7 +927,7 @@ function SettingsContent() {
 
                             {/* Bank Info */}
                             <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#9CA3AF' }}>Bank Details</p>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--wv-text-muted)' }}>Bank Details</p>
                               <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
                                   <Label className="text-xs">Bank Name</Label>

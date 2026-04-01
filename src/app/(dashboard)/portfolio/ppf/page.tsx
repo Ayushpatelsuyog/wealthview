@@ -195,8 +195,8 @@ export default function PPFPortfolioPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#1B2A4A' }} />
-        <span className="ml-2 text-sm" style={{ color: '#6B7280' }}>Loading PPF accounts...</span>
+        <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--wv-text)' }} />
+        <span className="ml-2 text-sm" style={{ color: 'var(--wv-text-secondary)' }}>Loading PPF accounts...</span>
       </div>
     );
   }
@@ -220,8 +220,8 @@ export default function PPFPortfolioPage() {
             <Leaf className="w-5 h-5" style={{ color: '#059669' }} />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: '#1B2A4A' }}>PPF Portfolio</h1>
-            <p className="text-xs" style={{ color: '#9CA3AF' }}>Public Provident Fund accounts</p>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--wv-text)' }}>PPF Portfolio</h1>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>Public Provident Fund accounts</p>
           </div>
         </div>
         <Button
@@ -244,30 +244,30 @@ export default function PPFPortfolioPage() {
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <IndianRupee className="w-4 h-4" style={{ color: '#C9A84C' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Total Balance</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Total Balance</p>
           </div>
-          <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(summary.totalBalance)}</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(summary.totalBalance)}</p>
         </div>
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <Landmark className="w-4 h-4" style={{ color: '#C9A84C' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Total Deposits</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Total Deposits</p>
           </div>
-          <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(summary.totalDeposits)}</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(summary.totalDeposits)}</p>
         </div>
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4" style={{ color: '#059669' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Interest Earned</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Interest Earned</p>
           </div>
           <p className="text-lg font-bold" style={{ color: '#059669' }}>{formatLargeINR(summary.totalInterest)}</p>
         </div>
         <div className="wv-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <Leaf className="w-4 h-4" style={{ color: '#C9A84C' }} />
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Accounts</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Accounts</p>
           </div>
-          <p className="text-lg font-bold" style={{ color: '#1B2A4A' }}>{summary.accountCount}</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>{summary.accountCount}</p>
         </div>
       </div>
 
@@ -275,8 +275,8 @@ export default function PPFPortfolioPage() {
       {rows.length === 0 ? (
         <div className="wv-card p-12 text-center">
           <Leaf className="w-10 h-10 mx-auto mb-3" style={{ color: '#D1D5DB' }} />
-          <p className="text-sm font-medium" style={{ color: '#6B7280' }}>No PPF accounts found</p>
-          <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Add your first PPF account to start tracking</p>
+          <p className="text-sm font-medium" style={{ color: 'var(--wv-text-secondary)' }}>No PPF accounts found</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--wv-text-muted)' }}>Add your first PPF account to start tracking</p>
           <Button
             onClick={() => router.push('/add-assets/ppf')}
             className="mt-4 text-white text-sm"
@@ -291,15 +291,15 @@ export default function PPFPortfolioPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr style={{ backgroundColor: '#F7F5F0' }}>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Bank</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Account No.</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Opening Date</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Balance</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Interest Rate</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Maturity Date</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Yrs Remaining</th>
-                  <th className="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Status</th>
+                <tr style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Bank</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Account No.</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Opening Date</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Balance</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Interest Rate</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Maturity Date</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Yrs Remaining</th>
+                  <th className="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -311,12 +311,12 @@ export default function PPFPortfolioPage() {
                     style={{ borderColor: '#F3F0E8' }}
                   >
                     <td className="px-4 py-3">
-                      <p className="font-medium text-sm" style={{ color: '#1B2A4A' }}>{row.bank}</p>
-                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{row.memberName}</p>
+                      <p className="font-medium text-sm" style={{ color: 'var(--wv-text)' }}>{row.bank}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{row.memberName}</p>
                     </td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#374151' }}>{row.accountNumber}</td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#374151' }}>{fmtDate(row.openingDate)}</td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold" style={{ color: '#1B2A4A' }}>{formatLargeINR(row.balance)}</td>
+                    <td className="px-4 py-3 text-sm text-right font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(row.balance)}</td>
                     <td className="px-4 py-3 text-sm text-right" style={{ color: '#374151' }}>{row.interestRate}%</td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#374151' }}>{fmtDate(row.maturityDate)}</td>
                     <td className="px-4 py-3 text-sm text-right" style={{ color: '#374151' }}>{row.yearsRemaining} yrs</td>
@@ -343,7 +343,7 @@ export default function PPFPortfolioPage() {
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="right" className="overflow-y-auto w-full sm:max-w-md">
           <SheetHeader>
-            <SheetTitle style={{ color: '#1B2A4A' }}>PPF Account Details</SheetTitle>
+            <SheetTitle style={{ color: 'var(--wv-text)' }}>PPF Account Details</SheetTitle>
             <SheetDescription>
               {selectedAsset?.bank} — {selectedAsset?.accountNumber}
             </SheetDescription>
@@ -354,47 +354,47 @@ export default function PPFPortfolioPage() {
               {/* Info grid */}
               <div className="wv-card p-4 grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Bank</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.bank}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Bank</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.bank}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Account Number</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.accountNumber}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Account Number</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.accountNumber}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Member</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.memberName}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Member</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.memberName}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Opening Date</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{fmtDate(selectedAsset.openingDate)}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Opening Date</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{fmtDate(selectedAsset.openingDate)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Balance</p>
-                  <p className="text-sm font-bold" style={{ color: '#1B2A4A' }}>{formatLargeINR(selectedAsset.balance)}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Balance</p>
+                  <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(selectedAsset.balance)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Interest Rate</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.interestRate}%</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Interest Rate</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.interestRate}%</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Total Deposits</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{formatLargeINR(selectedAsset.totalDeposits)}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Total Deposits</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(selectedAsset.totalDeposits)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Interest Earned</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Interest Earned</p>
                   <p className="text-sm font-bold" style={{ color: '#059669' }}>{formatLargeINR(selectedAsset.interestEarned)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Maturity Date</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{fmtDate(selectedAsset.maturityDate)}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Maturity Date</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{fmtDate(selectedAsset.maturityDate)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Years Remaining</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{selectedAsset.yearsRemaining} yrs</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Years Remaining</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{selectedAsset.yearsRemaining} yrs</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Status</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Status</p>
                   <span
                     className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
                     style={{
@@ -406,8 +406,8 @@ export default function PPFPortfolioPage() {
                   </span>
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: '#9CA3AF' }}>Last Updated</p>
-                  <p className="text-sm font-medium" style={{ color: '#1B2A4A' }}>{fmtDate(selectedAsset.last_updated)}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Last Updated</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--wv-text)' }}>{fmtDate(selectedAsset.last_updated)}</p>
                 </div>
               </div>
 
