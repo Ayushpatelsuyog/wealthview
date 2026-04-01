@@ -44,8 +44,8 @@ const navGroups: { title: string; items: NavItem[] }[] = [
     title: 'FIXED INCOME',
     items: [
       { label: 'Bonds',          href: '/add-assets/bonds',          icon: FileText },
-      { label: 'Fixed Deposits', href: '/add-assets/fixed-deposits', icon: Landmark  },
-      { label: 'PPF',            href: '/add-assets/ppf',            icon: Leaf },
+      { label: 'Fixed Deposits', href: '/portfolio/fixed-deposits', icon: Landmark, addHref: '/add-assets/fixed-deposits' },
+      { label: 'PPF',            href: '/portfolio/ppf',            icon: Leaf, addHref: '/add-assets/ppf' },
       { label: 'EPF / VPF',      href: '/add-assets/epf-vpf',        icon: UserCheck },
       { label: 'Gratuity',       href: '/add-assets/gratuity',       icon: PiggyBank },
       { label: 'NPS',            href: '/add-assets/nps',            icon: Shield },
@@ -60,7 +60,7 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   {
     title: 'CASH & SAVINGS',
     items: [
-      { label: 'Savings Accounts', href: '/add-assets/savings-accounts', icon: Wallet },
+      { label: 'Savings Accounts', href: '/portfolio/savings-accounts', icon: Wallet, addHref: '/add-assets/savings-accounts' },
     ],
   },
   {
