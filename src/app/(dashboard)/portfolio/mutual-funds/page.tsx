@@ -425,7 +425,12 @@ export default function MutualFundsPortfolioPage() {
         .order('created_at', { ascending: false });
 
       if (dbErr) { setError(dbErr.message); setLoading(false); return; }
-      data = freshData;
+      // Exclude SIF holdings — they have their own portfolio page
+      const filtered = freshData?.filter((h: Record<string, unknown>) => {
+        const meta = h.metadata as Record<string, unknown> | null;
+        return !meta?.is_sif && meta?.category !== 'SIF';
+      }) ?? null;
+      data = filtered;
       if (data) holdingsCacheSet('mf_holdings', data as unknown as RawHolding[]);
     }
 

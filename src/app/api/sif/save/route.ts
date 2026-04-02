@@ -72,7 +72,12 @@ export async function POST(req: NextRequest) {
       asset_type: 'mutual_fund',
       quantity: unitsNum,
       avg_buy_price: navNum,
-      metadata: { amc, scheme_code: schemeCode, category: 'SIF', is_sif: true, folio },
+      metadata: {
+        amc, scheme_code: schemeCode, category: 'SIF', is_sif: true, folio,
+        current_nav: navNum,
+        nav_updated_at: new Date().toISOString(),
+        nav_source: 'manual',
+      },
     }).select('id').single();
     if (hErr) return NextResponse.json({ error: hErr.message }, { status: 500 });
     holdingId = newHolding.id;
