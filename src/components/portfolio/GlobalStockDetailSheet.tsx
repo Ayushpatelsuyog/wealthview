@@ -73,18 +73,21 @@ function txnLabel(txn: Transaction): string {
   const notes = txn.notes?.toLowerCase() ?? '';
   if (notes.includes('bonus'))  return 'Bonus';
   if (notes.includes('split'))  return 'Split';
+  if (notes.includes('rights')) return 'Rights';
   return TXN_CONFIG[txn.type]?.label ?? txn.type;
 }
 function txnBg(txn: Transaction): string {
   const notes = txn.notes?.toLowerCase() ?? '';
-  if (notes.includes('bonus')) return 'rgba(201,168,76,0.12)';
-  if (notes.includes('split')) return 'rgba(99,102,241,0.10)';
+  if (notes.includes('bonus'))  return 'rgba(201,168,76,0.12)';
+  if (notes.includes('split'))  return 'rgba(99,102,241,0.10)';
+  if (notes.includes('rights')) return 'rgba(46,139,139,0.10)';
   return TXN_CONFIG[txn.type]?.bg ?? 'var(--wv-border)';
 }
 function txnColor(txn: Transaction): string {
   const notes = txn.notes?.toLowerCase() ?? '';
-  if (notes.includes('bonus')) return '#C9A84C';
-  if (notes.includes('split')) return '#4338CA';
+  if (notes.includes('bonus'))  return '#C9A84C';
+  if (notes.includes('split'))  return '#4338CA';
+  if (notes.includes('rights')) return '#2E8B8B';
   return TXN_CONFIG[txn.type]?.text ?? '#6B7280';
 }
 

@@ -31,12 +31,18 @@ export async function POST(req: NextRequest) {
     // Stock identity
     symbol, companyName, exchange, currency = 'USD', country, sector,
     // Transaction
-    transactionType = 'buy',  // 'buy' | 'sell' | 'dividend'
+    transactionType = 'buy',  // 'buy' | 'sell' | 'dividend' | 'bonus' | 'split' | 'rights'
     quantity, price, date,
     // FX
     fxRate = 1,
     // Charges
     brokerage = 0, withholdingTax = 0,
+    // Corporate action extras
+    bonusRatio,
+    splitRatio,
+    splitFactor: bodySplitFactor,
+    rightsRatio,
+    rightsPrice: _rightsPrice,
     // Portfolio & broker
     portfolioName = 'Long-term Growth',
     brokerId: passedBrokerId,
@@ -51,11 +57,11 @@ export async function POST(req: NextRequest) {
   if (!symbol || !companyName || !date) {
     return NextResponse.json({ error: 'symbol, companyName and date are required' }, { status: 400 });
   }
-  if (transactionType !== 'dividend' && !quantity) {
+  if (transactionType !== 'dividend' && transactionType !== 'split' && !quantity) {
     return NextResponse.json({ error: 'quantity is required' }, { status: 400 });
   }
-  if (transactionType === 'buy' && !price) {
-    return NextResponse.json({ error: 'price is required for buy' }, { status: 400 });
+  if ((transactionType === 'buy' || transactionType === 'rights') && !price) {
+    return NextResponse.json({ error: 'price is required for buy/rights' }, { status: 400 });
   }
 
   // -- 1. Get user profile --
@@ -127,7 +133,7 @@ export async function POST(req: NextRequest) {
   const qty       = parseFloat(quantity) || 0;
   const px        = parseFloat(price)    || 0;  // price in LOCAL currency
   const fxRateNum = parseFloat(String(fxRate)) || 1;
-  const totalFees = (parseFloat(String(brokerage)) || 0) + (parseFloat(String(withholdingTax)) || 0);
+  let totalFees = (parseFloat(String(brokerage)) || 0) + (parseFloat(String(withholdingTax)) || 0);
 
   if (existingHolding) {
     consolidated = true;
@@ -139,12 +145,20 @@ export async function POST(req: NextRequest) {
     let updatedQty: number;
     let updatedAvg: number;
 
-    if (transactionType === 'buy') {
+    if (transactionType === 'buy' || transactionType === 'rights') {
       // Weighted average of local currency prices
       updatedQty = oldQty + qty;
       updatedAvg = updatedQty > 0
         ? (oldQty * oldAvg + qty * px) / updatedQty
         : oldAvg;
+    } else if (transactionType === 'bonus') {
+      // Bonus shares are free: total invested stays same, qty increases
+      updatedQty = oldQty + qty;
+      updatedAvg = updatedQty > 0 ? (oldQty * oldAvg) / updatedQty : 0;
+    } else if (transactionType === 'split') {
+      const splitFactor = bodySplitFactor ?? (qty / oldQty);
+      updatedQty = oldQty * splitFactor;
+      updatedAvg = splitFactor > 0 ? oldAvg / splitFactor : oldAvg;
     } else if (transactionType === 'sell') {
       // Reduce qty, keep avg
       updatedQty = Math.max(0, oldQty - qty);
@@ -206,6 +220,10 @@ export async function POST(req: NextRequest) {
   let txnPrice = px;
   let txnQty   = qty;
 
+  if (transactionType === 'bonus' || transactionType === 'split') {
+    totalFees = 0;
+  }
+
   switch (transactionType) {
     case 'buy':
       txnType  = 'buy';
@@ -214,6 +232,19 @@ export async function POST(req: NextRequest) {
     case 'sell':
       txnType  = 'sell';
       if (!txnNotes) txnNotes = `Sell ${symbol} @ ${currency} ${px.toFixed(2)} | FX: ${fxRateNum}`;
+      break;
+    case 'bonus':
+      txnType  = 'buy';
+      txnPrice = 0;
+      if (!txnNotes) txnNotes = `Bonus Issue — Ratio: ${bonusRatio ?? ''} | FX: ${fxRateNum}`;
+      break;
+    case 'split':
+      txnType  = 'buy';
+      if (!txnNotes) txnNotes = `Stock Split — Ratio: ${splitRatio ?? ''} | FX: ${fxRateNum}`;
+      break;
+    case 'rights':
+      txnType  = 'buy';
+      if (!txnNotes) txnNotes = `Rights Issue — Ratio: ${rightsRatio ?? ''} | Price: ${currency} ${px.toFixed(2)} | FX: ${fxRateNum}`;
       break;
     case 'dividend':
       txnType  = 'dividend';

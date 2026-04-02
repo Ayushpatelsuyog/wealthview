@@ -48,11 +48,23 @@ interface HoldingRow extends RawHolding {
   amc: string;
   memberName: string;
   navStale: boolean;
+  navSource: 'live' | 'manual' | 'unknown';
+  navDate: string | null;
+  schemeCode: string | null;
+  navLoading: boolean;
 }
 
 interface Toast {
   type: 'success' | 'error';
   message: string;
+}
+
+interface BatchNavResult {
+  nav: number;
+  navDate: string;
+  fundName: string;
+  fundHouse: string;
+  previousNav?: number | null;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -90,6 +102,26 @@ function PnlBadge({ value, pct }: { value: number; pct: number }) {
   );
 }
 
+function NavSourceTag({ source }: { source: 'live' | 'manual' | 'unknown' }) {
+  if (source === 'live') {
+    return (
+      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+        style={{ backgroundColor: 'rgba(5,150,105,0.12)', color: '#059669' }}>
+        Live
+      </span>
+    );
+  }
+  if (source === 'manual') {
+    return (
+      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+        style={{ backgroundColor: 'rgba(201,168,76,0.15)', color: '#92620A' }}>
+        Manual
+      </span>
+    );
+  }
+  return null;
+}
+
 function SummaryCard({
   label, value, subtext, color,
 }: {
@@ -102,6 +134,14 @@ function SummaryCard({
       {subtext && <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{subtext}</p>}
     </div>
   );
+}
+
+function fmtNavDate(raw: string): string {
+  if (!raw) return '';
+  const [d, m, y] = raw.split('-');
+  if (!d || !m || !y) return raw;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -124,6 +164,10 @@ export default function SifPortfolioPage() {
   const [editNavId, setEditNavId] = useState<string | null>(null);
   const [editNavValue, setEditNavValue] = useState('');
   const [updatingNav, setUpdatingNav] = useState(false);
+
+  // Refresh state
+  const [refreshingAll, setRefreshingAll] = useState(false);
+  const [refreshingSingle, setRefreshingSingle] = useState<string | null>(null);
 
   // ── Load holdings ──────────────────────────────────────────────────────────
 
@@ -167,11 +211,14 @@ export default function SifPortfolioPage() {
       const pnl = currentValue - invested;
       const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
       const ownerId = h.portfolios?.user_id ?? '';
+      const schemeCode = (h.metadata?.scheme_code as string) ?? null;
 
       // Check if NAV is stale (older than 7 days or never updated)
       const navUpdatedAt = h.metadata?.nav_updated_at as string | undefined;
       const navStale = !navUpdatedAt ||
         (Date.now() - new Date(navUpdatedAt).getTime()) > 7 * 24 * 60 * 60 * 1000;
+
+      const navSource = (h.metadata?.nav_source as 'live' | 'manual') ?? 'unknown';
 
       return {
         ...h,
@@ -183,18 +230,271 @@ export default function SifPortfolioPage() {
         amc: (h.metadata?.amc as string) ?? (h.metadata?.fund_house as string) ?? '',
         memberName: names[ownerId] ?? '',
         navStale,
+        navSource,
+        navDate: (h.metadata?.nav_date as string) ?? null,
+        schemeCode,
+        navLoading: false,
       };
     });
 
     setHoldings(rows);
     setLoading(false);
+
+    // Auto-fetch live NAVs for all holdings that have a scheme_code
+    await fetchNavBatch(rows);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadHoldings();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Update NAV inline ──────────────────────────────────────────────────────
+  // ── Batch-fetch NAVs from mfapi.in ──────────────────────────────────────
+
+  async function fetchNavBatch(baseRows?: HoldingRow[]) {
+    const source = baseRows ?? holdings;
+    // Collect holdings with scheme_code
+    const withCode = source.filter(h => h.schemeCode);
+    if (withCode.length === 0) return;
+
+    const uniqueCodes = Array.from(new Set(withCode.map(h => h.schemeCode!)));
+
+    // Mark those holdings as loading
+    setHoldings(prev => prev.map(h =>
+      h.schemeCode ? { ...h, navLoading: true } : h
+    ));
+
+    try {
+      const res = await fetch('/api/mf/nav/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scheme_codes: uniqueCodes }),
+      });
+      if (!res.ok) throw new Error('Batch NAV fetch failed');
+      const json = await res.json();
+      const results: Record<string, BatchNavResult | null> = json.results ?? {};
+
+      // Apply results and update holdings in DB
+      setHoldings(prev => {
+        const updated = prev.map(h => {
+          if (!h.schemeCode) return h;
+          const navResult = results[h.schemeCode];
+          if (!navResult) return { ...h, navLoading: false };
+
+          const newNav = navResult.nav;
+          const currentValue = Number(h.quantity) * newNav;
+          const pnl = currentValue - h.investedValue;
+          const pnlPct = h.investedValue > 0 ? (pnl / h.investedValue) * 100 : 0;
+
+          return {
+            ...h,
+            currentNav: newNav,
+            currentValue,
+            pnl,
+            pnlPct,
+            navStale: false,
+            navSource: 'live' as const,
+            navDate: navResult.navDate,
+            navLoading: false,
+            metadata: {
+              ...h.metadata,
+              current_nav: newNav,
+              nav_updated_at: new Date().toISOString(),
+              nav_source: 'live',
+              nav_date: navResult.navDate,
+            },
+          };
+        });
+        return updated;
+      });
+
+      // Persist updated NAVs to DB in background
+      for (const h of source) {
+        if (!h.schemeCode) continue;
+        const navResult = results[h.schemeCode];
+        if (!navResult) continue;
+
+        supabase
+          .from('holdings')
+          .update({
+            metadata: {
+              ...h.metadata,
+              current_nav: navResult.nav,
+              nav_updated_at: new Date().toISOString(),
+              nav_source: 'live',
+              nav_date: navResult.navDate,
+            },
+          })
+          .eq('id', h.id)
+          .then(); // fire and forget
+      }
+    } catch {
+      // Batch failed - clear loading state
+      setHoldings(prev => prev.map(h => ({ ...h, navLoading: false })));
+    }
+  }
+
+  // ── Refresh All NAVs button handler ─────────────────────────────────────
+
+  async function handleRefreshAllNavs() {
+    setRefreshingAll(true);
+    const withCode = holdings.filter(h => h.schemeCode);
+    if (withCode.length === 0) {
+      setToast({ type: 'error', message: 'No holdings with scheme codes to refresh' });
+      setRefreshingAll(false);
+      return;
+    }
+
+    const uniqueCodes = Array.from(new Set(withCode.map(h => h.schemeCode!)));
+
+    // Mark as loading
+    setHoldings(prev => prev.map(h =>
+      h.schemeCode ? { ...h, navLoading: true } : h
+    ));
+
+    try {
+      const res = await fetch('/api/mf/nav/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scheme_codes: uniqueCodes, nocache: true }),
+      });
+      if (!res.ok) throw new Error('Batch NAV fetch failed');
+      const json = await res.json();
+      const results: Record<string, BatchNavResult | null> = json.results ?? {};
+
+      let successCount = 0;
+      const totalWithCode = withCode.length;
+
+      setHoldings(prev => {
+        return prev.map(h => {
+          if (!h.schemeCode) return h;
+          const navResult = results[h.schemeCode];
+          if (!navResult) return { ...h, navLoading: false };
+
+          successCount++;
+          const newNav = navResult.nav;
+          const currentValue = Number(h.quantity) * newNav;
+          const pnl = currentValue - h.investedValue;
+          const pnlPct = h.investedValue > 0 ? (pnl / h.investedValue) * 100 : 0;
+
+          return {
+            ...h,
+            currentNav: newNav,
+            currentValue,
+            pnl,
+            pnlPct,
+            navStale: false,
+            navSource: 'live' as const,
+            navDate: navResult.navDate,
+            navLoading: false,
+            metadata: {
+              ...h.metadata,
+              current_nav: newNav,
+              nav_updated_at: new Date().toISOString(),
+              nav_source: 'live',
+              nav_date: navResult.navDate,
+            },
+          };
+        });
+      });
+
+      // Persist to DB
+      for (const h of holdings) {
+        if (!h.schemeCode) continue;
+        const navResult = results[h.schemeCode];
+        if (!navResult) continue;
+
+        supabase
+          .from('holdings')
+          .update({
+            metadata: {
+              ...h.metadata,
+              current_nav: navResult.nav,
+              nav_updated_at: new Date().toISOString(),
+              nav_source: 'live',
+              nav_date: navResult.navDate,
+            },
+          })
+          .eq('id', h.id)
+          .then();
+      }
+
+      const noCode = holdings.length - totalWithCode;
+      let msg = `NAVs refreshed for ${successCount} of ${totalWithCode} fund${totalWithCode !== 1 ? 's' : ''}`;
+      if (noCode > 0) msg += ` (${noCode} without scheme code)`;
+      setToast({
+        type: successCount > 0 ? 'success' : 'error',
+        message: msg,
+      });
+    } catch {
+      setHoldings(prev => prev.map(h => ({ ...h, navLoading: false })));
+      setToast({ type: 'error', message: 'Failed to refresh NAVs' });
+    } finally {
+      setRefreshingAll(false);
+    }
+  }
+
+  // ── Refresh single holding NAV from mfapi.in ───────────────────────────
+
+  async function handleRefreshSingleNav(holdingId: string) {
+    const holding = holdings.find(h => h.id === holdingId);
+    if (!holding?.schemeCode) {
+      setToast({ type: 'error', message: 'No scheme code - use manual NAV update' });
+      return;
+    }
+
+    setRefreshingSingle(holdingId);
+
+    try {
+      const res = await fetch(`/api/mf/nav?scheme_code=${holding.schemeCode}&nocache=1`);
+      if (!res.ok) throw new Error('NAV fetch failed');
+      const data = await res.json();
+
+      const newNav = data.nav;
+      const currentValue = Number(holding.quantity) * newNav;
+      const pnl = currentValue - holding.investedValue;
+      const pnlPct = holding.investedValue > 0 ? (pnl / holding.investedValue) * 100 : 0;
+
+      const updatedMetadata = {
+        ...holding.metadata,
+        current_nav: newNav,
+        nav_updated_at: new Date().toISOString(),
+        nav_source: 'live',
+        nav_date: data.navDate,
+      };
+
+      const { error: updateErr } = await supabase
+        .from('holdings')
+        .update({ metadata: updatedMetadata })
+        .eq('id', holdingId);
+
+      if (updateErr) {
+        setToast({ type: 'error', message: 'Failed to save NAV' });
+      } else {
+        setHoldings(prev => prev.map(h =>
+          h.id === holdingId
+            ? {
+                ...h,
+                currentNav: newNav,
+                currentValue,
+                pnl,
+                pnlPct,
+                navStale: false,
+                navSource: 'live',
+                navDate: data.navDate,
+                metadata: updatedMetadata,
+              }
+            : h
+        ));
+        setToast({ type: 'success', message: `NAV updated: \u20B9${newNav.toFixed(4)}` });
+      }
+    } catch {
+      setToast({ type: 'error', message: 'Failed to fetch live NAV' });
+    } finally {
+      setRefreshingSingle(null);
+    }
+  }
+
+  // ── Update NAV inline (manual) ──────────────────────────────────────────
 
   async function handleNavUpdate(holdingId: string) {
     const newNav = parseFloat(editNavValue);
@@ -209,6 +509,7 @@ export default function SifPortfolioPage() {
       ...holding.metadata,
       current_nav: newNav,
       nav_updated_at: new Date().toISOString(),
+      nav_source: 'manual',
     };
 
     const { error: updateErr } = await supabase
@@ -225,10 +526,10 @@ export default function SifPortfolioPage() {
 
       setHoldings(prev => prev.map(h =>
         h.id === holdingId
-          ? { ...h, currentNav: newNav, currentValue, pnl, pnlPct, navStale: false, metadata: updatedMetadata }
+          ? { ...h, currentNav: newNav, currentValue, pnl, pnlPct, navStale: false, navSource: 'manual' as const, metadata: updatedMetadata }
           : h
       ));
-      setToast({ type: 'success', message: 'NAV updated successfully' });
+      setToast({ type: 'success', message: 'NAV updated manually' });
     }
 
     setEditNavId(null);
@@ -267,6 +568,8 @@ export default function SifPortfolioPage() {
   const totalPnl = totalCurrentValue - totalInvested;
   const totalPnlPct = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
   const staleCount = filteredHoldings.filter(h => h.navStale).length;
+  const liveCount = filteredHoldings.filter(h => h.navSource === 'live').length;
+  const withCodeCount = filteredHoldings.filter(h => h.schemeCode).length;
 
   // ── Detail sheet holding ───────────────────────────────────────────────────
 
@@ -288,17 +591,42 @@ export default function SifPortfolioPage() {
             </h1>
             <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>
               Specialized Investment Funds
+              {liveCount > 0 && (
+                <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                  style={{ backgroundColor: 'rgba(5,150,105,0.1)', color: '#059669' }}>
+                  {liveCount} Live NAV{liveCount > 1 ? 's' : ''}
+                </span>
+              )}
             </p>
           </div>
         </div>
-        <Button
-          onClick={() => router.push('/add-assets/sif')}
-          className="text-white text-xs h-9 gap-1.5"
-          style={{ backgroundColor: '#1B2A4A' }}
-        >
-          <PlusCircle className="w-3.5 h-3.5" />
-          Add SIF
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Refresh All NAVs button */}
+          {withCodeCount > 0 && (
+            <Button
+              onClick={handleRefreshAllNavs}
+              disabled={refreshingAll}
+              variant="outline"
+              className="text-xs h-9 gap-1.5"
+              style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }}
+            >
+              {refreshingAll ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="w-3.5 h-3.5" />
+              )}
+              Refresh All NAVs
+            </Button>
+          )}
+          <Button
+            onClick={() => router.push('/add-assets/sif')}
+            className="text-white text-xs h-9 gap-1.5"
+            style={{ backgroundColor: '#1B2A4A' }}
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            Add SIF
+          </Button>
+        </div>
       </div>
 
       {toast && <ToastBanner toast={toast} onClose={() => setToast(null)} />}
@@ -358,7 +686,10 @@ export default function SifPortfolioPage() {
                 color: '#92620A',
               }}>
               <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>{staleCount} fund{staleCount > 1 ? 's have' : ' has'} stale NAV. Click &quot;Update NAV&quot; to enter the latest value.</span>
+              <span>
+                {staleCount} fund{staleCount > 1 ? 's have' : ' has'} stale NAV.
+                {withCodeCount > 0 ? ' Click "Refresh All NAVs" to auto-update from mfapi.in.' : ' Update NAV manually for funds without scheme codes.'}
+              </span>
             </div>
           )}
 
@@ -368,7 +699,7 @@ export default function SifPortfolioPage() {
             <SummaryCard
               label="Current Value"
               value={formatLargeINR(totalCurrentValue)}
-              subtext={staleCount > 0 ? 'Based on last known NAV' : undefined}
+              subtext={liveCount > 0 ? `${liveCount} with live NAV` : staleCount > 0 ? 'Based on last known NAV' : undefined}
             />
             <SummaryCard
               label="P&L"
@@ -409,14 +740,22 @@ export default function SifPortfolioPage() {
                         {h.memberName && (
                           <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{h.memberName}</p>
                         )}
-                        {h.navStale && (
-                          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
-                            style={{ backgroundColor: 'rgba(201,168,76,0.15)', color: '#92620A' }}>
-                            NAV stale
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1 mt-0.5">
+                          {h.navStale && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+                              style={{ backgroundColor: 'rgba(201,168,76,0.15)', color: '#92620A' }}>
+                              NAV stale
+                            </span>
+                          )}
+                          {!h.schemeCode && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+                              style={{ backgroundColor: 'var(--wv-border)', color: 'var(--wv-text-muted)' }}>
+                              No code
+                            </span>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{h.amc || '—'}</td>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{h.amc || '\u2014'}</td>
                       <td className="px-4 py-3 text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                         {h.quantity.toLocaleString('en-IN', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                       </td>
@@ -459,9 +798,23 @@ export default function SifPortfolioPage() {
                             </button>
                           </div>
                         ) : (
-                          <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
-                            {'\u20B9'}{h.currentNav.toFixed(4)}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <div>
+                              <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
+                                {'\u20B9'}{h.currentNav.toFixed(4)}
+                              </span>
+                              {h.navDate && (
+                                <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>
+                                  {fmtNavDate(h.navDate)}
+                                </p>
+                              )}
+                            </div>
+                            {h.navLoading ? (
+                              <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#C9A84C' }} />
+                            ) : (
+                              <NavSourceTag source={h.navSource} />
+                            )}
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
@@ -475,22 +828,36 @@ export default function SifPortfolioPage() {
                       </td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
+                          {/* Auto-refresh NAV from mfapi.in */}
+                          {h.schemeCode && (
+                            <button
+                              onClick={() => handleRefreshSingleNav(h.id)}
+                              disabled={refreshingSingle === h.id}
+                              className="p-1.5 rounded-lg hover:bg-green-50 transition-colors"
+                              title="Auto-fetch live NAV"
+                            >
+                              {refreshingSingle === h.id
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: '#059669' }} />
+                                : <RefreshCw className="w-3.5 h-3.5" style={{ color: '#059669' }} />}
+                            </button>
+                          )}
+                          {/* Manual NAV edit fallback */}
                           <button
                             onClick={() => {
                               setEditNavId(h.id);
                               setEditNavValue(h.currentNav.toFixed(4));
                             }}
                             className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-                            title="Update NAV"
+                            title="Edit NAV manually"
                           >
-                            <RefreshCw className="w-3.5 h-3.5" style={{ color: '#C9A84C' }} />
+                            <Pencil className="w-3.5 h-3.5" style={{ color: '#C9A84C' }} />
                           </button>
                           <button
                             onClick={() => setDetailId(h.id)}
                             className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
                             title="View details"
                           >
-                            <Pencil className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-secondary)' }} />
+                            <Shield className="w-3.5 h-3.5" style={{ color: 'var(--wv-text-secondary)' }} />
                           </button>
                           <button
                             onClick={() => handleDelete(h.id)}
@@ -530,11 +897,11 @@ export default function SifPortfolioPage() {
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'Fund Name', value: detailHolding.name },
-                    { label: 'AMC', value: detailHolding.amc || '—' },
-                    { label: 'Scheme Code', value: (detailHolding.metadata?.scheme_code as string) || detailHolding.symbol || '—' },
-                    { label: 'Folio', value: (detailHolding.metadata?.folio as string) || '—' },
-                    { label: 'Portfolio', value: detailHolding.portfolios?.name || '—' },
-                    { label: 'Member', value: detailHolding.memberName || '—' },
+                    { label: 'AMC', value: detailHolding.amc || '\u2014' },
+                    { label: 'Scheme Code', value: detailHolding.schemeCode || (detailHolding.metadata?.scheme_code as string) || detailHolding.symbol || '\u2014' },
+                    { label: 'Folio', value: (detailHolding.metadata?.folio as string) || '\u2014' },
+                    { label: 'Portfolio', value: detailHolding.portfolios?.name || '\u2014' },
+                    { label: 'Member', value: detailHolding.memberName || '\u2014' },
                   ].map(item => (
                     <div key={item.label}>
                       <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>{item.label}</p>
@@ -570,6 +937,9 @@ export default function SifPortfolioPage() {
                     <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Current NAV</p>
                     <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
                       {'\u20B9'}{detailHolding.currentNav.toFixed(4)}
+                      <span className="ml-1">
+                        <NavSourceTag source={detailHolding.navSource} />
+                      </span>
                       {detailHolding.navStale && (
                         <span className="ml-1 text-[9px] px-1 py-0.5 rounded-full"
                           style={{ backgroundColor: 'rgba(201,168,76,0.15)', color: '#92620A' }}>
@@ -577,6 +947,11 @@ export default function SifPortfolioPage() {
                         </span>
                       )}
                     </p>
+                    {detailHolding.navDate && (
+                      <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>
+                        as of {fmtNavDate(detailHolding.navDate)}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Current Value</p>
@@ -596,9 +971,31 @@ export default function SifPortfolioPage() {
               {/* Update NAV in sheet */}
               <div className="rounded-xl p-4" style={{ border: '1px solid var(--wv-border)' }}>
                 <p className="text-xs font-semibold mb-3" style={{ color: 'var(--wv-text)' }}>Update NAV</p>
+
+                {/* Auto-fetch button */}
+                {detailHolding.schemeCode && (
+                  <div className="mb-3">
+                    <Button
+                      onClick={() => handleRefreshSingleNav(detailHolding.id)}
+                      disabled={refreshingSingle === detailHolding.id}
+                      variant="outline"
+                      className="w-full text-xs h-9 gap-1.5"
+                      style={{ borderColor: 'rgba(5,150,105,0.3)', color: '#059669' }}
+                    >
+                      {refreshingSingle === detailHolding.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      )}
+                      Fetch Live NAV from mfapi.in
+                    </Button>
+                  </div>
+                )}
+
+                {/* Manual NAV entry */}
                 <div className="flex items-end gap-2">
                   <div className="flex-1">
-                    <p className="text-[10px] mb-1" style={{ color: 'var(--wv-text-muted)' }}>Enter latest NAV</p>
+                    <p className="text-[10px] mb-1" style={{ color: 'var(--wv-text-muted)' }}>Or enter NAV manually</p>
                     <Input
                       type="number"
                       value={editNavId === detailHolding.id ? editNavValue : ''}

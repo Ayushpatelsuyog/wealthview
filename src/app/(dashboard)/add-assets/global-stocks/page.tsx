@@ -54,6 +54,9 @@ interface Toast        { type: 'success' | 'error'; message: string }
 const TXN_TYPES = [
   { key: 'buy',      label: 'Buy' },
   { key: 'sell',     label: 'Sell' },
+  { key: 'bonus',    label: 'Bonus' },
+  { key: 'split',    label: 'Split' },
+  { key: 'rights',   label: 'Rights Issue' },
   { key: 'dividend', label: 'Dividend' },
 ];
 
@@ -130,10 +133,16 @@ function GlobalStocksFormContent() {
   const addToHoldingId = _searchParams.get('add_to');
   const sellHoldingId = _searchParams.get('sell');
   const dividendHoldingId = _searchParams.get('dividend');
+  const bonusHoldingId = _searchParams.get('bonus');
+  const splitHoldingId = _searchParams.get('split');
+  const rightsHoldingId = _searchParams.get('rights');
   const _isAddMoreMode = !!addToHoldingId && !isEditMode;
   const isSellMode = !!sellHoldingId;
   const isDividendMode = !!dividendHoldingId;
-  const preloadHoldingId = addToHoldingId || sellHoldingId || dividendHoldingId;
+  const isBonusMode = !!bonusHoldingId;
+  const isSplitMode = !!splitHoldingId;
+  const isRightsMode = !!rightsHoldingId;
+  const preloadHoldingId = addToHoldingId || sellHoldingId || dividendHoldingId || bonusHoldingId || splitHoldingId || rightsHoldingId;
 
   // Family/member prefill from sessionStorage (set by portfolio page before navigation)
   const prefillFamily = typeof window !== 'undefined' ? sessionStorage.getItem('wv_prefill_family') : null;
@@ -201,6 +210,12 @@ function GlobalStocksFormContent() {
   const [divFxRate,       setDivFxRate]       = useState('');
   const [divFxRateLoaded, setDivFxRateLoaded] = useState(false);
 
+  // Corporate action fields
+  const [bonusRatio,  setBonusRatio]  = useState('');
+  const [splitRatio,  setSplitRatio]  = useState('');
+  const [rightsRatio, setRightsRatio] = useState('');
+  const [rightsPrice, setRightsPrice] = useState('');
+
   // UI state
   const [saving,  setSaving]  = useState(false);
   const [toast,   setToast]   = useState<Toast | null>(null);
@@ -240,6 +255,9 @@ function GlobalStocksFormContent() {
       // Set transaction type based on mode
       if (isSellMode) setTxnType('sell');
       else if (isDividendMode) setTxnType('dividend');
+      else if (isBonusMode) setTxnType('bonus');
+      else if (isSplitMode) setTxnType('split');
+      else if (isRightsMode) setTxnType('rights');
       else setTxnType('buy');
 
       // ALWAYS set family/member from the holding's portfolio record (database truth)
@@ -585,11 +603,21 @@ function GlobalStocksFormContent() {
     if (!selectedStock) errs.stock    = 'Select a stock';
     if (!portfolioName) errs.portfolio = 'Select or create a portfolio';
 
-    if (txnType === 'buy' || txnType === 'sell') {
+    if (txnType === 'buy' || txnType === 'sell' || txnType === 'rights') {
       if (!quantity || qty <= 0) errs.quantity = 'Enter a valid quantity';
       if (!price    || px  <= 0) errs.price    = 'Enter a valid price';
       if (!fxRateValue || fx <= 0) errs.fxRate = 'Enter a valid FX rate';
       if (!date) errs.date = 'Enter a date';
+    }
+
+    if (txnType === 'bonus'    && !bonusRatio)  errs.bonusRatio  = 'Enter bonus ratio e.g. 1:2';
+    if (txnType === 'split'    && !splitRatio)  errs.splitRatio  = 'Enter split ratio e.g. 1:5';
+    if (txnType === 'bonus' || txnType === 'split' || txnType === 'rights') {
+      if (!date) errs.date = 'Enter record date';
+      if (!quantity || qty <= 0) errs.quantity = 'Enter existing quantity';
+    }
+    if (txnType === 'rights') {
+      if (!rightsPrice) errs.rightsPrice = 'Enter rights issue price';
     }
 
     if (txnType === 'dividend') {
@@ -610,6 +638,20 @@ function GlobalStocksFormContent() {
 
     try {
 
+      // For split: compute split factor
+      let splitFactor = 1;
+      if (txnType === 'split' && splitRatio) {
+        const [num, den] = splitRatio.split(':').map(Number);
+        if (den > 0) splitFactor = num / den;
+      }
+
+      // For bonus: compute bonus shares
+      let bonusQty = 0;
+      if (txnType === 'bonus' && bonusRatio && quantity) {
+        const [num, den] = bonusRatio.split(':').map(Number);
+        if (den > 0) bonusQty = Math.floor((qty / den) * num);
+      }
+
       const body: Record<string, unknown> = {
         symbol:          selectedStock!.symbol,
         companyName:     selectedStock!.companyName,
@@ -618,8 +660,8 @@ function GlobalStocksFormContent() {
         currency:        selectedStock!.currency,
         sector:          (sectorOverride && sectorOverride !== '__other__') ? sectorOverride : selectedStock!.sector,
         transactionType: txnType,
-        quantity:        qty,
-        price:           px,
+        quantity:        txnType === 'bonus' ? bonusQty : qty,
+        price:           txnType === 'bonus' ? 0 : px,
         date,
         fxRate:          fx,
         valueLocal:      valueLocal,
@@ -632,6 +674,11 @@ function GlobalStocksFormContent() {
         familyId:        familyId || undefined,
         currentPrice:    stockPrice?.price ?? null,
         currentFxRate:   fxRate?.rate ?? null,
+        bonusRatio,
+        splitRatio,
+        splitFactor: txnType === 'split' ? splitFactor : undefined,
+        rightsRatio,
+        rightsPrice,
       };
 
       // Add dividend-specific fields
@@ -747,6 +794,7 @@ function GlobalStocksFormContent() {
     setBrokerage('0'); setNotes('');
     setDivPerShare(''); setExDate(''); setPayDate('');
     setWithholdingTax('25'); setDivFxRate(''); setDivFxRateLoaded(false);
+    setBonusRatio(''); setSplitRatio(''); setRightsRatio(''); setRightsPrice('');
     setSectorOverride(null);
     setErrors({});
     setDate(new Date().toISOString().split('T')[0]);
@@ -1282,6 +1330,133 @@ function GlobalStocksFormContent() {
                       className="w-full rounded-lg border px-3 py-2 text-xs min-h-[60px] resize-y focus:outline-none focus:ring-2 focus:ring-offset-0"
                       style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }}
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* ── Bonus ──────────────────────────────────────────────────── */}
+              {txnType === 'bonus' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Bonus Ratio</Label>
+                      <Input value={bonusRatio} onChange={e => setBonusRatio(e.target.value)} placeholder="1:2 (1 bonus per 2 held)" className="h-9 text-xs" />
+                      <FieldError msg={errors.bonusRatio} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Existing Quantity (your holdings)</Label>
+                      <Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="500" className="h-9 text-xs" />
+                      <FieldError msg={errors.quantity} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Record Date</Label>
+                      <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-xs" />
+                      <FieldError msg={errors.date} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
+                        FX Rate ({stockCurrency} to INR)
+                        {fxRateLoaded && <AutoTag label="auto-fetched" />}
+                      </Label>
+                      <Input
+                        type="number" step="0.0001" min="0.0001"
+                        value={fxRateValue}
+                        onChange={e => { setFxRateValue(e.target.value); setFxRateLoaded(false); }}
+                        placeholder="e.g. 83.9200"
+                        className="h-9 text-xs"
+                      />
+                    </div>
+                  </div>
+                  {bonusRatio && quantity && (() => {
+                    const [num, den] = bonusRatio.split(':').map(Number);
+                    const bonus = den > 0 ? Math.floor((parseFloat(quantity) / den) * num) : 0;
+                    return bonus > 0 ? (
+                      <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.15)' }}>
+                        <p className="text-xs" style={{ color: '#059669' }}>
+                          You will receive <strong>{bonus} bonus shares</strong> &middot; Cost = {cSymbol}0 (lowers avg price)
+                        </p>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+
+              {/* ── Split ──────────────────────────────────────────────────── */}
+              {txnType === 'split' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Split Ratio (New : Old)</Label>
+                      <Input value={splitRatio} onChange={e => setSplitRatio(e.target.value)} placeholder="5:1 (1 share → 5 shares)" className="h-9 text-xs" />
+                      <FieldError msg={errors.splitRatio} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Existing Quantity</Label>
+                      <Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="100" className="h-9 text-xs" />
+                      <FieldError msg={errors.quantity} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Record Date</Label>
+                      <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-xs" />
+                      <FieldError msg={errors.date} />
+                    </div>
+                  </div>
+                  {splitRatio && quantity && (() => {
+                    const [num, den] = splitRatio.split(':').map(Number);
+                    const factor = den > 0 ? num / den : 1;
+                    const newQty = Math.round(parseFloat(quantity) * factor);
+                    return (
+                      <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.08)' }}>
+                        <p className="text-xs" style={{ color: 'var(--wv-text)' }}>
+                          {quantity} shares &rarr; <strong>{newQty} shares</strong> &middot; Avg price adjusted by &divide;{factor.toFixed(2)}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* ── Rights Issue ────────────────────────────────────────────── */}
+              {txnType === 'rights' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Rights Ratio</Label>
+                      <Input value={rightsRatio} onChange={e => setRightsRatio(e.target.value)} placeholder="1:5 (1 right per 5 held)" className="h-9 text-xs" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Rights Issue Price ({cSymbol})</Label>
+                      <Input type="number" step="0.01" value={rightsPrice} onChange={e => setRightsPrice(e.target.value)} placeholder="100.00" className="h-9 text-xs" />
+                      <FieldError msg={errors.rightsPrice} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Quantity (shares)</Label>
+                      <Input
+                        type="number" min="0.001" step="0.001"
+                        value={quantity} onChange={e => setQuantity(e.target.value)}
+                        placeholder="e.g. 10" className="h-9 text-xs"
+                      />
+                      <FieldError msg={errors.quantity} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Date</Label>
+                      <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-xs" />
+                      <FieldError msg={errors.date} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
+                        FX Rate ({stockCurrency} to INR)
+                        {fxRateLoaded && <AutoTag label="auto-fetched" />}
+                      </Label>
+                      <Input
+                        type="number" step="0.0001" min="0.0001"
+                        value={fxRateValue}
+                        onChange={e => { setFxRateValue(e.target.value); setFxRateLoaded(false); }}
+                        placeholder="e.g. 83.9200"
+                        className="h-9 text-xs"
+                      />
+                      <FieldError msg={errors.fxRate} />
+                    </div>
                   </div>
                 </div>
               )}

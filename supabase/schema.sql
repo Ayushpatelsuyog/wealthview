@@ -47,6 +47,7 @@ CREATE TABLE portfolios (
   family_id UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   type portfolio_type NOT NULL DEFAULT 'personal',
+  logo_color TEXT DEFAULT '#1B2A4A',
   description TEXT,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

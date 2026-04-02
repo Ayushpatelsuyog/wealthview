@@ -144,6 +144,26 @@ function BondFormContent() {
   const activeFamilyRef = useRef(selectedFamily);
   activeFamilyRef.current = selectedFamily;
 
+  // ── Bond type helpers ────────────────────────────────────────────────────────
+  const isSGB = bondType === 'Sovereign Gold Bond (SGB)';
+  const _isGSec = bondType === 'Government Bond (G-Sec)';
+  const isTaxFree = bondType === 'Tax-Free Bond';
+  const isRBI = bondType === 'RBI Bond';
+  const isSDL = bondType === 'State Development Loan (SDL)';
+  const isCorporate = bondType === 'Corporate Bond' || bondType === 'NCD';
+
+  const showFaceValue = !isSGB;
+  const showCreditRating = isCorporate;
+  const showISIN = !isSGB && !isRBI;
+  const showCouponFrequency = !isSGB && !isRBI;
+  const showPurchasePrice = !isRBI;
+
+  const bondNameLabel = isSGB ? 'Series Name' : isTaxFree ? 'Issuer Name' : isSDL ? 'State + Bond Description' : 'Bond Name / Description';
+  const bondNamePlaceholder = isSGB ? 'e.g. SGB 2023-24 Series II' : isTaxFree ? 'e.g. NHAI, IRFC, PFC' : isSDL ? 'e.g. Maharashtra SDL 7.5% 2033' : 'e.g. GOI 7.26% 2033, Tata Capital NCD';
+  const purchasePriceLabel = isSGB ? 'Issue Price (₹ per gram)' : 'Purchase Price per Unit (₹)';
+  const unitsLabel = isSGB ? 'Number of Units (grams of gold)' : 'Number of Units / Bonds';
+  const couponRateLabel = isRBI ? 'Current Interest Rate (NSC + 35 bps)' : 'Coupon Rate (% p.a.)';
+
   // ── Load user/family ──────────────────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -234,6 +254,50 @@ function BondFormContent() {
     setPurchaseDate(new Date().toISOString().split('T')[0]);
   }, []);
 
+  // ── Auto-set defaults based on bond type ───────────────────────────────────────
+  useEffect(() => {
+    switch (bondType) {
+      case 'Sovereign Gold Bond (SGB)':
+        setCouponRate('2.5');
+        setCouponFrequency('semi_annual');
+        setCreditRating('Sovereign');
+        setTaxTreatment('Tax-Free');
+        if (!faceValue || faceValue === '1000') setFaceValue('');
+        break;
+      case 'Government Bond (G-Sec)':
+        setCreditRating('Sovereign');
+        if (!faceValue || faceValue === '1000') setFaceValue('100');
+        break;
+      case 'Tax-Free Bond':
+        setCreditRating('AAA');
+        setTaxTreatment('Tax-Free');
+        setCouponFrequency('annual');
+        setFaceValue('1000');
+        break;
+      case 'RBI Bond':
+        setCreditRating('Sovereign');
+        setFaceValue('1000');
+        setPurchasePrice('1000');
+        break;
+      case 'State Development Loan (SDL)':
+        setCreditRating('Sovereign');
+        break;
+      case 'Corporate Bond':
+      case 'NCD':
+        setCreditRating('Unrated');
+        break;
+    }
+  }, [bondType]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── RBI Bond: auto-set maturity to purchase date + 7 years ─────────────────────
+  useEffect(() => {
+    if (isRBI && purchaseDate) {
+      const d = new Date(purchaseDate);
+      d.setFullYear(d.getFullYear() + 7);
+      setMaturityDate(d.toISOString().split('T')[0]);
+    }
+  }, [purchaseDate, isRBI]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Sync purchase price to face value when face value changes ────────────────
   useEffect(() => {
     const pp = parseFloat(purchasePrice);
@@ -260,11 +324,11 @@ function BondFormContent() {
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!bondName.trim()) errs.bondName = 'Enter bond name or description';
-    if (!faceValue || faceValueNum <= 0) errs.faceValue = 'Enter a valid face value';
-    if (!purchasePrice || purchasePriceNum <= 0) errs.purchasePrice = 'Enter a valid purchase price';
+    if (showFaceValue && (!faceValue || faceValueNum <= 0)) errs.faceValue = 'Enter a valid face value';
+    if (showPurchasePrice && (!purchasePrice || purchasePriceNum <= 0)) errs.purchasePrice = 'Enter a valid purchase price';
     if (!units || unitsNum <= 0) errs.units = 'Enter number of units';
     if (!purchaseDate) errs.purchaseDate = 'Select purchase date';
-    if (!couponRate && couponFrequency !== 'zero_coupon') errs.couponRate = 'Enter coupon rate';
+    if (!isRBI && !couponRate && couponFrequency !== 'zero_coupon') errs.couponRate = 'Enter coupon rate';
     if (!maturityDate) errs.maturityDate = 'Select maturity date';
     if (!portfolioName.trim()) errs.portfolio = 'Enter a portfolio name';
     setErrors(errs);
@@ -392,7 +456,7 @@ function BondFormContent() {
 
           <div className="space-y-4">
             {/* Row: Bond Type + Credit Rating */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className={`grid ${showCreditRating ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
               <div className="space-y-1.5">
                 <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Bond Type</Label>
                 <Select value={bondType} onValueChange={setBondType}>
@@ -402,81 +466,93 @@ function BondFormContent() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Credit Rating</Label>
-                <Select value={creditRating} onValueChange={setCreditRating}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {CREDIT_RATINGS.map(r => <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              {showCreditRating && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Credit Rating</Label>
+                  <Select value={creditRating} onValueChange={setCreditRating}>
+                    <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CREDIT_RATINGS.map(r => <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             {/* Bond Name */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Bond Name / Description <span style={{ color: '#DC2626' }}>*</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{bondNameLabel} <span style={{ color: '#DC2626' }}>*</span></Label>
               <Input
                 value={bondName}
                 onChange={e => setBondName(e.target.value)}
-                placeholder="e.g. GOI 7.26% 2033, Tata Capital NCD"
+                placeholder={bondNamePlaceholder}
                 className="h-9 text-xs"
               />
               <FieldError msg={errors.bondName} />
             </div>
 
             {/* ISIN */}
-            <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>ISIN <span className="text-gray-400">(optional)</span></Label>
-              <Input
-                value={isin}
-                onChange={e => setIsin(e.target.value)}
-                placeholder="e.g. IN0020220032"
-                className="h-9 text-xs"
-              />
-            </div>
+            {showISIN && (
+              <div className="space-y-1.5">
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>ISIN <span className="text-gray-400">(optional)</span></Label>
+                <Input
+                  value={isin}
+                  onChange={e => setIsin(e.target.value)}
+                  placeholder="e.g. IN0020220032"
+                  className="h-9 text-xs"
+                />
+              </div>
+            )}
 
             {/* Row: Face Value + Purchase Price */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Face Value (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
-                <Input
-                  type="number"
-                  value={faceValue}
-                  onChange={e => setFaceValue(e.target.value)}
-                  placeholder="1000"
-                  step="1"
-                  min="0"
-                  className="h-9 text-xs"
-                />
-                <FieldError msg={errors.faceValue} />
+            {(showFaceValue || showPurchasePrice) && (
+              <div className={`grid ${showFaceValue && showPurchasePrice ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                {showFaceValue && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Face Value (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
+                    <Input
+                      type="number"
+                      value={faceValue}
+                      onChange={e => setFaceValue(e.target.value)}
+                      placeholder="1000"
+                      step="1"
+                      min="0"
+                      readOnly={isRBI}
+                      className="h-9 text-xs"
+                      style={isRBI ? { backgroundColor: 'var(--wv-surface-2)', opacity: 0.7 } : undefined}
+                    />
+                    <FieldError msg={errors.faceValue} />
+                  </div>
+                )}
+                {showPurchasePrice && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{purchasePriceLabel} <span style={{ color: '#DC2626' }}>*</span></Label>
+                    <Input
+                      type="number"
+                      value={purchasePrice}
+                      onChange={e => setPurchasePrice(e.target.value)}
+                      placeholder="1000"
+                      step="0.01"
+                      min="0"
+                      className="h-9 text-xs"
+                    />
+                    <FieldError msg={errors.purchasePrice} />
+                  </div>
+                )}
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Purchase Price per Unit (₹) <span style={{ color: '#DC2626' }}>*</span></Label>
-                <Input
-                  type="number"
-                  value={purchasePrice}
-                  onChange={e => setPurchasePrice(e.target.value)}
-                  placeholder="1000"
-                  step="0.01"
-                  min="0"
-                  className="h-9 text-xs"
-                />
-                <FieldError msg={errors.purchasePrice} />
-              </div>
-            </div>
+            )}
 
             {/* Row: Number of Units + Purchase Date */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Number of Units / Bonds <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{unitsLabel} <span style={{ color: '#DC2626' }}>*</span></Label>
                 <Input
                   type="number"
                   value={units}
                   onChange={e => setUnits(e.target.value)}
                   placeholder="0"
-                  step="1"
-                  min="1"
+                  step={isSGB ? '0.001' : '1'}
+                  min={isSGB ? '0.001' : '1'}
                   className="h-9 text-xs"
                 />
                 <FieldError msg={errors.units} />
@@ -494,40 +570,46 @@ function BondFormContent() {
             </div>
 
             {/* Row: Coupon Rate + Coupon Frequency */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className={`grid ${showCouponFrequency ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Coupon Rate (% p.a.) <span style={{ color: '#DC2626' }}>*</span></Label>
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{couponRateLabel} {!isRBI && <span style={{ color: '#DC2626' }}>*</span>}</Label>
                 <Input
                   type="number"
                   value={couponRate}
                   onChange={e => setCouponRate(e.target.value)}
-                  placeholder="0.00"
+                  placeholder={isRBI ? 'Floating — check RBI website' : '0.00'}
                   step="0.01"
                   min="0"
                   max="100"
+                  readOnly={isSGB}
                   className="h-9 text-xs"
+                  style={isSGB ? { backgroundColor: 'var(--wv-surface-2)', opacity: 0.7 } : undefined}
                 />
                 <FieldError msg={errors.couponRate} />
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Coupon Frequency</Label>
-                <Select value={couponFrequency} onValueChange={setCouponFrequency}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {COUPON_FREQUENCIES.map(c => <SelectItem key={c.key} value={c.key} className="text-xs">{c.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              {showCouponFrequency && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Coupon Frequency</Label>
+                  <Select value={couponFrequency} onValueChange={setCouponFrequency}>
+                    <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {COUPON_FREQUENCIES.map(c => <SelectItem key={c.key} value={c.key} className="text-xs">{c.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             {/* Maturity Date */}
             <div className="space-y-1.5">
-              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Maturity Date <span style={{ color: '#DC2626' }}>*</span></Label>
+              <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Maturity Date {isRBI && <span className="text-gray-400">(auto: 7 years)</span>} <span style={{ color: '#DC2626' }}>*</span></Label>
               <Input
                 type="date"
                 value={maturityDate}
                 onChange={e => setMaturityDate(e.target.value)}
+                readOnly={isRBI}
                 className="h-9 text-xs"
+                style={isRBI ? { backgroundColor: 'var(--wv-surface-2)', opacity: 0.7 } : undefined}
               />
               <FieldError msg={errors.maturityDate} />
             </div>
@@ -553,6 +635,26 @@ function BondFormContent() {
                 className="h-9 text-xs"
               />
             </div>
+
+            {/* Bond type info panels */}
+            {isSGB && (
+              <div className="rounded-lg p-3 text-xs leading-relaxed" style={{ backgroundColor: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)', color: 'var(--wv-text-secondary)' }}>
+                <p className="font-semibold mb-1" style={{ color: '#C9A84C' }}>SGB Information</p>
+                <p>Interest: 2.5% p.a. on issue price, paid semi-annually. Capital gains tax exempt on maturity for individuals. Early exit available after 5th year on interest payment dates.</p>
+              </div>
+            )}
+            {isTaxFree && (
+              <div className="rounded-lg p-3 text-xs leading-relaxed" style={{ backgroundColor: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.2)', color: 'var(--wv-text-secondary)' }}>
+                <p className="font-semibold mb-1" style={{ color: '#059669' }}>Tax-Free Bond</p>
+                <p>Interest is exempt from income tax under Section 10(15)(iv)(h).</p>
+              </div>
+            )}
+            {isRBI && (
+              <div className="rounded-lg p-3 text-xs leading-relaxed" style={{ backgroundColor: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.15)', color: 'var(--wv-text-secondary)' }}>
+                <p className="font-semibold mb-1" style={{ color: '#1B2A4A' }}>RBI Floating Rate Bond</p>
+                <p>No secondary market — cannot sell before maturity. Interest rate resets every 6 months (NSC rate + 35 bps). Current rate: check RBI website.</p>
+              </div>
+            )}
           </div>
         </div>
 

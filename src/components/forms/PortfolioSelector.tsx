@@ -79,7 +79,7 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
     setLoading(true);
     supabase
       .from('portfolios')
-      .select('id, name, type')
+      .select('id, name, type, logo_color')
       .eq('family_id', familyId)
       .order('created_at')
       .then(({ data }) => {
@@ -103,8 +103,9 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
         family_id: familyId,
         name:      addName.trim(),
         type:      addType,
+        logo_color: addColor,
       })
-      .select('id, name, type')
+      .select('id, name, type, logo_color')
       .single();
 
     setAddSaving(false);

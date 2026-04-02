@@ -150,11 +150,14 @@ function ActionMenu({
     router.push(url);
   }
   const actions = [
-    { label: 'View details',    action: () => { onViewDetails(holdingId); setOpen(false); } },
-    { label: 'Add More Shares', action: () => { navTo(`/add-assets/global-stocks?add_to=${holdingId}`); setOpen(false); } },
-    { label: 'Sell / Exit',     action: () => { navTo(`/add-assets/global-stocks?sell=${holdingId}`); setOpen(false); } },
-    { label: 'Record Dividend', action: () => { navTo(`/add-assets/global-stocks?dividend=${holdingId}`); setOpen(false); } },
-    { label: 'Delete',          action: () => { onDelete(holdingId); setOpen(false); }, danger: true },
+    { label: 'View details',        action: () => { onViewDetails(holdingId); setOpen(false); } },
+    { label: 'Add More Shares',     action: () => { navTo(`/add-assets/global-stocks?add_to=${holdingId}`); setOpen(false); } },
+    { label: 'Sell / Exit',         action: () => { navTo(`/add-assets/global-stocks?sell=${holdingId}`); setOpen(false); } },
+    { label: 'Record Bonus',        action: () => { navTo(`/add-assets/global-stocks?bonus=${holdingId}`); setOpen(false); } },
+    { label: 'Record Stock Split',  action: () => { navTo(`/add-assets/global-stocks?split=${holdingId}`); setOpen(false); } },
+    { label: 'Record Rights Issue', action: () => { navTo(`/add-assets/global-stocks?rights=${holdingId}`); setOpen(false); } },
+    { label: 'Record Dividend',     action: () => { navTo(`/add-assets/global-stocks?dividend=${holdingId}`); setOpen(false); } },
+    { label: 'Delete',              action: () => { onDelete(holdingId); setOpen(false); }, danger: true },
   ];
   return (
     <div className="relative">
