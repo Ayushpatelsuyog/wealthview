@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { ensureUserProfile } from '@/lib/supabase/ensure-user';
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,6 +25,9 @@ export async function POST(req: NextRequest) {
     if (familyErr || !family) {
       return NextResponse.json({ error: familyErr?.message ?? 'Could not create family' }, { status: 500 });
     }
+
+    // Ensure user row exists (may be missing after DB reset)
+    await ensureUserProfile(supabase, user);
 
     // Link user to the family as admin
     const { error: userErr } = await supabase

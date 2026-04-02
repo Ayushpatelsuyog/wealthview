@@ -14,7 +14,7 @@ import { PortfolioSelector } from '@/components/forms/PortfolioSelector';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface SearchResult { schemeCode: number; schemeName: string; category: string }
+interface SearchResult { schemeCode: string; schemeName: string; category: string; amc?: string; planType?: string }
 interface NavData { nav: number; navDate: string; fundName: string; fundHouse: string; category: string }
 interface FamilyMember { id: string; name: string }
 interface Toast { type: 'success' | 'error'; message: string }
@@ -240,20 +240,26 @@ function SifAddContent() {
     }
   }, [amount, nav, unitsManuallyEdited]);
 
-  // ── Fund search handler (debounced) ─────────────────────────────────────
+  // ── Manual entry mode ──────────────────────────────────────────────────
+  const [manualMode, setManualMode] = useState(false);
+  const [manualFundName, setManualFundName] = useState('');
+  const [manualAmc, setManualAmc] = useState('');
+
+  // ── Fund search handler (debounced) — searches SIF registry ───────────
   function handleQueryChange(val: string) {
     setQuery(val);
     setSelectedFund(null);
     setNavData(null);
     setNav('');
     setNavAutoFetched(false);
+    setManualMode(false);
     clearTimeout(debounceRef.current);
     if (val.length < 2) { setSearchResults([]); setShowDrop(false); return; }
     setIsSearching(true);
     setShowDrop(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/mf/search?q=${encodeURIComponent(val)}`);
+        const res = await fetch(`/api/sif/search?q=${encodeURIComponent(val)}`);
         if (!res.ok) { setIsSearching(false); return; }
         const json = await res.json();
         setSearchResults(json.results ?? []);
@@ -263,28 +269,42 @@ function SifAddContent() {
     }, 300);
   }
 
+  function enterManualMode() {
+    setManualMode(true);
+    setShowDrop(false);
+    setManualFundName(query);
+    setSelectedFund(null);
+    setNavData(null);
+  }
+
   // ── Select fund from dropdown ───────────────────────────────────────────
   const selectFund = useCallback(async (fund: SearchResult) => {
     const refinedFund = { ...fund, category: detectCategory(fund.schemeName, fund.category) };
     setSelectedFund(refinedFund);
     setQuery(fund.schemeName);
     setShowDrop(false);
+    setManualMode(false);
     setNavData(null);
-    setIsNavLoading(true);
     setErrors(er => ({ ...er, fund: '' }));
-    try {
-      const res = await fetch(`/api/mf/nav?scheme_code=${fund.schemeCode}`);
-      if (res.ok) {
-        const data: NavData = await res.json();
-        setNavData(data);
-        // Auto-populate NAV if not manually set
-        if (!nav || navAutoFetched) {
-          setNav(data.nav.toString());
-          setNavAutoFetched(true);
-          setUnitsManuallyEdited(false);
+
+    // SIF NAVs are NOT on mfapi.in — skip auto-fetch for SIF scheme codes (non-numeric)
+    const isNumericCode = /^\d+$/.test(String(fund.schemeCode));
+    if (isNumericCode) {
+      setIsNavLoading(true);
+      try {
+        const res = await fetch(`/api/mf/nav?scheme_code=${fund.schemeCode}`);
+        if (res.ok) {
+          const data: NavData = await res.json();
+          setNavData(data);
+          if (!nav || navAutoFetched) {
+            setNav(data.nav.toString());
+            setNavAutoFetched(true);
+            setUnitsManuallyEdited(false);
+          }
         }
-      }
-    } finally { setIsNavLoading(false); }
+      } finally { setIsNavLoading(false); }
+    }
+    // For non-numeric (SIF registry) codes, NAV must be entered manually
   }, [nav, navAutoFetched]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Computed summary ───────────────────────────────────────────────────────
@@ -297,7 +317,8 @@ function SifAddContent() {
   // ── Validation ─────────────────────────────────────────────────────────────
   function validate(): boolean {
     const errs: Record<string, string> = {};
-    if (!selectedFund && !query.trim()) errs.fund = 'Please search and select a fund';
+    if (!selectedFund && !manualMode) errs.fund = 'Please search and select a fund';
+    if (manualMode && !manualFundName.trim()) errs.fund = 'Enter the fund name';
     if (!purchaseDate) errs.purchaseDate = 'Purchase date is required';
     if (!nav || parseFloat(nav) <= 0) errs.nav = 'Enter a valid NAV';
     if (!amount || parseFloat(amount) <= 0) errs.amount = 'Enter investment amount';
@@ -313,8 +334,12 @@ function SifAddContent() {
     setIsSaving(true);
     setToast(null);
 
-    const fundName = navData?.fundName || selectedFund?.schemeName || query.trim();
-    const amc = navData?.fundHouse || '';
+    const fundName = manualMode
+      ? manualFundName.trim()
+      : (navData?.fundName || selectedFund?.schemeName || query.trim());
+    const amc = manualMode
+      ? manualAmc.trim()
+      : (navData?.fundHouse || selectedFund?.amc || '');
     const schemeCode = selectedFund?.schemeCode ? String(selectedFund.schemeCode) : null;
 
     const payload = {
@@ -371,7 +396,7 @@ function SifAddContent() {
             Specialized Investment Fund (SIF)
           </h1>
           <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>
-            Add SIF holdings with AMFI fund search and live NAV
+            Search SEBI Specialized Investment Funds or enter manually
           </p>
         </div>
       </div>
@@ -441,7 +466,7 @@ function SifAddContent() {
                 value={query}
                 onChange={(e) => handleQueryChange(e.target.value)}
                 onFocus={() => { if (searchResults.length > 0) setShowDrop(true); }}
-                placeholder="Type fund name (min 2 chars)..."
+                placeholder="Search SIF (e.g. QSIF, Long Short, ICICI SIF)..."
                 className="h-9 text-xs pr-8 pl-8"
                 style={errors.fund ? { borderColor: '#DC2626' } : {}}
               />
@@ -454,8 +479,8 @@ function SifAddContent() {
             </div>
 
             {/* Dropdown results */}
-            {showDrop && searchResults.length > 0 && (
-              <div className="absolute top-full mt-1 left-0 right-0 rounded-xl border overflow-hidden bg-white"
+            {showDrop && !isSearching && query.length >= 2 && (
+              <div className="absolute top-full mt-1 left-0 right-0 rounded-xl border overflow-hidden bg-white max-h-80 overflow-y-auto"
                 style={{ borderColor: 'var(--wv-border)', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
                 {searchResults.map((f) => {
                   const cc = getCatStyle(detectCategory(f.schemeName, f.category));
@@ -466,7 +491,9 @@ function SifAddContent() {
                       onMouseDown={(e) => { e.preventDefault(); selectFund(f); }}>
                       <div className="min-w-0 flex-1 mr-3">
                         <p className="text-xs font-medium truncate" style={{ color: 'var(--wv-text)' }}>{f.schemeName}</p>
-                        <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>AMFI {f.schemeCode}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>
+                          {f.amc ?? ''}{f.amc ? ' · ' : ''}{f.schemeCode}
+                        </p>
                       </div>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
                         style={{ backgroundColor: cc.bg, color: cc.text }}>
@@ -475,6 +502,20 @@ function SifAddContent() {
                     </button>
                   );
                 })}
+                {searchResults.length === 0 && (
+                  <div className="px-4 py-3 text-center">
+                    <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>No SIF schemes found for &ldquo;{query}&rdquo;</p>
+                  </div>
+                )}
+                {/* Manual entry fallback */}
+                <button
+                  className="w-full px-4 py-2.5 text-left border-t transition-colors hover:bg-gray-50"
+                  style={{ borderColor: '#F0EDE6' }}
+                  onMouseDown={(e) => { e.preventDefault(); enterManualMode(); }}>
+                  <p className="text-xs font-medium" style={{ color: '#C9A84C' }}>
+                    Can&apos;t find your SIF? Enter details manually &rarr;
+                  </p>
+                </button>
               </div>
             )}
           </div>
@@ -488,19 +529,18 @@ function SifAddContent() {
               ? <Loader2 className="w-4 h-4 mt-0.5 flex-shrink-0 animate-spin" style={{ color: '#059669' }} />
               : <Check className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#059669' }} />}
             <div className="flex-1 min-w-0">
-              {/* Show canonical name from NAV API if it differs from AMFI name */}
               {navData?.fundName && navData.fundName !== selectedFund.schemeName ? (
                 <>
                   <p className="text-xs font-semibold truncate" style={{ color: 'var(--wv-text)' }}>{navData.fundName}</p>
                   <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--wv-text-muted)' }}>
-                    AMFI: {selectedFund.schemeName}
+                    {selectedFund.schemeName}
                   </p>
                 </>
               ) : (
                 <p className="text-xs font-semibold truncate" style={{ color: 'var(--wv-text)' }}>{selectedFund.schemeName}</p>
               )}
               <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>
-                Scheme Code: {selectedFund.schemeCode}
+                {selectedFund.amc ? `${selectedFund.amc} · ` : ''}Code: {selectedFund.schemeCode}
               </p>
               {navData ? (
                 <div className="flex items-center gap-3 mt-1">
@@ -508,20 +548,68 @@ function SifAddContent() {
                     Latest NAV: <strong style={{ color: 'var(--wv-text)' }}>{'\u20B9'}{navData.nav.toFixed(4)}</strong>
                     {' \u00B7 '}{fmtNavDate(navData.navDate)}
                   </p>
-                  {navData.fundHouse && <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{navData.fundHouse}</p>}
                 </div>
               ) : isNavLoading ? (
                 <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>Fetching live NAV...</p>
               ) : (
-                <p className="text-[10px] mt-0.5" style={{ color: '#DC2626' }}>NAV unavailable - enter manually below</p>
+                <p className="text-[10px] mt-0.5" style={{ color: '#92620A' }}>
+                  Live NAV not available for this SIF yet. Enter NAV manually below.
+                </p>
               )}
             </div>
-            {selectedFund && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
+            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
                 style={{ backgroundColor: getCatStyle(selectedFund.category).bg, color: getCatStyle(selectedFund.category).text }}>
                 {selectedFund.category}
               </span>
-            )}
+              <button
+                onClick={() => { setSelectedFund(null); setQuery(''); setNavData(null); setNav(''); setNavAutoFetched(false); }}
+                className="text-[10px] px-1.5 py-0.5 rounded hover:bg-red-50"
+                style={{ color: '#DC2626' }}>
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Manual Entry Card ──────────────────────────────────────────── */}
+        {manualMode && !selectedFund && (
+          <div className="p-4 rounded-xl space-y-3"
+            style={{ backgroundColor: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.2)' }}>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold" style={{ color: '#C9A84C' }}>Manual SIF Entry</p>
+              <button
+                onClick={() => { setManualMode(false); setQuery(''); }}
+                className="text-[10px] px-2 py-0.5 rounded hover:bg-gray-100"
+                style={{ color: 'var(--wv-text-muted)' }}>
+                Back to search
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1 col-span-2">
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Fund Name *</Label>
+                <Input
+                  value={manualFundName}
+                  onChange={e => { setManualFundName(e.target.value); setErrors(er => ({ ...er, fund: '' })); }}
+                  placeholder="e.g. QSIF Equity Long Short Fund - Direct Plan"
+                  className="h-9 text-xs"
+                  style={errors.fund ? { borderColor: '#DC2626' } : {}}
+                />
+                <FieldError msg={errors.fund} />
+              </div>
+              <div className="space-y-1 col-span-2">
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>AMC / Fund House</Label>
+                <Input
+                  value={manualAmc}
+                  onChange={e => setManualAmc(e.target.value)}
+                  placeholder="e.g. Quant Mutual Fund"
+                  className="h-9 text-xs"
+                />
+              </div>
+            </div>
+            <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
+              Enter the SIF NAV manually below. Live NAV is not available for manually entered SIFs.
+            </p>
           </div>
         )}
 

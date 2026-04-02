@@ -32,7 +32,7 @@ export async function updateSession(request: NextRequest) {
   // Page routes that don't require auth (and redirect logged-in users away)
   const authPageRoutes = ['/login', '/signup'];
   // API routes that are accessible without auth (no redirect, no 401)
-  const publicApiRoutes = ['/api/stocks/search', '/api/stocks/global/search', '/api/stocks/global/price', '/api/fx/rate', '/api/mf/search', '/api/mf/nav'];
+  const publicApiRoutes = ['/api/stocks/search', '/api/stocks/global/search', '/api/stocks/global/price', '/api/fx/rate', '/api/mf/search', '/api/mf/nav', '/api/sif/search'];
 
   const isAuthPage   = authPageRoutes.some((route) => pathname.startsWith(route));
   const isPublicApi  = publicApiRoutes.some((route) => pathname.startsWith(route));

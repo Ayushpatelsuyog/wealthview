@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { ensureUserProfile } from '@/lib/supabase/ensure-user';
 import { calculateXIRR } from '@/lib/utils/calculations';
 import type { DashboardSnapshot, DashboardMember, DashboardCashFlow } from '@/lib/types/dashboard';
 
@@ -77,11 +78,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return emptySnapshot();
 
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('family_id')
-      .eq('id', user.id)
-      .single();
+    const userProfile = await ensureUserProfile(supabase, user);
 
     if (!userProfile?.family_id) {
       return { ...emptySnapshot(), needsOnboarding: true };

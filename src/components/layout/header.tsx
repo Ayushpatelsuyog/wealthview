@@ -21,11 +21,23 @@ export function Header() {
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
-      const { data: u } = await supabase
+      let { data: u } = await supabase
         .from('users')
         .select('name, role, family_id, families(name)')
         .eq('id', user.id)
         .single();
+
+      // Auto-create users row if missing (DB reset scenario)
+      if (!u) {
+        const name = user.user_metadata?.name ?? user.email?.split('@')[0] ?? 'User';
+        await supabase.from('users').insert({
+          id: user.id,
+          email: user.email ?? '',
+          name,
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        u = { name, role: 'member', family_id: null, families: null } as any;
+      }
       if (!u) return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const familyRecord = u.families as any;

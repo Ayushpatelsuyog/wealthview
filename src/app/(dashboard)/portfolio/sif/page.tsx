@@ -252,8 +252,9 @@ export default function SifPortfolioPage() {
 
   async function fetchNavBatch(baseRows?: HoldingRow[]) {
     const source = baseRows ?? holdings;
-    // Collect holdings with scheme_code
-    const withCode = source.filter(h => h.schemeCode);
+    // Collect holdings with numeric scheme_code (AMFI codes)
+    // Non-numeric codes are WealthView internal SIF IDs — not on mfapi.in
+    const withCode = source.filter(h => h.schemeCode && /^\d+$/.test(h.schemeCode));
     if (withCode.length === 0) return;
 
     const uniqueCodes = Array.from(new Set(withCode.map(h => h.schemeCode!)));
@@ -337,9 +338,9 @@ export default function SifPortfolioPage() {
 
   async function handleRefreshAllNavs() {
     setRefreshingAll(true);
-    const withCode = holdings.filter(h => h.schemeCode);
+    const withCode = holdings.filter(h => h.schemeCode && /^\d+$/.test(h.schemeCode));
     if (withCode.length === 0) {
-      setToast({ type: 'error', message: 'No holdings with scheme codes to refresh' });
+      setToast({ type: 'error', message: 'No holdings with AMFI scheme codes to refresh. SIF NAVs must be updated manually.' });
       setRefreshingAll(false);
       return;
     }
@@ -348,7 +349,7 @@ export default function SifPortfolioPage() {
 
     // Mark as loading
     setHoldings(prev => prev.map(h =>
-      h.schemeCode ? { ...h, navLoading: true } : h
+      h.schemeCode && /^\d+$/.test(h.schemeCode) ? { ...h, navLoading: true } : h
     ));
 
     try {
@@ -437,8 +438,8 @@ export default function SifPortfolioPage() {
 
   async function handleRefreshSingleNav(holdingId: string) {
     const holding = holdings.find(h => h.id === holdingId);
-    if (!holding?.schemeCode) {
-      setToast({ type: 'error', message: 'No scheme code - use manual NAV update' });
+    if (!holding?.schemeCode || !/^\d+$/.test(holding.schemeCode)) {
+      setToast({ type: 'error', message: 'Live NAV not available for SIF schemes. Use manual NAV update.' });
       return;
     }
 

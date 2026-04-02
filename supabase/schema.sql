@@ -41,6 +41,15 @@ CREATE TABLE users (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE family_memberships (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  auth_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  family_id UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+  role user_role NOT NULL DEFAULT 'member',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(auth_user_id, family_id)
+);
+
 CREATE TABLE portfolios (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -208,6 +217,7 @@ CREATE TABLE audit_log (
 -- ROW LEVEL SECURITY (enabled after all tables exist)
 -- ============================================================
 ALTER TABLE families ENABLE ROW LEVEL SECURITY;
+ALTER TABLE family_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE portfolios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE brokers ENABLE ROW LEVEL SECURITY;
@@ -251,6 +261,22 @@ CREATE POLICY "families_select" ON families
 
 CREATE POLICY "families_insert" ON families
   FOR INSERT WITH CHECK (created_by = auth.uid());
+
+-- family_memberships
+CREATE POLICY "family_memberships_select" ON family_memberships
+  FOR SELECT USING (auth_user_id = auth.uid());
+
+CREATE POLICY "family_memberships_insert" ON family_memberships
+  FOR INSERT WITH CHECK (
+    auth_user_id = auth.uid()
+    OR EXISTS (SELECT 1 FROM families WHERE id = family_id AND created_by = auth.uid())
+  );
+
+CREATE POLICY "family_memberships_delete" ON family_memberships
+  FOR DELETE USING (
+    auth_user_id = auth.uid()
+    OR EXISTS (SELECT 1 FROM families WHERE id = family_id AND created_by = auth.uid())
+  );
 
 -- Admin-only update: must be the admin of this specific family
 CREATE POLICY "families_update" ON families
