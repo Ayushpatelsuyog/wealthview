@@ -8,6 +8,7 @@ import {
   MoreHorizontal, Search, Download, X, ChevronDown, ChevronRight, Globe,
 } from 'lucide-react';
 import { GlobalStockDetailSheet, type GlobalStockHoldingDetail } from '@/components/portfolio/GlobalStockDetailSheet';
+import { MergerDemergerModal } from '@/components/portfolio/MergerDemergerModal';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR, formatPercentage } from '@/lib/utils/formatters';
 import { calculateXIRR } from '@/lib/utils/calculations';
@@ -132,18 +133,19 @@ function _PnlBadge({ value, pct }: { value: number; pct: number }) {
 // ─── Action Menu ─────────────────────────────────────────────────────────────
 
 function ActionMenu({
-  holdingId, familyId, memberId, onDelete, onViewDetails,
+  holdingId, familyId, memberId, onDelete, onViewDetails, onMerger, onDemerger,
 }: {
   holdingId: string;
   familyId?: string;
   memberId?: string;
   onDelete: (id: string) => void;
   onViewDetails: (id: string) => void;
+  onMerger?: (id: string) => void;
+  onDemerger?: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   function navTo(url: string) {
-    console.log('=== ActionMenu navTo ===', { holdingId, familyId, memberId });
     if (familyId) sessionStorage.setItem('wv_prefill_family', familyId);
     if (memberId) sessionStorage.setItem('wv_prefill_member', memberId);
     if (familyId || memberId) sessionStorage.setItem('wv_prefill_active', 'true');
@@ -157,7 +159,9 @@ function ActionMenu({
     { label: 'Record Stock Split',  action: () => { navTo(`/add-assets/global-stocks?split=${holdingId}`); setOpen(false); } },
     { label: 'Record Rights Issue', action: () => { navTo(`/add-assets/global-stocks?rights=${holdingId}`); setOpen(false); } },
     { label: 'Record Dividend',     action: () => { navTo(`/add-assets/global-stocks?dividend=${holdingId}`); setOpen(false); } },
-    { label: 'Record Buyback',        action: () => { navTo(`/add-assets/global-stocks?buyback=${holdingId}`); setOpen(false); } },
+    { label: 'Record Buyback',      action: () => { navTo(`/add-assets/global-stocks?buyback=${holdingId}`); setOpen(false); } },
+    { label: 'Record Merger / M&A', action: () => { onMerger?.(holdingId); setOpen(false); } },
+    { label: 'Record Demerger',     action: () => { onDemerger?.(holdingId); setOpen(false); } },
     { label: 'Delete',              action: () => { onDelete(holdingId); setOpen(false); }, danger: true },
   ];
   return (
@@ -287,6 +291,10 @@ export default function GlobalStocksPortfolioPage() {
   const [_memberNames,   setMemberNames]    = useState<Record<string, string>>({});
   const [fxRates,        setFxRates]        = useState<Record<string, number>>({});
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  // M&A / Demerger modal
+  const [corpActionHoldingId, setCorpActionHoldingId] = useState<string | null>(null);
+  const [corpActionMode, setCorpActionMode] = useState<'merger' | 'demerger'>('merger');
 
   // Filters
   const [filterBrokers,    setFilterBrokers]    = useState<Set<string>>(new Set());
@@ -846,7 +854,7 @@ export default function GlobalStocksPortfolioPage() {
         </div>
         {/* Actions */}
         <div onClick={e => e.stopPropagation()}>
-          <ActionMenu holdingId={h.id} familyId={h.portfolios?.family_id} memberId={h.portfolios?.user_id} onDelete={deleteHolding} onViewDetails={id => setDetailId(id)} />
+          <ActionMenu holdingId={h.id} familyId={h.portfolios?.family_id} memberId={h.portfolios?.user_id} onDelete={deleteHolding} onViewDetails={id => setDetailId(id)} onMerger={id => { setCorpActionHoldingId(id); setCorpActionMode('merger'); }} onDemerger={id => { setCorpActionHoldingId(id); setCorpActionMode('demerger'); }} />
         </div>
       </div>
     );
@@ -1273,6 +1281,31 @@ export default function GlobalStocksPortfolioPage() {
         onRefreshPrice={sym => fetchPrice(sym)}
         onHoldingChanged={() => { holdingsCacheClear('global_stock_holdings'); loadHoldings(); }}
       />
+
+      {/* M&A / Demerger Modal */}
+      {corpActionHoldingId && (() => {
+        const h = holdings.find(x => x.id === corpActionHoldingId);
+        if (!h) return null;
+        const meta = (h.metadata ?? {}) as Record<string, unknown>;
+        return (
+          <MergerDemergerModal
+            holding={{
+              id: h.id,
+              symbol: h.symbol,
+              name: h.name,
+              quantity: h.quantity,
+              avgBuyPrice: h.avg_buy_price,
+              assetType: 'global_stock',
+              currency: String(meta.currency ?? 'USD'),
+              exchange: String(meta.exchange ?? ''),
+            }}
+            mode={corpActionMode}
+            stockType="global_stock"
+            onClose={() => setCorpActionHoldingId(null)}
+            onComplete={() => { holdingsCacheClear('global_stock_holdings'); loadHoldings(); }}
+          />
+        );
+      })()}
     </div>
   );
 }

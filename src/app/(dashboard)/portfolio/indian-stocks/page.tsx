@@ -8,6 +8,7 @@ import {
   MoreHorizontal, Search, Download, X, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { StockDetailSheet, type StockHoldingDetail } from '@/components/portfolio/StockDetailSheet';
+import { MergerDemergerModal } from '@/components/portfolio/MergerDemergerModal';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR, formatPercentage } from '@/lib/utils/formatters';
 import { calculateXIRR } from '@/lib/utils/calculations';
@@ -90,13 +91,15 @@ function _PnlBadge({ value, pct }: { value: number; pct: number }) {
 // ─── Action Menu ──────────────────────────────────────────────────────────────
 
 function ActionMenu({
-  holdingId, familyId, memberId, onDelete, onViewDetails,
+  holdingId, familyId, memberId, onDelete, onViewDetails, onMerger, onDemerger,
 }: {
   holdingId: string;
   familyId?: string;
   memberId?: string;
   onDelete: (id: string) => void;
   onViewDetails: (id: string) => void;
+  onMerger?: (id: string) => void;
+  onDemerger?: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -115,6 +118,8 @@ function ActionMenu({
     { label: 'Record Rights Issue',     action: () => { navTo(`/add-assets/indian-stocks?rights=${holdingId}`); setOpen(false); } },
     { label: 'Record Dividend',         action: () => { navTo(`/add-assets/indian-stocks?dividend=${holdingId}`); setOpen(false); } },
     { label: 'Record Buyback',          action: () => { navTo(`/add-assets/indian-stocks?buyback=${holdingId}`); setOpen(false); } },
+    { label: 'Record Merger / M&A',     action: () => { onMerger?.(holdingId); setOpen(false); } },
+    { label: 'Record Demerger',         action: () => { onDemerger?.(holdingId); setOpen(false); } },
     { label: 'Delete',                   action: () => { onDelete(holdingId); setOpen(false); }, danger: true },
   ];
   return (
@@ -249,6 +254,10 @@ export default function IndianStocksPortfolioPage() {
   const [sortKey,          setSortKey]          = useState<SortKey>('value');
   const [searchQuery,      setSearchQuery]      = useState('');
   const [activeMemberIds,  setActiveMemberIds]  = useState<string[]>([]);
+
+  // M&A / Demerger modal
+  const [corpActionHoldingId, setCorpActionHoldingId] = useState<string | null>(null);
+  const [corpActionMode, setCorpActionMode] = useState<'merger' | 'demerger'>('merger');
 
   function toggleSet(set: Set<string>, setFn: (s: Set<string>) => void, val: string) {
     const next = new Set(set);
@@ -717,7 +726,7 @@ export default function IndianStocksPortfolioPage() {
           {h.gainLoss != null && <_PnlBadge value={h.gainLoss} pct={h.gainLossPct ?? 0} />}
         </div>
         <div onClick={e => e.stopPropagation()}>
-          <ActionMenu holdingId={h.id} familyId={h.portfolios?.family_id} memberId={h.portfolios?.user_id} onDelete={deleteHolding} onViewDetails={id => setDetailId(id)} />
+          <ActionMenu holdingId={h.id} familyId={h.portfolios?.family_id} memberId={h.portfolios?.user_id} onDelete={deleteHolding} onViewDetails={id => setDetailId(id)} onMerger={id => { setCorpActionHoldingId(id); setCorpActionMode('merger'); }} onDemerger={id => { setCorpActionHoldingId(id); setCorpActionMode('demerger'); }} />
         </div>
       </div>
     );
@@ -1063,6 +1072,28 @@ export default function IndianStocksPortfolioPage() {
         onRefreshPrice={sym => fetchPrice(sym)}
         onHoldingChanged={() => { holdingsCacheClear('stock_holdings'); loadHoldings(); }}
       />
+
+      {/* M&A / Demerger Modal */}
+      {corpActionHoldingId && (() => {
+        const h = holdings.find(x => x.id === corpActionHoldingId);
+        if (!h) return null;
+        return (
+          <MergerDemergerModal
+            holding={{
+              id: h.id,
+              symbol: h.symbol,
+              name: h.name,
+              quantity: h.quantity,
+              avgBuyPrice: h.avg_buy_price,
+              assetType: 'indian_stock',
+            }}
+            mode={corpActionMode}
+            stockType="indian_stock"
+            onClose={() => setCorpActionHoldingId(null)}
+            onComplete={() => { holdingsCacheClear('stock_holdings'); loadHoldings(); }}
+          />
+        );
+      })()}
     </div>
   );
 }
