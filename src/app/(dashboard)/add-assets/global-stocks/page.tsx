@@ -58,6 +58,7 @@ const TXN_TYPES = [
   { key: 'split',    label: 'Split' },
   { key: 'rights',   label: 'Rights Issue' },
   { key: 'dividend', label: 'Dividend' },
+  { key: 'buyback',  label: 'Buyback' },
 ];
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -136,13 +137,15 @@ function GlobalStocksFormContent() {
   const bonusHoldingId = _searchParams.get('bonus');
   const splitHoldingId = _searchParams.get('split');
   const rightsHoldingId = _searchParams.get('rights');
+  const buybackHoldingId = _searchParams.get('buyback');
   const _isAddMoreMode = !!addToHoldingId && !isEditMode;
   const isSellMode = !!sellHoldingId;
   const isDividendMode = !!dividendHoldingId;
   const isBonusMode = !!bonusHoldingId;
   const isSplitMode = !!splitHoldingId;
   const isRightsMode = !!rightsHoldingId;
-  const preloadHoldingId = addToHoldingId || sellHoldingId || dividendHoldingId || bonusHoldingId || splitHoldingId || rightsHoldingId;
+  const isBuybackMode = !!buybackHoldingId;
+  const preloadHoldingId = addToHoldingId || sellHoldingId || dividendHoldingId || bonusHoldingId || splitHoldingId || rightsHoldingId || buybackHoldingId;
 
   // Family/member prefill from sessionStorage (set by portfolio page before navigation)
   const prefillFamily = typeof window !== 'undefined' ? sessionStorage.getItem('wv_prefill_family') : null;
@@ -216,6 +219,10 @@ function GlobalStocksFormContent() {
   const [rightsRatio, setRightsRatio] = useState('');
   const [rightsPrice, setRightsPrice] = useState('');
 
+  // Buyback
+  const [buybackPrice, setBuybackPrice] = useState('');
+  const [sharesAccepted, setSharesAccepted] = useState('');
+
   // UI state
   const [saving,  setSaving]  = useState(false);
   const [toast,   setToast]   = useState<Toast | null>(null);
@@ -258,6 +265,7 @@ function GlobalStocksFormContent() {
       else if (isBonusMode) setTxnType('bonus');
       else if (isSplitMode) setTxnType('split');
       else if (isRightsMode) setTxnType('rights');
+      else if (isBuybackMode) setTxnType('buyback');
       else setTxnType('buy');
 
       // ALWAYS set family/member from the holding's portfolio record (database truth)
@@ -627,6 +635,13 @@ function GlobalStocksFormContent() {
       if (!divFxRate || divFx <= 0) errs.divFxRate = 'Enter FX rate on payment date';
     }
 
+    if (txnType === 'buyback') {
+      if (!buybackPrice || parseFloat(buybackPrice) <= 0) errs.buybackPrice = 'Enter buyback price';
+      if (!quantity || qty <= 0) errs.quantity = 'Enter shares tendered';
+      if (!fxRateValue || fx <= 0) errs.fxRate = 'Enter FX rate';
+      if (!date) errs.date = 'Enter record date';
+    }
+
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -680,6 +695,13 @@ function GlobalStocksFormContent() {
         rightsRatio,
         rightsPrice,
       };
+
+      // Add buyback-specific fields
+      if (txnType === 'buyback') {
+        body.buybackPrice = parseFloat(buybackPrice);
+        body.sharesAccepted = parseFloat(sharesAccepted) || qty;
+        body.price = parseFloat(buybackPrice);
+      }
 
       // Add dividend-specific fields
       if (txnType === 'dividend') {
@@ -795,6 +817,7 @@ function GlobalStocksFormContent() {
     setDivPerShare(''); setExDate(''); setPayDate('');
     setWithholdingTax('25'); setDivFxRate(''); setDivFxRateLoaded(false);
     setBonusRatio(''); setSplitRatio(''); setRightsRatio(''); setRightsPrice('');
+    setBuybackPrice(''); setSharesAccepted('');
     setSectorOverride(null);
     setErrors({});
     setDate(new Date().toISOString().split('T')[0]);
@@ -1457,6 +1480,62 @@ function GlobalStocksFormContent() {
                       />
                       <FieldError msg={errors.fxRate} />
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Buyback ──────────────────────────────────────── */}
+              {txnType === 'buyback' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Shares Tendered</Label>
+                      <Input type="number" min="0.001" step="0.001" value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="100" className="h-9 text-xs" />
+                      <FieldError msg={errors.quantity} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Shares Accepted</Label>
+                      <Input type="number" min="0.001" step="0.001" value={sharesAccepted} onChange={e => setSharesAccepted(e.target.value)} placeholder="Same if fully accepted" className="h-9 text-xs" />
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Leave blank if fully accepted</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Buyback Price ({currencySymbol(selectedStock?.currency ?? 'USD')})</Label>
+                      <Input type="number" step="0.01" min="0.01" value={buybackPrice} onChange={e => setBuybackPrice(e.target.value)} placeholder="50.00" className="h-9 text-xs" />
+                      <FieldError msg={errors.buybackPrice} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Record Date</Label>
+                      <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-xs" />
+                      <FieldError msg={errors.date} />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
+                      FX Rate ({selectedStock?.currency ?? 'USD'} to INR)
+                      {fxRateLoaded && <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(5,150,105,0.1)', color: '#059669' }}>auto-fetched</span>}
+                    </Label>
+                    <Input type="number" step="0.0001" min="0.0001" value={fxRateValue} onChange={e => { setFxRateValue(e.target.value); setFxRateLoaded(false); }} placeholder="e.g. 83.92" className="h-9 text-xs" />
+                    <FieldError msg={errors.fxRate} />
+                  </div>
+                  {buybackPrice && quantity && (() => {
+                    const accepted = parseFloat(sharesAccepted) || parseFloat(quantity);
+                    const bp = parseFloat(buybackPrice);
+                    const proceeds = accepted * bp;
+                    const proceedsINR = proceeds * fx;
+                    return (
+                      <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.15)' }}>
+                        <p className="text-xs" style={{ color: '#059669' }}>
+                          Buyback proceeds: <strong>{currencySymbol(selectedStock?.currency ?? 'USD')}{proceeds.toLocaleString('en-US', { maximumFractionDigits: 2 })}</strong> ({accepted} shares @ {currencySymbol(selectedStock?.currency ?? 'USD')}{bp})
+                          {fx > 0 && <span className="ml-1" style={{ color: 'var(--wv-text-muted)' }}>(₹{proceedsINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })})</span>}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes (optional)</Label>
+                    <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Any notes about this buyback..." className="w-full rounded-lg border px-3 py-2 text-xs min-h-[60px] resize-y focus:outline-none focus:ring-2 focus:ring-offset-0" style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }} />
                   </div>
                 </div>
               )}

@@ -54,23 +54,32 @@ const TXN_CONFIG: Record<string, { label: string; bg: string; text: string; sign
 
 function txnLabel(txn: Transaction): string {
   const notes = txn.notes?.toLowerCase() ?? '';
-  if (notes.includes('bonus'))  return 'Bonus';
-  if (notes.includes('split'))  return 'Split';
-  if (notes.includes('rights')) return 'Rights';
+  if (notes.includes('bonus'))    return 'Bonus';
+  if (notes.includes('split'))    return 'Split';
+  if (notes.includes('rights'))   return 'Rights';
+  if (notes.includes('merger'))   return 'Merger';
+  if (notes.includes('demerger')) return 'Demerger';
+  if (notes.includes('buyback'))  return 'Buyback';
   return TXN_CONFIG[txn.type]?.label ?? txn.type;
 }
 function txnBg(txn: Transaction): string {
   const notes = txn.notes?.toLowerCase() ?? '';
-  if (notes.includes('bonus'))  return 'rgba(201,168,76,0.12)';
-  if (notes.includes('split'))  return 'rgba(99,102,241,0.10)';
-  if (notes.includes('rights')) return 'rgba(46,139,139,0.10)';
+  if (notes.includes('bonus'))    return 'rgba(201,168,76,0.12)';
+  if (notes.includes('split'))    return 'rgba(99,102,241,0.10)';
+  if (notes.includes('rights'))   return 'rgba(46,139,139,0.10)';
+  if (notes.includes('merger'))   return 'rgba(147,51,234,0.10)';
+  if (notes.includes('demerger')) return 'rgba(147,51,234,0.10)';
+  if (notes.includes('buyback'))  return 'rgba(234,88,12,0.10)';
   return TXN_CONFIG[txn.type]?.bg ?? 'var(--wv-border)';
 }
 function txnColor(txn: Transaction): string {
   const notes = txn.notes?.toLowerCase() ?? '';
-  if (notes.includes('bonus'))  return '#C9A84C';
-  if (notes.includes('split'))  return '#4338CA';
-  if (notes.includes('rights')) return '#2E8B8B';
+  if (notes.includes('bonus'))    return '#C9A84C';
+  if (notes.includes('split'))    return '#4338CA';
+  if (notes.includes('rights'))   return '#2E8B8B';
+  if (notes.includes('merger'))   return '#7C3AED';
+  if (notes.includes('demerger')) return '#7C3AED';
+  if (notes.includes('buyback'))  return '#EA580C';
   return TXN_CONFIG[txn.type]?.text ?? '#6B7280';
 }
 

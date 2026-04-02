@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     // Stock identity
     symbol, companyName, exchange, currency = 'USD', country, sector,
     // Transaction
-    transactionType = 'buy',  // 'buy' | 'sell' | 'dividend' | 'bonus' | 'split' | 'rights'
+    transactionType = 'buy',  // 'buy' | 'sell' | 'dividend' | 'bonus' | 'split' | 'rights' | 'buyback'
     quantity, price, date,
     // FX
     fxRate = 1,
@@ -43,6 +43,8 @@ export async function POST(req: NextRequest) {
     splitFactor: bodySplitFactor,
     rightsRatio,
     rightsPrice: _rightsPrice,
+    buybackPrice,
+    sharesAccepted,
     // Portfolio & broker
     portfolioName = 'Long-term Growth',
     brokerId: passedBrokerId,
@@ -62,6 +64,9 @@ export async function POST(req: NextRequest) {
   }
   if ((transactionType === 'buy' || transactionType === 'rights') && !price) {
     return NextResponse.json({ error: 'price is required for buy/rights' }, { status: 400 });
+  }
+  if (transactionType === 'buyback' && !buybackPrice) {
+    return NextResponse.json({ error: 'buybackPrice is required for buyback' }, { status: 400 });
   }
 
   // -- 1. Get user profile --
@@ -163,6 +168,10 @@ export async function POST(req: NextRequest) {
       // Reduce qty, keep avg
       updatedQty = Math.max(0, oldQty - qty);
       updatedAvg = oldAvg;
+    } else if (transactionType === 'buyback') {
+      const accepted = sharesAccepted ? parseFloat(String(sharesAccepted)) : qty;
+      updatedQty = Math.max(0, oldQty - accepted);
+      updatedAvg = oldAvg;
     } else {
       // dividend: no qty change
       updatedQty = oldQty;
@@ -220,7 +229,7 @@ export async function POST(req: NextRequest) {
   let txnPrice = px;
   let txnQty   = qty;
 
-  if (transactionType === 'bonus' || transactionType === 'split') {
+  if (transactionType === 'bonus' || transactionType === 'split' || transactionType === 'buyback') {
     totalFees = 0;
   }
 
@@ -251,6 +260,12 @@ export async function POST(req: NextRequest) {
       txnQty   = 0;
       txnPrice = px;
       if (!txnNotes) txnNotes = `Dividend from ${symbol} | ${currency} ${px.toFixed(2)} | FX: ${fxRateNum}`;
+      break;
+    case 'buyback':
+      txnType = 'sell';
+      txnQty = sharesAccepted ? parseFloat(String(sharesAccepted)) : qty;
+      txnPrice = parseFloat(String(buybackPrice)) || px;
+      if (!txnNotes) txnNotes = `Buyback — ${txnQty} shares @ ${currency} ${txnPrice.toFixed(2)} | FX: ${fxRateNum}`;
       break;
   }
 

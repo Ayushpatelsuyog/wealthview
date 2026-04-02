@@ -51,6 +51,7 @@ const TXN_TYPES = [
   { key: 'split',    label: 'Split' },
   { key: 'rights',   label: 'Rights Issue' },
   { key: 'dividend', label: 'Dividend' },
+  { key: 'buyback',  label: 'Buyback' },
 ];
 
 const SECTOR_COLORS: Record<string, string> = {
@@ -158,10 +159,18 @@ function IndianStocksFormContent() {
   const addToHoldingId = _searchParams.get('add_to');
   const sellHoldingId = _searchParams.get('sell');
   const dividendHoldingId = _searchParams.get('dividend');
+  const buybackHoldingId = _searchParams.get('buyback');
+  const bonusHoldingId = _searchParams.get('bonus');
+  const splitHoldingId = _searchParams.get('split');
+  const rightsHoldingId = _searchParams.get('rights');
   const _isAddMoreMode = !!addToHoldingId && !isEditMode;
   const isSellMode = !!sellHoldingId;
   const isDividendMode = !!dividendHoldingId;
-  const preloadHoldingId = addToHoldingId || sellHoldingId || dividendHoldingId;
+  const isBuybackMode = !!buybackHoldingId;
+  const isBonusMode = !!bonusHoldingId;
+  const isSplitMode = !!splitHoldingId;
+  const isRightsMode = !!rightsHoldingId;
+  const preloadHoldingId = addToHoldingId || sellHoldingId || dividendHoldingId || buybackHoldingId || bonusHoldingId || splitHoldingId || rightsHoldingId;
 
   // Family/member prefill from sessionStorage (set by portfolio page before navigation)
   const prefillFamily = typeof window !== 'undefined' ? sessionStorage.getItem('wv_prefill_family') : null;
@@ -230,6 +239,9 @@ function IndianStocksFormContent() {
   const [divType,     setDivType]     = useState('Interim');
   const [exDate,      setExDate]      = useState('');
   const [payDate,     setPayDate]     = useState('');
+  // Buyback
+  const [buybackPrice, setBuybackPrice] = useState('');
+  const [sharesAccepted, setSharesAccepted] = useState('');
 
   // UI state
   const [saving,  setSaving]  = useState(false);
@@ -271,6 +283,10 @@ function IndianStocksFormContent() {
       // Set transaction type based on mode
       if (isSellMode) setTxnType('sell');
       else if (isDividendMode) setTxnType('dividend');
+      else if (isBuybackMode) setTxnType('buyback');
+      else if (isBonusMode) setTxnType('bonus');
+      else if (isSplitMode) setTxnType('split');
+      else if (isRightsMode) setTxnType('rights');
       else setTxnType('buy');
 
       // Pre-select family/member from holding's portfolio (fallback if not already prefilled)
@@ -442,6 +458,7 @@ function IndianStocksFormContent() {
       if (notes.toLowerCase().includes('bonus')) setTxnType('bonus');
       else if (notes.toLowerCase().includes('split')) setTxnType('split');
       else if (notes.toLowerCase().includes('rights')) setTxnType('rights');
+      else if (notes.toLowerCase().includes('buyback')) setTxnType('buyback');
       else if (txn.type === 'dividend') setTxnType('dividend');
       else if (txn.type === 'sell') setTxnType('sell');
       else setTxnType('buy');
@@ -550,6 +567,11 @@ function IndianStocksFormContent() {
     if (txnType === 'bonus'    && !bonusRatio)  errs.bonusRatio  = 'Enter bonus ratio e.g. 1:2';
     if (txnType === 'split'    && !splitRatio)  errs.splitRatio  = 'Enter split ratio e.g. 1:5';
     if (txnType === 'dividend' && !divPerShare) errs.divPerShare = 'Enter dividend per share';
+    if (txnType === 'buyback') {
+      if (!quantity || qty <= 0) errs.quantity = 'Enter shares tendered';
+      if (!buybackPrice || parseFloat(buybackPrice) <= 0) errs.buybackPrice = 'Enter buyback price';
+      if (!date) errs.date = 'Enter record date';
+    }
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -623,7 +645,11 @@ function IndianStocksFormContent() {
         bonusRatio,  splitRatio,  splitFactor,
         rightsRatio, rightsPrice,
         dividendPerShare: divPerShare, dividendType: divType, exDate, paymentDate: payDate,
+        buybackPrice: txnType === 'buyback' ? parseFloat(buybackPrice) : undefined,
+        sharesAccepted: txnType === 'buyback' ? (parseFloat(sharesAccepted) || parseFloat(quantity)) : undefined,
       };
+
+      if (txnType === 'buyback') body.transactionType = 'buyback';
 
       if (txnType === 'sell' && sellHoldingId) {
         // Sell mode: use dedicated sell API to reduce existing holding
@@ -675,6 +701,7 @@ function IndianStocksFormContent() {
     setBrokerage('0'); setStt(''); setGst(''); setStampDuty(''); setExchangeCharges('0'); setDpCharges('0');
     setBonusRatio(''); setSplitRatio(''); setRightsRatio(''); setRightsPrice('');
     setDivPerShare(''); setExDate(''); setPayDate('');
+    setBuybackPrice(''); setSharesAccepted('');
     setSectorOverride(null);
     setErrors({});
     setDate(new Date().toISOString().split('T')[0]);
@@ -929,7 +956,7 @@ function IndianStocksFormContent() {
               </p>
             {preloadHoldingId && selectedStock && (
               <div className="mb-4 p-3 rounded-xl text-xs" style={{ backgroundColor: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)', color: '#92620A' }}>
-                {isSellMode ? 'Selling shares of' : isDividendMode ? 'Recording dividend for' : 'Adding shares to'}: <strong>{selectedStock.companyName}</strong>
+                {isSellMode ? 'Selling shares of' : isDividendMode ? 'Recording dividend for' : isBuybackMode ? 'Recording buyback for' : 'Adding shares to'}: <strong>{selectedStock.companyName}</strong>
               </div>
             )}
 
@@ -1137,6 +1164,47 @@ function IndianStocksFormContent() {
                       </p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* ── Buyback ──────────────────────────────────────────────── */}
+              {txnType === 'buyback' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Shares Tendered</Label>
+                      <Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="100" className="h-9 text-xs" />
+                      <FieldError msg={errors.quantity} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Shares Accepted</Label>
+                      <Input type="number" value={sharesAccepted} onChange={e => setSharesAccepted(e.target.value)} placeholder="Same as tendered if full acceptance" className="h-9 text-xs" />
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Leave blank if fully accepted</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Buyback Price ({'\u20B9'})</Label>
+                      <Input type="number" step="0.01" value={buybackPrice} onChange={e => setBuybackPrice(e.target.value)} placeholder="500.00" className="h-9 text-xs" />
+                      <FieldError msg={errors.buybackPrice} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Record Date</Label>
+                      <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-xs" />
+                      <FieldError msg={errors.date} />
+                    </div>
+                  </div>
+                  {buybackPrice && quantity && (() => {
+                    const accepted = parseFloat(sharesAccepted) || parseFloat(quantity);
+                    const bp = parseFloat(buybackPrice);
+                    const proceeds = accepted * bp;
+                    return (
+                      <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.15)' }}>
+                        <p className="text-xs" style={{ color: '#059669' }}>
+                          Buyback proceeds: <strong>{'\u20B9'}{proceeds.toLocaleString('en-IN')}</strong> ({accepted} shares @ {'\u20B9'}{bp})
+                          {stockPrice ? ` \u00B7 vs CMP \u20B9${stockPrice.price}: ${bp > stockPrice.price ? 'Premium' : 'Discount'} of ${Math.abs(((bp - stockPrice.price) / stockPrice.price) * 100).toFixed(1)}%` : ''}
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 

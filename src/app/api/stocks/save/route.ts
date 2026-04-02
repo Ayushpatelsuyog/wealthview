@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     // Stock identity
     symbol, companyName, exchange = 'NSE', sector, industry, isin, bseCode,
     // Transaction
-    transactionType = 'buy',  // 'buy' | 'bonus' | 'split' | 'rights' | 'dividend'
+    transactionType = 'buy',  // 'buy' | 'sell' | 'bonus' | 'split' | 'rights' | 'dividend' | 'buyback'
     quantity, price, date,
     // Charges (for buy)
     brokerage = 0, stt = 0, gst = 0, stampDuty = 0, exchangeCharges = 0, dpCharges = 0,
@@ -52,6 +52,8 @@ export async function POST(req: NextRequest) {
     dividendType,
     exDate,
     paymentDate,
+    buybackPrice,
+    sharesAccepted,
   } = body;
 
   if (!symbol || !companyName || !date) {
@@ -62,6 +64,9 @@ export async function POST(req: NextRequest) {
   }
   if (transactionType === 'buy' && !price) {
     return NextResponse.json({ error: 'price is required for buy' }, { status: 400 });
+  }
+  if (transactionType === 'buyback' && !buybackPrice) {
+    return NextResponse.json({ error: 'buybackPrice is required for buyback' }, { status: 400 });
   }
 
   // ── 1. Get user profile ─────────────────────────────────────────────────────
@@ -166,6 +171,10 @@ export async function POST(req: NextRequest) {
       // Sell: reduce holding quantity
       updatedQty = Math.max(0, oldQty - qty);
       updatedAvg = oldAvg; // avg cost basis stays the same
+    } else if (transactionType === 'buyback') {
+      const accepted = sharesAccepted ? parseFloat(String(sharesAccepted)) : qty;
+      updatedQty = Math.max(0, oldQty - accepted);
+      updatedAvg = oldAvg; // cost basis stays same for remaining shares
     } else {
       // dividend: doesn't change holding qty/avg
       updatedQty = oldQty;
@@ -256,6 +265,13 @@ export async function POST(req: NextRequest) {
       txnPrice = parseFloat(dividendPerShare) || 0;
       txnFees  = 0;
       txnNotes = `${dividendType ?? 'Dividend'} — ₹${txnPrice}/share${exDate ? ` | Ex-date: ${exDate}` : ''}${paymentDate ? ` | Pay: ${paymentDate}` : ''}`;
+      break;
+    case 'buyback':
+      txnType  = 'sell';
+      txnQty   = sharesAccepted ? parseFloat(String(sharesAccepted)) : qty;
+      txnPrice = parseFloat(String(buybackPrice)) || px;
+      txnFees  = 0;
+      txnNotes = `Buyback — ${txnQty} shares accepted @ ₹${txnPrice}/share${exDate ? ` | Record date: ${exDate}` : ''}`;
       break;
   }
 

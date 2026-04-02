@@ -157,6 +157,7 @@ function ActionMenu({
     { label: 'Record Stock Split',  action: () => { navTo(`/add-assets/global-stocks?split=${holdingId}`); setOpen(false); } },
     { label: 'Record Rights Issue', action: () => { navTo(`/add-assets/global-stocks?rights=${holdingId}`); setOpen(false); } },
     { label: 'Record Dividend',     action: () => { navTo(`/add-assets/global-stocks?dividend=${holdingId}`); setOpen(false); } },
+    { label: 'Record Buyback',        action: () => { navTo(`/add-assets/global-stocks?buyback=${holdingId}`); setOpen(false); } },
     { label: 'Delete',              action: () => { onDelete(holdingId); setOpen(false); }, danger: true },
   ];
   return (
