@@ -7,7 +7,7 @@ import {
   Bitcoin, DollarSign, FileText, Landmark, Leaf,
   UserCheck, PiggyBank, Shield, Heart,
   Wallet, Gem, Building, Settings, ChevronDown,
-  ChevronRight, LayoutDashboard, Activity, PieChart, ArrowLeft, Plus,
+  ChevronRight, LayoutDashboard, Activity, PieChart, ArrowLeft, Plus, Download,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -216,6 +216,7 @@ export function Sidebar() {
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/prices',    icon: Activity,         label: 'Prices'    },
     { href: '/portfolio', icon: PieChart,          label: 'Portfolio' },
+    { href: '/reports',   icon: Download,          label: 'Reports'   },
   ];
 
   return (
