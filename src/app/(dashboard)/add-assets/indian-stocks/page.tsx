@@ -279,16 +279,23 @@ function IndianStocksFormContent() {
       if (!holdingData) return;
 
       const meta = (holdingData.metadata ?? {}) as Record<string, unknown>;
+      const holdingSector = String(meta.sector ?? '');
       setSelectedStock({
         symbol: holdingData.symbol,
         companyName: holdingData.name,
         exchange: String(meta.exchange ?? 'NSE'),
-        sector: String(meta.sector ?? ''),
+        sector: holdingSector,
         industry: String(meta.industry ?? ''),
         isin: String(meta.isin ?? ''),
         bseCode: String(meta.bse_code ?? ''),
       });
       setQuery(`${holdingData.symbol} — ${holdingData.name}`);
+
+      // Pre-fill sector from holding metadata
+      if (holdingSector) {
+        setSectorOverride(holdingSector);
+        console.log('Preloaded sector:', holdingSector);
+      }
 
       // Set transaction type based on mode
       if (isSellMode) setTxnType('sell');
@@ -452,17 +459,24 @@ function IndianStocksFormContent() {
       if (!holdingData) return;
 
       const meta = (holdingData.metadata ?? {}) as Record<string, unknown>;
+      const editSector = String(meta.sector ?? '');
 
       setSelectedStock({
         symbol: holdingData.symbol,
         companyName: holdingData.name,
         exchange: String(meta.exchange ?? 'NSE'),
-        sector: String(meta.sector ?? ''),
+        sector: editSector,
         industry: String(meta.industry ?? ''),
         isin: String(meta.isin ?? ''),
         bseCode: String(meta.bse_code ?? ''),
       });
       setQuery(`${holdingData.symbol} — ${holdingData.name}`);
+
+      // Pre-fill sector from holding metadata
+      if (editSector) {
+        setSectorOverride(editSector);
+        console.log('Preloaded sector (edit):', editSector);
+      }
 
       const notes = txn.notes ?? '';
       if (notes.toLowerCase().includes('bonus')) setTxnType('bonus');

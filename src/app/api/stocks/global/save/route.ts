@@ -209,10 +209,10 @@ export async function POST(req: NextRequest) {
     const existingMeta = (existingHolding.metadata ?? {}) as Record<string, unknown>;
     const updatedMeta = {
       ...existingMeta,
-      exchange,
-      currency,
-      country,
-      sector,
+      exchange:  exchange  ?? existingMeta.exchange,
+      currency:  currency  ?? existingMeta.currency,
+      country:   country   ?? existingMeta.country,
+      sector:    sector    ?? existingMeta.sector,
       fx_rate: fxRateNum,
     };
 

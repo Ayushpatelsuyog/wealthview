@@ -262,15 +262,22 @@ function GlobalStocksFormContent() {
       if (!holdingData) return;
 
       const meta = (holdingData.metadata ?? {}) as Record<string, unknown>;
+      const holdingSector = String(meta.sector ?? '');
       setSelectedStock({
         symbol: holdingData.symbol,
         companyName: holdingData.name,
         exchange: String(meta.exchange ?? ''),
         currency: String(meta.currency ?? 'USD'),
-        sector: String(meta.sector ?? ''),
+        sector: holdingSector,
         country: String(meta.country ?? ''),
       });
       setQuery(`${holdingData.symbol} — ${holdingData.name}`);
+
+      // Pre-fill sector from holding metadata
+      if (holdingSector) {
+        setSectorOverride(holdingSector);
+        console.log('Preloaded sector:', holdingSector);
+      }
 
       // Set transaction type based on mode
       if (isSellMode) setTxnType('sell');
@@ -450,15 +457,22 @@ function GlobalStocksFormContent() {
       const holdingMeta = (holdingData.metadata ?? {}) as Record<string, unknown>;
 
       // Set stock info
+      const editSector = String(holdingMeta.sector ?? '');
       setSelectedStock({
         symbol: holdingData.symbol,
         companyName: holdingData.name,
         exchange: String(holdingMeta.exchange ?? ''),
         currency: String(holdingMeta.currency ?? 'USD'),
-        sector: String(holdingMeta.sector ?? ''),
+        sector: editSector,
         country: String(holdingMeta.country ?? ''),
       });
       setQuery(holdingData.name);
+
+      // Pre-fill sector from holding metadata
+      if (editSector) {
+        setSectorOverride(editSector);
+        console.log('Preloaded sector (edit):', editSector);
+      }
 
       // Set transaction type
       setTxnType(txn.type === 'dividend' ? 'dividend' : txn.type === 'sell' ? 'sell' : 'buy');
