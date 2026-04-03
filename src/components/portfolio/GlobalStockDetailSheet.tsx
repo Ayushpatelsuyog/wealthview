@@ -516,6 +516,17 @@ export function GlobalStockDetailSheet({
             {(() => {
               const avgBuyFxRate = investedLocal > 0 ? investedINR / investedLocal : fxRate;
               const fxChangePct = avgBuyFxRate > 0 ? ((fxRate - avgBuyFxRate) / avgBuyFxRate) * 100 : 0;
+              // Per-transaction FX details
+              const buyTxnsForFx = (holding.transactions ?? [])
+                .filter(t => (t.type === 'buy' || t.type === 'sip') && Number(t.quantity) > 0)
+                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+              const fxDetails = buyTxnsForFx.map(t => {
+                const txFx = Number((t.metadata as Record<string, unknown>)?.fx_rate ?? fxRate);
+                const q = Number(t.quantity);
+                const p = Number(t.price);
+                const fxGain = q * p * (fxRate - txFx);
+                return { date: t.date, qty: q, price: p, purchaseFx: txFx, fxGain };
+              });
               return (
                 <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: fxImpact >= 0 ? 'rgba(5,150,105,0.04)' : 'rgba(220,38,38,0.04)', border: `1px solid ${fxImpact >= 0 ? 'rgba(5,150,105,0.10)' : 'rgba(220,38,38,0.10)'}` }}>
                   <p className="text-[10px] font-bold mb-2" style={{ color: fxImpact >= 0 ? '#059669' : '#DC2626' }}>
@@ -523,7 +534,7 @@ export function GlobalStockDetailSheet({
                   </p>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Purchase FX Rate</p>
+                      <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Avg Purchase FX</p>
                       <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>₹{avgBuyFxRate.toFixed(2)}/{currency}</p>
                     </div>
                     <div>
@@ -538,6 +549,22 @@ export function GlobalStockDetailSheet({
                       </p>
                     </div>
                   </div>
+                  {/* Per-transaction FX breakdown */}
+                  {fxDetails.length > 1 && (
+                    <div className="mt-2 pt-2 space-y-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                      <p className="text-[9px] font-semibold" style={{ color: 'var(--wv-text-muted)' }}>Per-Transaction FX</p>
+                      {fxDetails.map((d, i) => (
+                        <div key={i} className="flex items-center justify-between text-[10px]">
+                          <span style={{ color: 'var(--wv-text-secondary)' }}>
+                            {fmtDate(d.date)} · {d.qty} @ ₹{d.purchaseFx.toFixed(2)}/{currency}
+                          </span>
+                          <span className="font-medium" style={{ color: d.fxGain >= 0 ? '#059669' : '#DC2626' }}>
+                            {d.fxGain >= 0 ? '+' : ''}{formatLargeINR(d.fxGain)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -661,6 +688,11 @@ export function GlobalStockDetailSheet({
                           <button
                             className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-blue-50 transition-all"
                             onClick={() => {
+                              if (holding.portfolios) {
+                                sessionStorage.setItem('wv_prefill_family', holding.portfolios.family_id);
+                                sessionStorage.setItem('wv_prefill_member', holding.portfolios.user_id);
+                                sessionStorage.setItem('wv_prefill_active', 'true');
+                              }
                               onClose();
                               router.push(`/add-assets/global-stocks?edit_txn=${t.id}&holding_id=${holding.id}`);
                             }}

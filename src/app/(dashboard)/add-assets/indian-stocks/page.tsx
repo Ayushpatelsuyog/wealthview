@@ -453,7 +453,7 @@ function IndianStocksFormContent() {
 
       const { data: holdingData } = await supabase
         .from('holdings')
-        .select('symbol, name, metadata, brokers(id, name), portfolios(name)')
+        .select('symbol, name, metadata, brokers(id, name), portfolios(name, family_id, user_id)')
         .eq('id', editHoldingId)
         .single();
       if (!holdingData) return;
@@ -475,7 +475,6 @@ function IndianStocksFormContent() {
       // Pre-fill sector from holding metadata
       if (editSector) {
         setSectorOverride(editSector);
-        console.log('Preloaded sector (edit):', editSector);
       }
 
       const notes = txn.notes ?? '';
@@ -483,6 +482,8 @@ function IndianStocksFormContent() {
       else if (notes.toLowerCase().includes('split')) setTxnType('split');
       else if (notes.toLowerCase().includes('rights')) setTxnType('rights');
       else if (notes.toLowerCase().includes('buyback')) setTxnType('buyback');
+      else if (notes.toLowerCase().includes('merger')) setTxnType('merger_in');
+      else if (notes.toLowerCase().includes('demerger')) setTxnType('demerger_in');
       else if (txn.type === 'dividend') setTxnType('dividend');
       else if (txn.type === 'sell') setTxnType('sell');
       else setTxnType('buy');
@@ -491,9 +492,20 @@ function IndianStocksFormContent() {
       setPrice(String(txn.price || ''));
       setDate(txn.date || '');
 
+      // Set portfolio, family, member from holding's portfolio record
       if (holdingData.portfolios) {
-        const p = holdingData.portfolios as unknown as { name: string };
+        const p = holdingData.portfolios as unknown as { name: string; family_id: string; user_id: string };
         setPortfolioName(p.name);
+        if (p.family_id) {
+          setSelectedFamily(p.family_id);
+          setFamilyId(p.family_id);
+        }
+        if (p.user_id) {
+          setMember(p.user_id);
+          targetMemberRef.current = p.user_id;
+          _pendingMember = p.user_id;
+        }
+        prefillLockedRef.current = true;
       }
       if (holdingData.brokers) {
         const b = holdingData.brokers as unknown as { id: string };

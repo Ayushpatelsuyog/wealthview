@@ -452,7 +452,7 @@ function GlobalStocksFormContent() {
       // Load the holding for stock info
       const { data: holdingData } = await supabase
         .from('holdings')
-        .select('symbol, name, metadata, brokers(id, name), portfolios(name)')
+        .select('symbol, name, metadata, brokers(id, name), portfolios(name, family_id, user_id)')
         .eq('id', editHoldingId)
         .single();
       if (!holdingData) return;
@@ -476,11 +476,19 @@ function GlobalStocksFormContent() {
       // Pre-fill sector from holding metadata
       if (editSector) {
         setSectorOverride(editSector);
-        console.log('Preloaded sector (edit):', editSector);
       }
 
-      // Set transaction type
-      setTxnType(txn.type === 'dividend' ? 'dividend' : txn.type === 'sell' ? 'sell' : 'buy');
+      // Set transaction type from notes
+      const txnNotes = txn.notes?.toLowerCase() ?? '';
+      if (txnNotes.includes('bonus')) setTxnType('bonus');
+      else if (txnNotes.includes('split')) setTxnType('split');
+      else if (txnNotes.includes('rights')) setTxnType('rights');
+      else if (txnNotes.includes('buyback')) setTxnType('buyback');
+      else if (txnNotes.includes('merger')) setTxnType('merger_in');
+      else if (txnNotes.includes('demerger')) setTxnType('demerger_in');
+      else if (txn.type === 'dividend') setTxnType('dividend');
+      else if (txn.type === 'sell') setTxnType('sell');
+      else setTxnType('buy');
 
       // Set transaction fields
       setQuantity(String(txn.quantity || ''));
@@ -490,10 +498,20 @@ function GlobalStocksFormContent() {
       setBrokerage(String(meta.brokerage || txn.fees || '0'));
       setNotes(txn.notes || '');
 
-      // Set portfolio
+      // Set portfolio, family, member from holding's portfolio record
       if (holdingData.portfolios) {
-        const portfolio = holdingData.portfolios as unknown as { name: string };
-        setPortfolioName(portfolio.name);
+        const p = holdingData.portfolios as unknown as { name: string; family_id: string; user_id: string };
+        setPortfolioName(p.name);
+        if (p.family_id) {
+          setSelectedFamily(p.family_id);
+          setFamilyId(p.family_id);
+        }
+        if (p.user_id) {
+          setMember(p.user_id);
+          targetMemberRef.current = p.user_id;
+          _pendingMember = p.user_id;
+        }
+        prefillLockedRef.current = true;
       }
 
       // Set broker

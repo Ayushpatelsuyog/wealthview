@@ -455,6 +455,11 @@ export function StockDetailSheet({
                           <button
                             className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-blue-50 transition-all"
                             onClick={() => {
+                              if (holding.portfolios) {
+                                sessionStorage.setItem('wv_prefill_family', holding.portfolios.family_id);
+                                sessionStorage.setItem('wv_prefill_member', holding.portfolios.user_id);
+                                sessionStorage.setItem('wv_prefill_active', 'true');
+                              }
                               onClose();
                               router.push(`/add-assets/indian-stocks?edit_txn=${t.id}&holding_id=${holding.id}`);
                             }}
