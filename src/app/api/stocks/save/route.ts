@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     // Stock identity
     symbol, companyName, exchange = 'NSE', sector, industry, isin, bseCode,
     // Transaction
-    transactionType = 'buy',  // 'buy' | 'sell' | 'bonus' | 'split' | 'rights' | 'dividend' | 'buyback'
+    transactionType = 'buy',  // 'buy' | 'sell' | 'bonus' | 'split' | 'rights' | 'dividend' | 'buyback' | 'merger_in' | 'demerger_in'
     quantity, price, date,
     // Charges (for buy)
     brokerage = 0, stt = 0, gst = 0, stampDuty = 0, exchangeCharges = 0, dpCharges = 0,
@@ -54,6 +54,13 @@ export async function POST(req: NextRequest) {
     paymentDate,
     buybackPrice,
     sharesAccepted,
+    // Merger/Demerger-in extras
+    originalCompany,
+    originalShares,
+    originalCostBasis,
+    mergerCashComponent,
+    parentCompany,
+    costBasisAllocated,
   } = body;
 
   if (!symbol || !companyName || !date) {
@@ -64,6 +71,12 @@ export async function POST(req: NextRequest) {
   }
   if (transactionType === 'buy' && !price) {
     return NextResponse.json({ error: 'price is required for buy' }, { status: 400 });
+  }
+  if (transactionType === 'merger_in' && !originalCostBasis) {
+    return NextResponse.json({ error: 'originalCostBasis is required for merger_in' }, { status: 400 });
+  }
+  if (transactionType === 'demerger_in' && !costBasisAllocated) {
+    return NextResponse.json({ error: 'costBasisAllocated is required for demerger_in' }, { status: 400 });
   }
   if (transactionType === 'buyback' && !buybackPrice) {
     return NextResponse.json({ error: 'buybackPrice is required for buyback' }, { status: 400 });
@@ -153,10 +166,15 @@ export async function POST(req: NextRequest) {
     let updatedQty: number;
     let updatedAvg: number;
 
-    if (transactionType === 'buy' || transactionType === 'rights') {
+    if (transactionType === 'buy' || transactionType === 'rights' || transactionType === 'merger_in' || transactionType === 'demerger_in') {
+      const effectivePrice = transactionType === 'merger_in'
+        ? (parseFloat(String(originalCostBasis)) - (parseFloat(String(mergerCashComponent || 0)) * parseFloat(String(originalShares || 0)))) / (newQty || 1)
+        : transactionType === 'demerger_in'
+        ? parseFloat(String(costBasisAllocated)) / (newQty || 1)
+        : px;
       updatedQty = oldQty + newQty;
       updatedAvg = updatedQty > 0
-        ? (oldQty * oldAvg + newQty * px) / updatedQty
+        ? (oldQty * oldAvg + newQty * effectivePrice) / updatedQty
         : oldAvg;
     } else if (transactionType === 'bonus') {
       // Bonus shares are free: total invested stays same, qty increases
@@ -211,7 +229,10 @@ export async function POST(req: NextRequest) {
         symbol:        symbol.toUpperCase(),
         name:          companyName,
         quantity:      qty,
-        avg_buy_price: transactionType === 'bonus' ? 0 : px,
+        avg_buy_price: transactionType === 'bonus' ? 0
+                     : transactionType === 'merger_in' ? (parseFloat(String(originalCostBasis)) - (parseFloat(String(mergerCashComponent || 0)) * parseFloat(String(originalShares || 0)))) / (qty || 1)
+                     : transactionType === 'demerger_in' ? parseFloat(String(costBasisAllocated)) / (qty || 1)
+                     : px,
         currency:      'INR',
         metadata: {
           sector, industry, isin, bse_code: bseCode,
@@ -273,6 +294,26 @@ export async function POST(req: NextRequest) {
       txnFees  = 0;
       txnNotes = `Buyback — ${txnQty} shares accepted @ ₹${txnPrice}/share${exDate ? ` | Record date: ${exDate}` : ''}`;
       break;
+    case 'merger_in': {
+      const costBasis = parseFloat(String(originalCostBasis)) || 0;
+      const cashComp = (parseFloat(String(mergerCashComponent || 0))) * (parseFloat(String(originalShares || 0)));
+      const transferredCost = costBasis - cashComp;
+      const avgPx = qty > 0 ? transferredCost / qty : 0;
+      txnType  = 'buy';
+      txnPrice = avgPx;
+      txnFees  = 0;
+      txnNotes = `Merger In — Received ${qty} shares via merger of ${originalCompany || 'unknown'}. ${originalShares || '?'} original shares converted. Cost basis: ₹${transferredCost.toFixed(2)} transferred.${cashComp > 0 ? ` Cash received: ₹${cashComp.toFixed(2)}.` : ''}`;
+      break;
+    }
+    case 'demerger_in': {
+      const allocated = parseFloat(String(costBasisAllocated)) || 0;
+      const avgPx = qty > 0 ? allocated / qty : 0;
+      txnType  = 'buy';
+      txnPrice = avgPx;
+      txnFees  = 0;
+      txnNotes = `Demerger In — Received ${qty} shares from demerger/spin-off of ${parentCompany || 'unknown'}. Cost basis allocated: ₹${allocated.toFixed(2)}.`;
+      break;
+    }
   }
 
   const { error: txnErr } = await supabase.from('transactions').insert({

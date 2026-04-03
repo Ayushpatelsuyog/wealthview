@@ -52,13 +52,15 @@ interface Toast        { type: 'success' | 'error'; message: string }
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const TXN_TYPES = [
-  { key: 'buy',      label: 'Buy' },
-  { key: 'sell',     label: 'Sell' },
-  { key: 'bonus',    label: 'Bonus' },
-  { key: 'split',    label: 'Split' },
-  { key: 'rights',   label: 'Rights Issue' },
-  { key: 'dividend', label: 'Dividend' },
-  { key: 'buyback',  label: 'Buyback' },
+  { key: 'buy',         label: 'Buy' },
+  { key: 'sell',        label: 'Sell' },
+  { key: 'bonus',       label: 'Bonus' },
+  { key: 'split',       label: 'Split' },
+  { key: 'rights',      label: 'Rights Issue' },
+  { key: 'dividend',    label: 'Dividend' },
+  { key: 'buyback',     label: 'Buyback' },
+  { key: 'merger_in',   label: 'Received via M&A' },
+  { key: 'demerger_in', label: 'Received via Demerger' },
 ];
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -222,6 +224,17 @@ function GlobalStocksFormContent() {
   // Buyback
   const [buybackPrice, setBuybackPrice] = useState('');
   const [sharesAccepted, setSharesAccepted] = useState('');
+  // Merger In (Received via M&A)
+  const [originalCompany, setOriginalCompany] = useState('');
+  const [originalShares, setOriginalShares] = useState('');
+  const [originalCostBasis, setOriginalCostBasis] = useState('');
+  const [mergerCashComponent, setMergerCashComponent] = useState('');
+  const [originalCurrency, setOriginalCurrency] = useState('');
+  const [originalFxRate, setOriginalFxRate] = useState('');
+  // Demerger In (Received via Demerger)
+  const [parentCompany, setParentCompany] = useState('');
+  const [costBasisAllocated, setCostBasisAllocated] = useState('');
+  const [demergerOrigFxRate, setDemergerOrigFxRate] = useState('');
 
   // UI state
   const [saving,  setSaving]  = useState(false);
@@ -641,6 +654,20 @@ function GlobalStocksFormContent() {
       if (!fxRateValue || fx <= 0) errs.fxRate = 'Enter FX rate';
       if (!date) errs.date = 'Enter record date';
     }
+    if (txnType === 'merger_in') {
+      if (!quantity || qty <= 0) errs.quantity = 'Enter shares received';
+      if (!originalCompany.trim()) errs.originalCompany = 'Enter original company name';
+      if (!originalCostBasis || parseFloat(originalCostBasis) <= 0) errs.originalCostBasis = 'Enter original cost basis (₹)';
+      if (!fxRateValue || fx <= 0) errs.fxRate = 'Enter current FX rate';
+      if (!date) errs.date = 'Enter the merger date';
+    }
+    if (txnType === 'demerger_in') {
+      if (!quantity || qty <= 0) errs.quantity = 'Enter shares received';
+      if (!parentCompany.trim()) errs.parentCompany = 'Enter parent company name';
+      if (!costBasisAllocated || parseFloat(costBasisAllocated) <= 0) errs.costBasisAllocated = 'Enter cost basis allocated (₹)';
+      if (!fxRateValue || fx <= 0) errs.fxRate = 'Enter current FX rate';
+      if (!date) errs.date = 'Enter the demerger date';
+    }
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -701,6 +728,23 @@ function GlobalStocksFormContent() {
         body.buybackPrice = parseFloat(buybackPrice);
         body.sharesAccepted = parseFloat(sharesAccepted) || qty;
         body.price = parseFloat(buybackPrice);
+      }
+
+      // Add merger_in-specific fields
+      if (txnType === 'merger_in') {
+        body.originalCompany = originalCompany;
+        body.originalShares = originalShares;
+        body.originalCostBasis = parseFloat(originalCostBasis);
+        body.mergerCashComponent = parseFloat(mergerCashComponent || '0');
+        body.originalCurrency = originalCurrency || selectedStock!.currency;
+        body.originalFxRate = parseFloat(originalFxRate) || fx;
+      }
+
+      // Add demerger_in-specific fields
+      if (txnType === 'demerger_in') {
+        body.parentCompany = parentCompany;
+        body.costBasisAllocated = parseFloat(costBasisAllocated);
+        body.originalFxRate = parseFloat(demergerOrigFxRate) || fx;
       }
 
       // Add dividend-specific fields
@@ -818,6 +862,9 @@ function GlobalStocksFormContent() {
     setWithholdingTax('25'); setDivFxRate(''); setDivFxRateLoaded(false);
     setBonusRatio(''); setSplitRatio(''); setRightsRatio(''); setRightsPrice('');
     setBuybackPrice(''); setSharesAccepted('');
+    setOriginalCompany(''); setOriginalShares(''); setOriginalCostBasis(''); setMergerCashComponent('');
+    setOriginalCurrency(''); setOriginalFxRate('');
+    setParentCompany(''); setCostBasisAllocated(''); setDemergerOrigFxRate('');
     setSectorOverride(null);
     setErrors({});
     setDate(new Date().toISOString().split('T')[0]);
@@ -1537,6 +1584,153 @@ function GlobalStocksFormContent() {
                     <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Notes (optional)</Label>
                     <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Any notes about this buyback..." className="w-full rounded-lg border px-3 py-2 text-xs min-h-[60px] resize-y focus:outline-none focus:ring-2 focus:ring-offset-0" style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }} />
                   </div>
+                </div>
+              )}
+
+              {/* ── Received via Merger/Acquisition ─────────────────────── */}
+              {txnType === 'merger_in' && (
+                <div className="space-y-4">
+                  <div className="p-3 rounded-xl text-xs" style={{ backgroundColor: 'rgba(147,51,234,0.06)', border: '1px solid rgba(147,51,234,0.15)', color: '#7C3AED' }}>
+                    Use this when the acquired company is delisted and you received shares of the acquiring company.
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5 col-span-2">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Shares Received (new stock) *</Label>
+                      <Input type="number" step="0.0001" min="0.0001" value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="e.g. 80.11" className="h-9 text-xs" />
+                      <FieldError msg={errors.quantity} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Date Received *</Label>
+                      <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-xs" />
+                      <FieldError msg={errors.date} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Original Company Name *</Label>
+                      <Input value={originalCompany} onChange={e => setOriginalCompany(e.target.value)} placeholder="e.g. SilverCrest Metals" className="h-9 text-xs" />
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>May be delisted — just type the name</p>
+                      <FieldError msg={errors.originalCompany} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Original Shares Held</Label>
+                      <Input type="number" step="0.0001" min="0" value={originalShares} onChange={e => setOriginalShares(e.target.value)} placeholder="e.g. 50" className="h-9 text-xs" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Original Cost Basis (₹) *</Label>
+                      <Input type="number" step="0.01" min="0.01" value={originalCostBasis} onChange={e => setOriginalCostBasis(e.target.value)} placeholder="e.g. 150000" className="h-9 text-xs" />
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Total INR amount originally invested</p>
+                      <FieldError msg={errors.originalCostBasis} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Original Currency</Label>
+                      <Input value={originalCurrency} onChange={e => setOriginalCurrency(e.target.value)} placeholder={selectedStock?.currency ?? 'USD'} className="h-9 text-xs" />
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Currency of original stock (defaults to new stock currency)</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Original FX Rate (to INR)</Label>
+                      <Input type="number" step="0.0001" min="0" value={originalFxRate} onChange={e => setOriginalFxRate(e.target.value)} placeholder="e.g. 83.92" className="h-9 text-xs" />
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>FX rate when original investment was made (defaults to current FX)</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Cash Component per Share ({cSymbol})</Label>
+                      <Input type="number" step="0.01" min="0" value={mergerCashComponent} onChange={e => setMergerCashComponent(e.target.value)} placeholder="0.00" className="h-9 text-xs" />
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>In local currency, if M&A includes cash</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
+                        Current FX Rate ({stockCurrency} to INR) *
+                        {fxRateLoaded && <AutoTag label="auto-fetched" />}
+                      </Label>
+                      <Input type="number" step="0.0001" min="0.0001" value={fxRateValue} onChange={e => { setFxRateValue(e.target.value); setFxRateLoaded(false); }} placeholder="e.g. 83.92" className="h-9 text-xs" />
+                      <FieldError msg={errors.fxRate} />
+                    </div>
+                  </div>
+                  {/* Preview */}
+                  {quantity && originalCostBasis && (() => {
+                    const sharesRec = parseFloat(quantity) || 0;
+                    const cost = parseFloat(originalCostBasis) || 0;
+                    const cashPerSh = parseFloat(mergerCashComponent || '0');
+                    const origSh = parseFloat(originalShares || '0');
+                    const origFx = parseFloat(originalFxRate) || fx || 1;
+                    const costLocal = cost / origFx;
+                    const cashTotal = cashPerSh * origSh;
+                    const transferredLocal = costLocal - cashTotal;
+                    const avgPx = sharesRec > 0 ? transferredLocal / sharesRec : 0;
+                    return transferredLocal > 0 ? (
+                      <div className="p-3 rounded-xl space-y-1" style={{ backgroundColor: 'rgba(147,51,234,0.06)', border: '1px solid rgba(147,51,234,0.12)' }}>
+                        <p className="text-xs" style={{ color: '#7C3AED' }}>
+                          {origSh > 0 ? `${origSh} shares of ${originalCompany || '?'} → ` : ''}<strong>{sharesRec} shares</strong> of {selectedStock?.companyName}
+                        </p>
+                        <p className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
+                          Cost basis transferred: ₹{cost.toLocaleString('en-IN')} ({cSymbol}{transferredLocal.toFixed(2)} local) · Avg: {cSymbol}{avgPx.toFixed(2)}/share
+                          {cashTotal > 0 ? ` · Cash: ${cSymbol}${cashTotal.toFixed(2)}` : ''}
+                        </p>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+
+              {/* ── Received via Demerger/Spin-off ────────────────────────── */}
+              {txnType === 'demerger_in' && (
+                <div className="space-y-4">
+                  <div className="p-3 rounded-xl text-xs" style={{ backgroundColor: 'rgba(147,51,234,0.06)', border: '1px solid rgba(147,51,234,0.15)', color: '#7C3AED' }}>
+                    Use this when you received shares from a demerger/spin-off. The parent company may or may not still be listed.
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5 col-span-2">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Shares Received (new/spun-off stock) *</Label>
+                      <Input type="number" step="0.0001" min="0.0001" value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="e.g. 50" className="h-9 text-xs" />
+                      <FieldError msg={errors.quantity} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Date *</Label>
+                      <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 text-xs" />
+                      <FieldError msg={errors.date} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Parent Company Name *</Label>
+                      <Input value={parentCompany} onChange={e => setParentCompany(e.target.value)} placeholder="e.g. General Electric" className="h-9 text-xs" />
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>May or may not still be listed</p>
+                      <FieldError msg={errors.parentCompany} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Cost Basis Allocated (₹) *</Label>
+                      <Input type="number" step="0.01" min="0.01" value={costBasisAllocated} onChange={e => setCostBasisAllocated(e.target.value)} placeholder="e.g. 50000" className="h-9 text-xs" />
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>INR cost allocated to this demerger (per company announcement)</p>
+                      <FieldError msg={errors.costBasisAllocated} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Original FX Rate (to INR)</Label>
+                      <Input type="number" step="0.0001" min="0" value={demergerOrigFxRate} onChange={e => setDemergerOrigFxRate(e.target.value)} placeholder="e.g. 83.92" className="h-9 text-xs" />
+                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>FX rate at time of original investment (defaults to current)</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
+                        Current FX Rate ({stockCurrency} to INR) *
+                        {fxRateLoaded && <AutoTag label="auto-fetched" />}
+                      </Label>
+                      <Input type="number" step="0.0001" min="0.0001" value={fxRateValue} onChange={e => { setFxRateValue(e.target.value); setFxRateLoaded(false); }} placeholder="e.g. 83.92" className="h-9 text-xs" />
+                      <FieldError msg={errors.fxRate} />
+                    </div>
+                  </div>
+                  {/* Preview */}
+                  {quantity && costBasisAllocated && (() => {
+                    const sharesRec = parseFloat(quantity) || 0;
+                    const allocated = parseFloat(costBasisAllocated) || 0;
+                    const origFx = parseFloat(demergerOrigFxRate) || fx || 1;
+                    const allocLocal = allocated / origFx;
+                    const avgPx = sharesRec > 0 ? allocLocal / sharesRec : 0;
+                    return allocated > 0 ? (
+                      <div className="p-3 rounded-xl space-y-1" style={{ backgroundColor: 'rgba(147,51,234,0.06)', border: '1px solid rgba(147,51,234,0.12)' }}>
+                        <p className="text-xs" style={{ color: '#7C3AED' }}>
+                          <strong>{sharesRec} shares</strong> of {selectedStock?.companyName} from demerger of {parentCompany || '?'}
+                        </p>
+                        <p className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
+                          Cost allocated: ₹{allocated.toLocaleString('en-IN')} ({cSymbol}{allocLocal.toFixed(2)} local) · Avg: {cSymbol}{avgPx.toFixed(2)}/share
+                        </p>
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
               )}
 
