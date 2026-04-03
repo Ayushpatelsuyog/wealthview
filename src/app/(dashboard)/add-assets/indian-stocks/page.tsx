@@ -754,6 +754,14 @@ function IndianStocksFormContent() {
   }
 
 
+  // ── Save button label ─────────────────────────────────────────────────────
+  const TXN_LABELS: Record<string, string> = {
+    buy: 'Buy', sell: 'Sell', bonus: 'Bonus', split: 'Split',
+    rights: 'Rights Issue', dividend: 'Dividend', buyback: 'Buyback',
+    merger_in: 'M&A Entry', demerger_in: 'Demerger Entry',
+  };
+  const saveLabel = TXN_LABELS[txnType] ?? 'Entry';
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
@@ -1412,7 +1420,7 @@ function IndianStocksFormContent() {
             <div className="flex gap-3">
               <Button onClick={() => handleSave(false)} disabled={saving} className="flex-1 h-10 text-xs font-semibold"
                 style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}>
-                {saving ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Saving…</> : `Save ${txnType.charAt(0).toUpperCase() + txnType.slice(1)}`}
+                {saving ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Saving…</> : `Save ${saveLabel}`}
               </Button>
               <Button onClick={() => handleSave(true)} disabled={saving} className="flex-1 h-10 text-xs font-semibold text-white"
                 style={{ backgroundColor: '#1B2A4A' }}>
