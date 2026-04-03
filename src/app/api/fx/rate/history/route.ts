@@ -30,7 +30,7 @@ const FALLBACK_RATES: Record<string, number> = {
   CNYIN: 11.80,
 };
 
-async function fetchYahooFxHistory(from: string, to: string): Promise<FxHistoryData | null> {
+async function fetchYahooFxHistory(from: string, to: string, range = '2y'): Promise<FxHistoryData | null> {
   const headers: Record<string, string> = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept': 'application/json',
@@ -42,7 +42,7 @@ async function fetchYahooFxHistory(from: string, to: string): Promise<FxHistoryD
     try {
       const controller = new AbortController();
       const tid = setTimeout(() => controller.abort(), 10_000);
-      const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${pair}?interval=1d&range=2y`;
+      const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${pair}?interval=1d&range=${range}`;
       const res = await fetch(url, { headers, signal: controller.signal });
       clearTimeout(tid);
       if (!res.ok) continue;
@@ -56,10 +56,51 @@ async function fetchYahooFxHistory(from: string, to: string): Promise<FxHistoryD
 
       if (timestamps.length === 0 || closes.length === 0) continue;
 
-      console.log(`[FX History] ${from}/${to}: ${timestamps.length} data points from ${host}`);
+      console.log(`[FX History] ${from}/${to}: ${timestamps.length} data points from ${host} (range=${range})`);
       return { timestamps, closes };
     } catch (err) {
       console.warn(`[FX History] Yahoo (${host}) error for ${pair}:`, (err as Error).message);
+    }
+  }
+  return null;
+}
+
+/**
+ * Fetch FX history for a specific date window using period1/period2 (for dates beyond 2y range).
+ */
+async function fetchYahooFxHistoryForDate(from: string, to: string, targetDate: Date): Promise<FxHistoryData | null> {
+  const headers: Record<string, string> = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/json',
+  };
+
+  const pair = `${from}${to}=X`;
+  // 7-day window around the target date (handles weekends/holidays)
+  const period1 = Math.floor(targetDate.getTime() / 1000) - (7 * 86400);
+  const period2 = Math.floor(targetDate.getTime() / 1000) + (7 * 86400);
+
+  for (const host of ['query1', 'query2']) {
+    try {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 10_000);
+      const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${pair}?interval=1d&period1=${period1}&period2=${period2}`;
+      const res = await fetch(url, { headers, signal: controller.signal });
+      clearTimeout(tid);
+      if (!res.ok) continue;
+
+      const json = await res.json();
+      const result = json?.chart?.result?.[0];
+      if (!result) continue;
+
+      const timestamps: number[] = result.timestamp ?? [];
+      const closes: number[] = result.indicators?.quote?.[0]?.close ?? [];
+
+      if (timestamps.length === 0 || closes.length === 0) continue;
+
+      console.log(`[FX History] ${from}/${to}: ${timestamps.length} data points for date ${targetDate.toISOString().split('T')[0]} from ${host}`);
+      return { timestamps, closes };
+    } catch (err) {
+      console.warn(`[FX History] Yahoo (${host}) error for ${pair} date-specific:`, (err as Error).message);
     }
   }
   return null;
@@ -102,46 +143,63 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'invalid date' }, { status: 400 });
   }
 
-  // Cache full history per pair (6h TTL)
-  const cacheKey = `fx_history_${from}_${to}`;
-  let history = cacheGet<FxHistoryData>(cacheKey);
+  const targetMs = parsed.getTime();
+  const nowMs = Date.now();
+  const twoYearsMs = 2 * 365 * 24 * 60 * 60 * 1000;
+  const isWithin2y = (nowMs - targetMs) < twoYearsMs;
 
-  if (!history) {
-    history = await fetchYahooFxHistory(from, to);
+  let rate: number | null = null;
+
+  if (isWithin2y) {
+    // Use cached 2y history for recent dates
+    const cacheKey = `fx_history_${from}_${to}`;
+    let history = cacheGet<FxHistoryData>(cacheKey);
+
+    if (!history) {
+      history = await fetchYahooFxHistory(from, to);
+      if (history) {
+        cacheSet(cacheKey, history, 6 * 60 * 60 * 1000);
+      }
+    }
+
     if (history) {
-      cacheSet(cacheKey, history, 6 * 60 * 60 * 1000);
+      rate = findClosestRate(history.timestamps, history.closes, dateStr);
     }
   }
 
-  if (!history) {
-    // Fallback to hardcoded rate
-    const pairKey = `${from}${to}`;
-    const fallbackRate = FALLBACK_RATES[pairKey];
-    if (fallbackRate) {
-      console.warn(`[FX History] Using fallback rate for ${pairKey}: ${fallbackRate}`);
-      return NextResponse.json({ from, to, date: dateStr, rate: fallbackRate });
-    }
+  if (rate == null) {
+    // Date beyond 2y range or not found in cached data — fetch specific date window
+    const dateCacheKey = `fx_date_${from}_${to}_${dateStr}`;
+    const cachedRate = cacheGet<number>(dateCacheKey);
 
-    return NextResponse.json({
-      error:   'history_unavailable',
-      message: `Could not fetch FX history for ${from}/${to}. Yahoo Finance may be temporarily unavailable.`,
-    });
+    if (cachedRate != null) {
+      rate = cachedRate;
+    } else {
+      const dateHistory = await fetchYahooFxHistoryForDate(from, to, parsed);
+      if (dateHistory) {
+        rate = findClosestRate(dateHistory.timestamps, dateHistory.closes, dateStr);
+        if (rate != null) {
+          // Cache date-specific result for 24h
+          cacheSet(dateCacheKey, rate, 24 * 60 * 60 * 1000);
+        }
+      }
+    }
   }
 
-  const rate = findClosestRate(history.timestamps, history.closes, dateStr);
-  if (!rate) {
-    // Fallback
-    const pairKey = `${from}${to}`;
-    const fallbackRate = FALLBACK_RATES[pairKey];
-    if (fallbackRate) {
-      return NextResponse.json({ from, to, date: dateStr, rate: fallbackRate });
-    }
-
-    return NextResponse.json({
-      error:   'date_not_found',
-      message: `No FX rate found for ${from}/${to} on or near ${dateStr}`,
-    });
+  if (rate != null) {
+    return NextResponse.json({ from, to, date: dateStr, rate });
   }
 
-  return NextResponse.json({ from, to, date: dateStr, rate });
+  // Fallback to hardcoded rate
+  const pairKey = `${from}${to}`;
+  const fallbackRate = FALLBACK_RATES[pairKey];
+  if (fallbackRate) {
+    console.warn(`[FX History] Using fallback rate for ${pairKey} on ${dateStr}: ${fallbackRate}`);
+    return NextResponse.json({ from, to, date: dateStr, rate: fallbackRate });
+  }
+
+  return NextResponse.json({
+    error:   'rate_unavailable',
+    message: `No FX rate found for ${from}/${to} on or near ${dateStr}`,
+  });
 }
