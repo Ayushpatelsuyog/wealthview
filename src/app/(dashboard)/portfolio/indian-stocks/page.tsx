@@ -1003,6 +1003,13 @@ export default function IndianStocksPortfolioPage() {
                 const hasDayChange = group.holdings.some(h => h.dayChange != null);
                 const groupDayPnl = group.holdings.reduce((s, h) => s + (h.dayChange != null ? Number(h.quantity) * h.dayChange : 0), 0);
                 const groupDayPnlPct = group.holdings[0]?.dayChangePct ?? null;
+                const ubSet = new Set(group.holdings.map(h => h.brokers?.id ?? h.brokers?.name ?? ''));
+                const upSet = new Set(group.holdings.map(h => h.portfolios?.id ?? h.portfolios?.name ?? ''));
+                const subtitle = ubSet.size > 1 && upSet.size > 1
+                  ? `${group.holdings.length} entries · ${ubSet.size} brokers, ${upSet.size} portfolios`
+                  : ubSet.size > 1 ? `${ubSet.size} brokers`
+                  : upSet.size > 1 ? `${upSet.size} portfolios`
+                  : group.holdings[0]?.brokers?.name ?? '';
                 return (
                   <div key={group.symbol}>
                     {/* Consolidated summary row — always on top */}
@@ -1023,7 +1030,7 @@ export default function IndianStocksPortfolioPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-semibold leading-tight" style={{ color: 'var(--wv-text)' }}>{group.name} — Total</p>
-                          <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{group.holdings.length} brokers</p>
+                          <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{subtitle}</p>
                         </div>
                       </div>
                       <div><p className="text-[11px] font-semibold" style={{ color: '#C9A84C' }}>Consolidated</p></div>

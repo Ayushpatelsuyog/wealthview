@@ -1141,6 +1141,13 @@ export default function GlobalStocksPortfolioPage() {
                 const gDayPnlPct = group.holdings[0]?.dayChangePct ?? null;
                 const tGainLocal = group.totalCurrentValueLocal != null ? group.totalCurrentValueLocal - group.totalInvestedLocal : null;
                 const tGainLocalPct = tGainLocal != null && group.totalInvestedLocal > 0 ? (tGainLocal / group.totalInvestedLocal) * 100 : null;
+                const ubSet = new Set(group.holdings.map(h => h.brokers?.id ?? h.brokers?.name ?? ''));
+                const upSet = new Set(group.holdings.map(h => h.portfolios?.id ?? h.portfolios?.name ?? ''));
+                const subtitle = ubSet.size > 1 && upSet.size > 1
+                  ? `${group.holdings.length} entries · ${ubSet.size} brokers, ${upSet.size} portfolios`
+                  : ubSet.size > 1 ? `${ubSet.size} brokers`
+                  : upSet.size > 1 ? `${upSet.size} portfolios`
+                  : group.holdings[0]?.brokers?.name ?? '';
                 return (
                   <div key={group.symbol}>
                     {/* Consolidated summary row — always on top */}
@@ -1161,7 +1168,7 @@ export default function GlobalStocksPortfolioPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-semibold leading-tight" style={{ color: 'var(--wv-text)' }}>{group.name} — Total</p>
-                          <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{group.holdings.length} brokers</p>
+                          <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{subtitle}</p>
                         </div>
                       </div>
                       <div><span className="text-[11px] font-medium" style={{ color: 'var(--wv-text-secondary)' }}>{countryFlag(group.country)} {group.country}</span></div>
