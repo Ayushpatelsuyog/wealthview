@@ -903,6 +903,9 @@ function GlobalStocksFormContent() {
         setTimeout(() => router.push('/portfolio/global-stocks'), 1200);
       } else {
         // Normal mode: create new transaction (buy, dividend, or sell without holdingId)
+        if (txnType === 'merger_in' || txnType === 'demerger_in') {
+          console.log("=== MERGER SAVE PAYLOAD ===", JSON.stringify(body));
+        }
         const res = await fetch('/api/stocks/global/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1782,7 +1785,7 @@ function GlobalStocksFormContent() {
                     const cashPerSh = parseFloat(mergerCashComponent || '0');
                     const origSh = parseFloat(originalShares || '0');
                     const cashTotal = cashPerSh * origSh;
-                    const transferredLocal = mergerCostLocal - cashTotal;
+                    const transferredLocal = Math.max(0, mergerCostLocal - cashTotal);
                     const transferredINR = transferredLocal * mergerOrigFx;
                     const avgPx = sharesRec > 0 ? transferredLocal / sharesRec : 0;
                     return transferredLocal > 0 ? (

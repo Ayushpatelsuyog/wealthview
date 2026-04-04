@@ -1320,7 +1320,7 @@ function IndianStocksFormContent() {
                     const cashPerSh = parseFloat(mergerCashComponent || '0');
                     const origSh = parseFloat(originalShares || '0');
                     const cashTotal = cashPerSh * origSh;
-                    const transferred = cost - cashTotal;
+                    const transferred = Math.max(0, cost - cashTotal);
                     const avgPx = sharesRec > 0 ? transferred / sharesRec : 0;
                     return transferred > 0 ? (
                       <div className="p-3 rounded-xl space-y-1" style={{ backgroundColor: 'rgba(147,51,234,0.06)', border: '1px solid rgba(147,51,234,0.12)' }}>

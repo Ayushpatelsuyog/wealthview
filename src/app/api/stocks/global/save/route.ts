@@ -173,7 +173,12 @@ export async function POST(req: NextRequest) {
         const origFx = parseFloat(String(originalFxRate)) || fxRateNum;
         const costLocal = costBasis / origFx; // convert INR cost to local currency
         const cashComp = (parseFloat(String(mergerCashComponent || 0))) * (parseFloat(String(originalShares || 0)));
-        effectivePrice = qty > 0 ? (costLocal - cashComp) / qty : 0;
+        const transferredCost = Math.max(0, costLocal - cashComp); // never negative
+        console.log("=== MERGER_IN SAVE (consolidated) ===");
+        console.log("sharesReceived:", qty, "originalCostBasis(INR):", costBasis, "origFx:", origFx, "costLocal:", costLocal);
+        console.log("cashComponent:", mergerCashComponent, "originalShares:", originalShares, "cashComp:", cashComp);
+        console.log("transferredCost:", transferredCost, "calculated avg_buy_price:", qty > 0 ? transferredCost / qty : 0);
+        effectivePrice = qty > 0 ? transferredCost / qty : 0;
       } else if (transactionType === 'demerger_in') {
         const allocated = parseFloat(String(costBasisAllocated)) || 0;
         const origFx = parseFloat(String(originalFxRate)) || fxRateNum;
@@ -239,7 +244,12 @@ export async function POST(req: NextRequest) {
                          const origFx = parseFloat(String(originalFxRate)) || fxRateNum;
                          const costLocal = costBasis / origFx;
                          const cashComp = (parseFloat(String(mergerCashComponent || 0))) * (parseFloat(String(originalShares || 0)));
-                         return qty > 0 ? (costLocal - cashComp) / qty : 0;
+                         const transferredCost = Math.max(0, costLocal - cashComp); // never negative
+                         console.log("=== MERGER_IN SAVE (new holding) ===");
+                         console.log("sharesReceived:", qty, "originalCostBasis(INR):", costBasis, "origFx:", origFx, "costLocal:", costLocal);
+                         console.log("cashComponent:", mergerCashComponent, "originalShares:", originalShares, "cashComp:", cashComp);
+                         console.log("transferredCost:", transferredCost, "calculated avg_buy_price:", qty > 0 ? transferredCost / qty : 0);
+                         return qty > 0 ? transferredCost / qty : 0;
                        })()
                      : transactionType === 'demerger_in' ? (() => {
                          const allocated = parseFloat(String(costBasisAllocated)) || 0;
@@ -313,7 +323,7 @@ export async function POST(req: NextRequest) {
       const origFx = parseFloat(String(originalFxRate)) || fxRateNum;
       const costLocal = costBasis / origFx;
       const cashComp = (parseFloat(String(mergerCashComponent || 0))) * (parseFloat(String(originalShares || 0)));
-      const transferredCost = costLocal - cashComp;
+      const transferredCost = Math.max(0, costLocal - cashComp); // never negative
       txnType  = 'buy';
       txnPrice = qty > 0 ? transferredCost / qty : 0;
       totalFees = 0;

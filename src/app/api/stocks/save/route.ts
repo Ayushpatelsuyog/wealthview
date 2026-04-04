@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
 
     if (transactionType === 'buy' || transactionType === 'rights' || transactionType === 'merger_in' || transactionType === 'demerger_in') {
       const effectivePrice = transactionType === 'merger_in'
-        ? (parseFloat(String(originalCostBasis)) - (parseFloat(String(mergerCashComponent || 0)) * parseFloat(String(originalShares || 0)))) / (newQty || 1)
+        ? Math.max(0, parseFloat(String(originalCostBasis)) - (parseFloat(String(mergerCashComponent || 0)) * parseFloat(String(originalShares || 0)))) / (newQty || 1)
         : transactionType === 'demerger_in'
         ? parseFloat(String(costBasisAllocated)) / (newQty || 1)
         : px;
@@ -230,7 +230,7 @@ export async function POST(req: NextRequest) {
         name:          companyName,
         quantity:      qty,
         avg_buy_price: transactionType === 'bonus' ? 0
-                     : transactionType === 'merger_in' ? (parseFloat(String(originalCostBasis)) - (parseFloat(String(mergerCashComponent || 0)) * parseFloat(String(originalShares || 0)))) / (qty || 1)
+                     : transactionType === 'merger_in' ? Math.max(0, parseFloat(String(originalCostBasis)) - (parseFloat(String(mergerCashComponent || 0)) * parseFloat(String(originalShares || 0)))) / (qty || 1)
                      : transactionType === 'demerger_in' ? parseFloat(String(costBasisAllocated)) / (qty || 1)
                      : px,
         currency:      'INR',
@@ -297,7 +297,7 @@ export async function POST(req: NextRequest) {
     case 'merger_in': {
       const costBasis = parseFloat(String(originalCostBasis)) || 0;
       const cashComp = (parseFloat(String(mergerCashComponent || 0))) * (parseFloat(String(originalShares || 0)));
-      const transferredCost = costBasis - cashComp;
+      const transferredCost = Math.max(0, costBasis - cashComp); // never negative
       const avgPx = qty > 0 ? transferredCost / qty : 0;
       txnType  = 'buy';
       txnPrice = avgPx;

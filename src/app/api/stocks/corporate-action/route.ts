@@ -51,7 +51,7 @@ async function handleMerger(supabase: SB, body: Record<string, unknown>) {
   const cashComp = Number(cashPerShare) * oldQty;
 
   // Cost basis for new holding
-  const transferredCost = transferCostBasis ? totalCost - cashComp : 0;
+  const transferredCost = transferCostBasis ? Math.max(0, totalCost - cashComp) : 0;
   const newAvgPrice = received > 0 ? transferredCost / received : 0;
 
   // 2. Close source holding (set qty to 0)
