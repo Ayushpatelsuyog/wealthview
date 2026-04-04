@@ -1136,10 +1136,14 @@ export default function GlobalStocksPortfolioPage() {
                 if (!group.isMultiBroker) return renderStockRow(group.holdings[0]);
                 const isExpanded = expandedGroups.has(group.symbol);
                 const wtdAvgLocal = group.totalQty > 0 ? (group.totalInvestedLocal / group.totalQty) : 0;
+                const hasDayChange = group.holdings.some(h => h.dayChange != null);
+                const gDayPnl = group.holdings.reduce((s, h) => s + (h.dayChange != null ? Number(h.quantity) * (h.dayChange ?? 0) : 0), 0);
+                const gDayPnlPct = group.holdings[0]?.dayChangePct ?? null;
+                const tGainLocal = group.totalCurrentValueLocal != null ? group.totalCurrentValueLocal - group.totalInvestedLocal : null;
+                const tGainLocalPct = tGainLocal != null && group.totalInvestedLocal > 0 ? (tGainLocal / group.totalInvestedLocal) * 100 : null;
                 return (
                   <div key={group.symbol}>
-                    {isExpanded && group.holdings.map(h => renderStockRow(h, { borderLeft: '3px solid #C9A84C' }))}
-                    {/* Consolidated summary row */}
+                    {/* Consolidated summary row — always on top */}
                     <div
                       className="grid items-center px-4 py-3 border-b cursor-pointer"
                       style={{
@@ -1185,35 +1189,40 @@ export default function GlobalStocksPortfolioPage() {
                         ) : <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>}
                       </div>
                       <div className="text-right">
-                        {(() => {
-                          const gDayPnl = group.holdings.reduce((s, h) => s + (h.dayChange != null ? Number(h.quantity) * (h.dayChange ?? 0) : 0), 0);
-                          return gDayPnl !== 0 ? (
+                        {hasDayChange ? (
+                          <div>
                             <p className="text-[10px] font-semibold" style={{ color: gDayPnl >= 0 ? '#059669' : '#DC2626' }}>
                               {gDayPnl >= 0 ? '+' : ''}{fmtLocal(gDayPnl, group.currency)}
                             </p>
-                          ) : <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>;
-                        })()}
+                            {gDayPnlPct != null && (
+                              <p className="text-[9px]" style={{ color: gDayPnlPct >= 0 ? '#059669' : '#DC2626' }}>
+                                {gDayPnlPct >= 0 ? '+' : ''}{gDayPnlPct.toFixed(2)}%
+                              </p>
+                            )}
+                          </div>
+                        ) : <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>}
                       </div>
                       <div className="text-right">
-                        {(() => {
-                          const tGainLocal = group.totalCurrentValueLocal != null ? group.totalCurrentValueLocal - group.totalInvestedLocal : null;
-                          const tGainLocalPct = tGainLocal != null && group.totalInvestedLocal > 0 ? (tGainLocal / group.totalInvestedLocal) * 100 : null;
-                          if (tGainLocal == null || tGainLocalPct == null) return null;
+                        {tGainLocal != null ? (() => {
                           const up = tGainLocal >= 0;
                           return (
                             <div>
                               <p className="text-xs font-semibold" style={{ color: up ? '#059669' : '#DC2626' }}>
                                 {up ? '+' : ''}{fmtLocal(tGainLocal, group.currency)}
                               </p>
-                              <p className="text-[10px]" style={{ color: tGainLocalPct >= 0 ? '#059669' : '#DC2626' }}>
-                                {tGainLocalPct >= 0 ? '+' : ''}{tGainLocalPct.toFixed(1)}%
-                              </p>
+                              {tGainLocalPct != null && (
+                                <p className="text-[10px]" style={{ color: tGainLocalPct >= 0 ? '#059669' : '#DC2626' }}>
+                                  {tGainLocalPct >= 0 ? '+' : ''}{tGainLocalPct.toFixed(1)}%
+                                </p>
+                              )}
                             </div>
                           );
-                        })()}
+                        })() : <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>}
                       </div>
                       <div />
                     </div>
+                    {/* Individual entries — expand below consolidated row */}
+                    {isExpanded && group.holdings.map(h => renderStockRow(h, { borderLeft: '3px solid #C9A84C', backgroundColor: 'rgba(201,168,76,0.03)', paddingLeft: '1.5rem' }))}
                   </div>
                 );
               })

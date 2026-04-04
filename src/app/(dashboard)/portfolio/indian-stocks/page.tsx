@@ -1000,10 +1000,12 @@ export default function IndianStocksPortfolioPage() {
                 const tGain = group.totalCurrentValue != null ? group.totalCurrentValue - group.totalInvested : null;
                 const tGainPct = tGain != null && group.totalInvested > 0 ? (tGain / group.totalInvested) * 100 : null;
                 const wtdAvg = group.totalQty > 0 ? group.totalInvested / group.totalQty : 0;
+                const hasDayChange = group.holdings.some(h => h.dayChange != null);
+                const groupDayPnl = group.holdings.reduce((s, h) => s + (h.dayChange != null ? Number(h.quantity) * h.dayChange : 0), 0);
+                const groupDayPnlPct = group.holdings[0]?.dayChangePct ?? null;
                 return (
                   <div key={group.symbol}>
-                    {isExpanded && group.holdings.map(h => renderStockRow(h, { borderLeft: '3px solid #C9A84C' }))}
-                    {/* Consolidated summary row */}
+                    {/* Consolidated summary row — always on top */}
                     <div
                       className="grid items-center px-4 py-3 border-b cursor-pointer"
                       style={{
@@ -1038,21 +1040,27 @@ export default function IndianStocksPortfolioPage() {
                       </div>
                       {/* Day P&L */}
                       <div className="text-right">
-                        {(() => {
-                          const groupDayPnl = group.holdings.reduce((s, h) => s + (h.dayChange != null ? Number(h.quantity) * h.dayChange : 0), 0);
-                          return groupDayPnl !== 0 ? (
+                        {hasDayChange ? (
+                          <div>
                             <p className="text-[10px] font-semibold" style={{ color: groupDayPnl >= 0 ? '#059669' : '#DC2626' }}>
                               {groupDayPnl >= 0 ? '+' : ''}{formatLargeINR(groupDayPnl)}
                             </p>
-                          ) : <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>;
-                        })()}
+                            {groupDayPnlPct != null && (
+                              <p className="text-[9px]" style={{ color: groupDayPnlPct >= 0 ? '#059669' : '#DC2626' }}>
+                                {groupDayPnlPct >= 0 ? '+' : ''}{groupDayPnlPct.toFixed(2)}%
+                              </p>
+                            )}
+                          </div>
+                        ) : <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>}
                       </div>
                       <div className="text-right">
                         {group.totalCurrentValue != null ? <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(group.totalCurrentValue)}</p> : <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>}
                       </div>
-                      <div className="text-right">{tGain != null && tGainPct != null && <_PnlBadge value={tGain} pct={tGainPct} />}</div>
+                      <div className="text-right">{tGain != null && tGainPct != null ? <_PnlBadge value={tGain} pct={tGainPct} /> : <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>}</div>
                       <div />
                     </div>
+                    {/* Individual entries — expand below consolidated row */}
+                    {isExpanded && group.holdings.map(h => renderStockRow(h, { borderLeft: '3px solid #C9A84C', backgroundColor: 'rgba(201,168,76,0.03)', paddingLeft: '1.5rem' }))}
                   </div>
                 );
               })
