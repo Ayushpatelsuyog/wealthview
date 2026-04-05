@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cacheGet, cacheSet, cacheClear } from '@/lib/utils/price-cache';
+import { normalizeSubUnit } from '@/lib/utils/currency';
 
 interface GlobalStockPriceData {
   symbol: string;
@@ -58,19 +59,27 @@ async function fetchGlobalYahooPrice(symbol: string): Promise<GlobalStockPriceDa
       const price = meta?.regularMarketPrice;
       if (!price || price <= 0) continue;
 
-      const currency = meta?.currency ?? 'USD';
+      const rawCurrency = meta?.currency ?? 'USD';
+      const { currency: normalizedCurrency, divisor } = normalizeSubUnit(rawCurrency);
 
-      const prevClose = meta.chartPreviousClose ?? meta.regularMarketPreviousClose ?? 0;
-      const change = meta.regularMarketChange ?? (prevClose > 0 ? price - prevClose : 0);
-      const changePct = meta.regularMarketChangePercent ?? (prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0);
-      console.log(`[Global Stock Price] ${symbol} from ${host}: ${currency} ${price} (chg: ${change.toFixed(2)})`);
+      // Convert sub-unit prices (e.g., pence → pounds)
+      const adjPrice = price / divisor;
+      const prevClose = (meta.chartPreviousClose ?? meta.regularMarketPreviousClose ?? 0) / divisor;
+      const change = divisor > 1
+        ? (prevClose > 0 ? adjPrice - prevClose : 0)
+        : (meta.regularMarketChange ?? (prevClose > 0 ? adjPrice - prevClose : 0));
+      const changePct = divisor > 1
+        ? (prevClose > 0 ? ((adjPrice - prevClose) / prevClose) * 100 : 0)
+        : (meta.regularMarketChangePercent ?? (prevClose > 0 ? ((adjPrice - prevClose) / prevClose) * 100 : 0));
+      if (divisor > 1) console.log(`[Global Stock Price] ${symbol}: converted ${rawCurrency} ${price} → ${normalizedCurrency} ${adjPrice.toFixed(2)}`);
+      console.log(`[Global Stock Price] ${symbol} from ${host}: ${normalizedCurrency} ${adjPrice.toFixed(2)} (chg: ${change.toFixed(2)})`);
       return {
         symbol,
-        price:         Math.round(price * 100) / 100,
+        price:         Math.round(adjPrice * 100) / 100,
         change:        Math.round(change * 100) / 100,
         changePct:     Math.round(changePct * 100) / 100,
-        previousClose: Math.round((prevClose || price) * 100) / 100,
-        currency,
+        previousClose: Math.round((prevClose || adjPrice) * 100) / 100,
+        currency: normalizedCurrency,
         dayHigh:       Math.round((meta.regularMarketDayHigh  ?? price) * 100) / 100,
         dayLow:        Math.round((meta.regularMarketDayLow   ?? price) * 100) / 100,
         volume:        meta.regularMarketVolume ?? 0,

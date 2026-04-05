@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cacheGet, cacheSet } from '@/lib/utils/price-cache';
+import { normalizeSubUnit } from '@/lib/utils/currency';
 
 interface HistoryData {
   timestamps: number[];
@@ -28,11 +29,15 @@ async function fetchYahooHistory(symbol: string): Promise<HistoryData | null> {
       if (!result) continue;
 
       const timestamps: number[] = result.timestamp ?? [];
-      const closes: number[] = result.indicators?.quote?.[0]?.close ?? [];
-      const currency: string = result.meta?.currency ?? 'USD';
+      const rawCloses: number[] = result.indicators?.quote?.[0]?.close ?? [];
+      const rawCurrency: string = result.meta?.currency ?? 'USD';
+      const { currency, divisor } = normalizeSubUnit(rawCurrency);
+      // Convert sub-unit prices (e.g., pence → pounds)
+      const closes = divisor > 1 ? rawCloses.map(c => c != null ? c / divisor : c) : rawCloses;
 
       if (timestamps.length === 0 || closes.length === 0) continue;
 
+      if (divisor > 1) console.log(`[Global Stock History] ${symbol}: converted ${rawCurrency} → ${currency} (÷${divisor})`);
       console.log(`[Global Stock History] ${symbol}: ${timestamps.length} candles from ${host}`);
       return { timestamps, closes, currency };
     } catch (err) {
