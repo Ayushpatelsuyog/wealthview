@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, X, Loader2 } from 'lucide-react';
+import { Plus, X, Loader2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -38,15 +37,6 @@ const PRESET_COLORS = [
   { label: 'Gold',   hex: '#C9A84C' },
 ];
 
-const TYPE_OPTIONS = [
-  { label: 'Personal',   value: 'personal' },
-  { label: 'Retirement', value: 'retirement' },
-  { label: 'Tax Saving', value: 'tax_saving' },
-  { label: 'Joint',      value: 'joint' },
-  { label: 'Trading',    value: 'trading' },
-  { label: 'Other',      value: 'other' },
-];
-
 function portfolioLetter(name: string): string {
   return name.trim().charAt(0).toUpperCase();
 }
@@ -63,10 +53,16 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
   // Add modal
   const [showAdd,  setShowAdd]  = useState(false);
   const [addName,  setAddName]  = useState('');
-  const [addType,  setAddType]  = useState('personal');
   const [addColor, setAddColor] = useState('#1B2A4A');
   const [addSaving, setAddSaving] = useState(false);
   const [addError,  setAddError]  = useState<string | null>(null);
+
+  // Edit modal
+  const [editTarget, setEditTarget] = useState<DbPortfolio | null>(null);
+  const [editName,   setEditName]   = useState('');
+  const [editColor,  setEditColor]  = useState('#1B2A4A');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError,  setEditError]  = useState<string | null>(null);
 
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<DbPortfolio | null>(null);
@@ -77,16 +73,18 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
   useEffect(() => {
     if (!familyId) return;
     setLoading(true);
-    supabase
+    let query = supabase
       .from('portfolios')
       .select('id, name, type, logo_color')
-      .eq('family_id', familyId)
+      .eq('family_id', familyId);
+    if (memberId) query = query.eq('user_id', memberId);
+    query
       .order('created_at')
       .then(({ data }) => {
         setPortfolios(data ?? []);
         setLoading(false);
       });
-  }, [familyId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [familyId, memberId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Add portfolio ─────────────────────────────────────────────────────────
   async function handleAdd() {
@@ -95,14 +93,13 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
     setAddSaving(true);
     setAddError(null);
 
-    console.log("Creating portfolio with family_id:", familyId, "member_id:", memberId);
     const { data, error: err } = await supabase
       .from('portfolios')
       .insert({
         user_id:   memberId,
         family_id: familyId,
         name:      addName.trim(),
-        type:      addType,
+        type:      'personal',
         logo_color: addColor,
       })
       .select('id, name, type, logo_color')
@@ -118,7 +115,28 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
     setShowAdd(false);
     setAddName('');
     setAddColor('#1B2A4A');
-    setAddType('personal');
+  }
+
+  // ── Edit portfolio ──────────────────────────────────────────────────────
+  async function handleEdit() {
+    if (!editTarget || !editName.trim()) { setEditError('Portfolio name is required'); return; }
+    setEditSaving(true);
+    setEditError(null);
+
+    const oldName = editTarget.name;
+    const { error: err } = await supabase
+      .from('portfolios')
+      .update({ name: editName.trim(), logo_color: editColor })
+      .eq('id', editTarget.id);
+
+    setEditSaving(false);
+    if (err) { setEditError(err.message); return; }
+
+    setPortfolios(prev => prev.map(p =>
+      p.id === editTarget.id ? { ...p, name: editName.trim(), logo_color: editColor } : p
+    ));
+    if (selectedPortfolioName === oldName) onChange(editName.trim());
+    setEditTarget(null);
   }
 
   // ── Delete portfolio ──────────────────────────────────────────────────────
@@ -127,7 +145,6 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
     setDeleting(true);
     setDeleteError(null);
 
-    // Check for linked holdings (only active ones with qty > 0)
     const { count } = await supabase
       .from('holdings')
       .select('*', { count: 'exact', head: true })
@@ -151,6 +168,29 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
     setPortfolios(prev => prev.filter(p => p.id !== deleteTarget.id));
     if (selectedPortfolioName === deleteTarget.name) onChange('');
     setDeleteTarget(null);
+  }
+
+  // ── Color picker (shared between add and edit) ─────────────────────────
+  function ColorPicker({ value, onSelect }: { value: string; onSelect: (hex: string) => void }) {
+    return (
+      <div className="flex gap-2 flex-wrap">
+        {PRESET_COLORS.map(c => (
+          <button
+            key={c.hex}
+            type="button"
+            onClick={() => onSelect(c.hex)}
+            className="w-7 h-7 rounded-full transition-transform"
+            style={{
+              backgroundColor: c.hex,
+              outline: value === c.hex ? `2px solid ${c.hex}` : 'none',
+              outlineOffset: '2px',
+              transform: value === c.hex ? 'scale(1.15)' : 'scale(1)',
+            }}
+            title={c.label}
+          />
+        ))}
+      </div>
+    );
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -197,21 +237,38 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
                   </span>
                 </button>
 
-                {/* Delete X — only shown on hover */}
+                {/* Edit & Delete — shown on hover */}
                 {isHovered && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteTarget(p);
-                      setDeleteError(null);
-                    }}
-                    className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: 'rgba(220,38,38,0.12)', color: '#DC2626' }}
-                    title={`Remove ${p.name}`}
-                  >
-                    <X className="w-2.5 h-2.5" />
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditTarget(p);
+                        setEditName(p.name);
+                        setEditColor(p.logo_color || '#1B2A4A');
+                        setEditError(null);
+                      }}
+                      className="absolute top-1 left-1 w-4 h-4 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: 'rgba(27,42,74,0.12)', color: '#1B2A4A' }}
+                      title={`Edit ${p.name}`}
+                    >
+                      <Pencil className="w-2 h-2" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget(p);
+                        setDeleteError(null);
+                      }}
+                      className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: 'rgba(220,38,38,0.12)', color: '#DC2626' }}
+                      title={`Remove ${p.name}`}
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </>
                 )}
               </div>
             );
@@ -265,38 +322,8 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Type</Label>
-                <Select value={addType} onValueChange={setAddType}>
-                  <SelectTrigger className="h-9 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TYPE_OPTIONS.map(opt => (
-                      <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
                 <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Color</Label>
-                <div className="flex gap-2 flex-wrap">
-                  {PRESET_COLORS.map(c => (
-                    <button
-                      key={c.hex}
-                      type="button"
-                      onClick={() => setAddColor(c.hex)}
-                      className="w-7 h-7 rounded-full transition-transform"
-                      style={{
-                        backgroundColor: c.hex,
-                        outline: addColor === c.hex ? `2px solid ${c.hex}` : 'none',
-                        outlineOffset: '2px',
-                        transform: addColor === c.hex ? 'scale(1.15)' : 'scale(1)',
-                      }}
-                      title={c.label}
-                    />
-                  ))}
-                </div>
+                <ColorPicker value={addColor} onSelect={setAddColor} />
               </div>
 
               {/* Preview */}
@@ -316,11 +343,7 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
             </div>
 
             <div className="flex gap-2 mt-5">
-              <Button
-                variant="outline"
-                className="flex-1 h-9 text-xs"
-                onClick={() => setShowAdd(false)}
-              >
+              <Button variant="outline" className="flex-1 h-9 text-xs" onClick={() => setShowAdd(false)}>
                 Cancel
               </Button>
               <Button
@@ -330,6 +353,70 @@ export function PortfolioSelector({ familyId, memberId, selectedPortfolioName, o
                 disabled={addSaving}
               >
                 {addSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save Portfolio'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Portfolio Modal ── */}
+      {editTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+          onClick={() => setEditTarget(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl p-6 shadow-xl"
+            style={{ backgroundColor: 'var(--wv-surface)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--wv-text)' }}>Edit Portfolio</h3>
+
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Portfolio Name *</Label>
+                <Input
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleEdit()}
+                  placeholder="e.g. Long-term Growth"
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Color</Label>
+                <ColorPicker value={editColor} onSelect={setEditColor} />
+              </div>
+
+              {/* Preview */}
+              <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: 'var(--wv-surface-2)' }}>
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold"
+                  style={{ backgroundColor: editColor }}
+                >
+                  {portfolioLetter(editName || 'P')}
+                </div>
+                <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>
+                  {editName || 'Portfolio Name'}
+                </span>
+              </div>
+
+              {editError && <p className="text-[11px]" style={{ color: '#DC2626' }}>{editError}</p>}
+            </div>
+
+            <div className="flex gap-2 mt-5">
+              <Button variant="outline" className="flex-1 h-9 text-xs" onClick={() => setEditTarget(null)}>
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 h-9 text-xs text-white"
+                style={{ backgroundColor: '#1B2A4A' }}
+                onClick={handleEdit}
+                disabled={editSaving}
+              >
+                {editSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save Changes'}
               </Button>
             </div>
           </div>

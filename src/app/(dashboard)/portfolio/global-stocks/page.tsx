@@ -90,12 +90,19 @@ function regionOf(country: string): string {
   return COUNTRY_REGION[country] ?? 'Other';
 }
 
+const COUNTRY_COLORS: Record<string, string> = {
+  US: '#1B2A4A', CA: '#059669', UK: '#2563EB', DE: '#4B5563', FR: '#7C3AED',
+  JP: '#EC4899', HK: '#EF4444', AU: '#D97706', SG: '#10B981', CN: '#DC2626',
+  KR: '#0891B2', CH: '#6366F1', NL: '#F97316', SE: '#3B82F6', IT: '#A855F7',
+  ES: '#F59E0B', IE: '#14B8A6', BR: '#84CC16', AE: '#C9A84C', IN: '#E11D48',
+};
+
 const REGION_COLORS: Record<string, string> = {
   US: '#1B2A4A', Europe: '#2563EB', Asia: '#059669', LatAm: '#EA580C', 'Middle East': '#D97706', Other: '#6B7280',
 };
 
 function countryColor(country: string): string {
-  return REGION_COLORS[regionOf(country)] ?? '#6B7280';
+  return COUNTRY_COLORS[country] ?? REGION_COLORS[regionOf(country)] ?? '#6B7280';
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
