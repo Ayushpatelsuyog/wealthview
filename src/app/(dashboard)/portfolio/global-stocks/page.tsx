@@ -61,12 +61,28 @@ const COUNTRY_FLAG: Record<string, string> = {
   CA: '🇨🇦', CH: '🇨🇭', CN: '🇨🇳', KR: '🇰🇷',
   NL: '🇳🇱', SE: '🇸🇪', IT: '🇮🇹', ES: '🇪🇸',
   IE: '🇮🇪', BR: '🇧🇷', AE: '🇦🇪', IN: '🇮🇳',
+  TW: '🇹🇼', MX: '🇲🇽', IL: '🇮🇱', ZA: '🇿🇦', NZ: '🇳🇿',
+  TH: '🇹🇭', MY: '🇲🇾', DK: '🇩🇰', NO: '🇳🇴', FI: '🇫🇮',
 };
 
 const CURRENCY_COUNTRY: Record<string, string> = {
   USD: 'US', GBP: 'UK', GBp: 'UK', EUR: 'DE', JPY: 'JP', HKD: 'HK',
   AUD: 'AU', SGD: 'SG', CAD: 'CA', CHF: 'CH', CNY: 'CN', KRW: 'KR',
   SEK: 'SE', BRL: 'BR', AED: 'AE', INR: 'IN',
+};
+
+// Full country name → 2-letter code (API stores full names in metadata)
+const COUNTRY_NAME_TO_CODE: Record<string, string> = {
+  'United States': 'US', 'US': 'US', 'USA': 'US',
+  'United Kingdom': 'UK', 'UK': 'UK',
+  'Germany': 'DE', 'France': 'FR', 'Netherlands': 'NL', 'Sweden': 'SE',
+  'Italy': 'IT', 'Spain': 'ES', 'Ireland': 'IE', 'Switzerland': 'CH',
+  'Denmark': 'DK', 'Norway': 'NO', 'Belgium': 'BE', 'Finland': 'FI',
+  'Japan': 'JP', 'Hong Kong': 'HK', 'China': 'CN', 'South Korea': 'KR',
+  'Australia': 'AU', 'Singapore': 'SG', 'India': 'IN', 'Taiwan': 'TW',
+  'Canada': 'CA', 'Brazil': 'BR', 'Mexico': 'MX',
+  'UAE': 'AE', 'Israel': 'IL', 'South Africa': 'ZA',
+  'New Zealand': 'NZ', 'Thailand': 'TH', 'Malaysia': 'MY',
 };
 
 const COUNTRY_REGION: Record<string, string> = {
@@ -78,7 +94,11 @@ const COUNTRY_REGION: Record<string, string> = {
 };
 
 function resolveCountry(meta: Record<string, unknown>, currency: string): string {
-  if (meta?.country) return String(meta.country);
+  const raw = meta?.country ? String(meta.country) : '';
+  if (raw) {
+    // Normalize full name to 2-letter code
+    return COUNTRY_NAME_TO_CODE[raw] ?? raw;
+  }
   return CURRENCY_COUNTRY[currency] ?? 'US';
 }
 
@@ -95,6 +115,8 @@ const COUNTRY_COLORS: Record<string, string> = {
   JP: '#EC4899', HK: '#EF4444', AU: '#D97706', SG: '#10B981', CN: '#DC2626',
   KR: '#0891B2', CH: '#6366F1', NL: '#F97316', SE: '#3B82F6', IT: '#A855F7',
   ES: '#F59E0B', IE: '#14B8A6', BR: '#84CC16', AE: '#C9A84C', IN: '#E11D48',
+  TW: '#0D9488', MX: '#DB2777', IL: '#06B6D4', ZA: '#65A30D', NZ: '#4F46E5',
+  TH: '#16A34A', MY: '#9333EA', DK: '#EA580C', NO: '#0EA5E9', FI: '#F43F5E',
 };
 
 const REGION_COLORS: Record<string, string> = {
@@ -255,8 +277,16 @@ function DonutChart({ title, data, getColor }: {
   );
 }
 
-const BROKER_PALETTE   = ['#1B2A4A', '#2E8B8B', '#C9A84C', '#059669', '#7C3AED', '#EA580C', '#2563EB', '#DB2777'];
-const PORTFOLIO_PALETTE = ['#7C3AED', '#2563EB', '#059669', '#EA580C', '#DB2777', '#D97706', '#0891B2'];
+const BROKER_PALETTE = [
+  '#1B2A4A', '#2E8B8B', '#C9A84C', '#059669', '#7C3AED', '#EA580C', '#2563EB', '#DB2777',
+  '#D97706', '#0891B2', '#84CC16', '#6366F1', '#14B8A6', '#F97316', '#A855F7', '#EF4444',
+  '#4F46E5', '#16A34A', '#0D9488', '#F43F5E',
+];
+const PORTFOLIO_PALETTE = [
+  '#7C3AED', '#2563EB', '#059669', '#EA580C', '#DB2777', '#D97706', '#0891B2',
+  '#1B2A4A', '#84CC16', '#C9A84C', '#6366F1', '#14B8A6', '#F97316', '#EF4444',
+  '#4F46E5', '#16A34A', '#9333EA', '#F43F5E', '#0EA5E9', '#65A30D',
+];
 
 // ─── Pill ────────────────────────────────────────────────────────────────────
 

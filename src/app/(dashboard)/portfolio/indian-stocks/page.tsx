@@ -210,7 +210,11 @@ function DonutChart({ title, data, getColor }: {
   );
 }
 
-const PORTFOLIO_PALETTE = ['#7C3AED', '#2563EB', '#059669', '#EA580C', '#DB2777', '#D97706', '#0891B2'];
+const PORTFOLIO_PALETTE = [
+  '#7C3AED', '#2563EB', '#059669', '#EA580C', '#DB2777', '#D97706', '#0891B2',
+  '#1B2A4A', '#84CC16', '#C9A84C', '#6366F1', '#14B8A6', '#F97316', '#EF4444',
+  '#4F46E5', '#16A34A', '#9333EA', '#F43F5E', '#0EA5E9', '#65A30D',
+];
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
@@ -564,7 +568,11 @@ export default function IndianStocksPortfolioPage() {
 
   // ── Pie data ───────────────────────────────────────────────────────────────
 
-  const BROKER_PALETTE = ['#1B2A4A', '#2E8B8B', '#C9A84C', '#059669', '#7C3AED', '#EA580C', '#2563EB', '#DB2777'];
+  const BROKER_PALETTE = [
+    '#1B2A4A', '#2E8B8B', '#C9A84C', '#059669', '#7C3AED', '#EA580C', '#2563EB', '#DB2777',
+    '#D97706', '#0891B2', '#84CC16', '#6366F1', '#14B8A6', '#F97316', '#A855F7', '#EF4444',
+    '#4F46E5', '#16A34A', '#0D9488', '#F43F5E',
+  ];
 
   const brokerPieData = useMemo(() => {
     const map: Record<string, number> = {};
