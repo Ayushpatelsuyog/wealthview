@@ -140,6 +140,8 @@ function GlobalStocksFormContent() {
   const splitHoldingId = _searchParams.get('split');
   const rightsHoldingId = _searchParams.get('rights');
   const buybackHoldingId = _searchParams.get('buyback');
+  const mergerHoldingId = _searchParams.get('merger');
+  const demergerHoldingId = _searchParams.get('demerger');
   const _isAddMoreMode = !!addToHoldingId && !isEditMode;
   const isSellMode = !!sellHoldingId;
   const isDividendMode = !!dividendHoldingId;
@@ -147,6 +149,8 @@ function GlobalStocksFormContent() {
   const isSplitMode = !!splitHoldingId;
   const isRightsMode = !!rightsHoldingId;
   const isBuybackMode = !!buybackHoldingId;
+  const isMergerMode = !!mergerHoldingId;
+  const isDemergerMode = !!demergerHoldingId;
   const preloadHoldingId = addToHoldingId || sellHoldingId || dividendHoldingId || bonusHoldingId || splitHoldingId || rightsHoldingId || buybackHoldingId;
 
   // Family/member prefill from sessionStorage (set by portfolio page before navigation)
@@ -314,6 +318,46 @@ function GlobalStocksFormContent() {
       }
     })();
   }, [preloadHoldingId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Pre-fill for merger/demerger mode (source holding info) ──
+  useEffect(() => {
+    const srcId = mergerHoldingId || demergerHoldingId;
+    if (!srcId) return;
+    (async () => {
+      const { data: srcHolding } = await supabase
+        .from('holdings')
+        .select('symbol, name, quantity, avg_buy_price, metadata, brokers(id, name), portfolios(name, family_id, user_id)')
+        .eq('id', srcId)
+        .single();
+      if (!srcHolding) return;
+
+      const meta = (srcHolding.metadata ?? {}) as Record<string, unknown>;
+
+      if (isMergerMode) {
+        setTxnType('merger_in');
+        setOriginalCompany(srcHolding.name);
+        setOriginalShares(String(srcHolding.quantity));
+        const totalCost = Number(srcHolding.quantity) * Number(srcHolding.avg_buy_price);
+        setOriginalCostBasis(totalCost.toFixed(2));
+        setOriginalCurrency(String(meta.currency ?? 'USD'));
+      } else if (isDemergerMode) {
+        setTxnType('demerger_in');
+        setParentCompany(srcHolding.name);
+      }
+
+      // Pre-fill family/member/portfolio/broker from source holding
+      if (srcHolding.portfolios) {
+        const p = srcHolding.portfolios as unknown as { name: string; family_id: string; user_id: string };
+        setPortfolioName(p.name);
+        if (p.family_id) { setSelectedFamily(p.family_id); setFamilyId(p.family_id); }
+        if (p.user_id) { setMember(p.user_id); targetMemberRef.current = p.user_id; _pendingMember = p.user_id; }
+        prefillLockedRef.current = true;
+      }
+      if (srcHolding.brokers) {
+        setBrokerId((srcHolding.brokers as unknown as { id: string }).id);
+      }
+    })();
+  }, [mergerHoldingId, demergerHoldingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load user/family ────────────────────────────────────────────────────────
   useEffect(() => {
