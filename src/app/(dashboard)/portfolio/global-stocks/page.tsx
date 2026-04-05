@@ -758,7 +758,8 @@ export default function GlobalStocksPortfolioPage() {
         }}
         onClick={() => setDetailId(h.id)}>
         {/* Stock */}
-        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+        <div className="flex items-center gap-2 min-w-0 pr-2">
+          <div className="w-3.5 flex-shrink-0" />
           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
             style={{ backgroundColor: countryColor(h.country) }}>
             {h.symbol.slice(0, 2)}
@@ -1114,7 +1115,7 @@ export default function GlobalStocksPortfolioPage() {
           <div className="wv-card">
             {/* Table header */}
             <div className="grid text-[10px] font-semibold uppercase tracking-wide px-4 py-2 border-b"
-              style={{ gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.7fr 0.6fr 0.8fr 40px', borderColor: '#F0EDE6', color: 'var(--wv-text-muted)', backgroundColor: 'var(--wv-surface-2)' }}>
+              style={{ gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 40px', borderColor: '#F0EDE6', color: 'var(--wv-text-muted)', backgroundColor: 'var(--wv-surface-2)' }}>
               <span>Stock</span>
               <span>Country</span>
               <span>Distributor</span>
@@ -1230,7 +1231,7 @@ export default function GlobalStocksPortfolioPage() {
                       <div />
                     </div>
                     {/* Individual entries — expand below consolidated row */}
-                    {isExpanded && group.holdings.map(h => renderStockRow(h, { borderLeft: '3px solid #C9A84C', backgroundColor: 'rgba(201,168,76,0.03)', paddingLeft: '1.5rem' }))}
+                    {isExpanded && group.holdings.map(h => renderStockRow(h, { borderLeft: '3px solid #C9A84C', backgroundColor: 'rgba(201,168,76,0.03)' }))}
                   </div>
                 );
               })

@@ -648,7 +648,8 @@ export default function IndianStocksPortfolioPage() {
           ...extraStyle,
         }}
         onClick={() => setDetailId(h.id)}>
-        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+        <div className="flex items-center gap-2 min-w-0 pr-2">
+          <div className="w-3.5 flex-shrink-0" />
           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
             style={{ backgroundColor: sectorColor(h.sector) }}>
             {h.symbol.slice(0, 2)}
@@ -1068,7 +1069,7 @@ export default function IndianStocksPortfolioPage() {
                       <div />
                     </div>
                     {/* Individual entries — expand below consolidated row */}
-                    {isExpanded && group.holdings.map(h => renderStockRow(h, { borderLeft: '3px solid #C9A84C', backgroundColor: 'rgba(201,168,76,0.03)', paddingLeft: '1.5rem' }))}
+                    {isExpanded && group.holdings.map(h => renderStockRow(h, { borderLeft: '3px solid #C9A84C', backgroundColor: 'rgba(201,168,76,0.03)' }))}
                   </div>
                 );
               })
