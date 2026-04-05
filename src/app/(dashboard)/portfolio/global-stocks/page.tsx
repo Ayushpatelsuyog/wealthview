@@ -1211,7 +1211,11 @@ export default function GlobalStocksPortfolioPage() {
           <div className="wv-card">
             {/* Table header — sortable columns */}
             {(() => {
-              const arrow = (key: SortKey) => sortKey === key ? (sortDir === 'desc' ? ' ▼' : ' ▲') : '';
+              const arrow = (key: SortKey) => {
+                const active = sortKey === key;
+                const char = active ? (sortDir === 'desc' ? '▼' : '▲') : '▼';
+                return <span style={{ opacity: active ? 1 : 0.3, fontSize: '0.6rem', marginLeft: 2 }}>{char}</span>;
+              };
               const click = (key: SortKey) => () => {
                 if (sortKey === key) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
                 else { setSortKey(key); setSortDir(key === 'name' ? 'asc' : 'desc'); }
@@ -1221,7 +1225,7 @@ export default function GlobalStocksPortfolioPage() {
                 <div className="grid text-[10px] font-semibold uppercase tracking-wide px-4 py-2 border-b select-none"
                   style={{ gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 40px', borderColor: '#F0EDE6', color: 'var(--wv-text-muted)', backgroundColor: 'var(--wv-surface-2)' }}>
                   <span className={cls('name')} onClick={click('name')}>Stock{arrow('name')}</span>
-                  <span>Country</span>
+                  <span>🏳️</span>
                   <span>Distributor</span>
                   <span>Portfolio</span>
                   <span className="text-right">Qty · Avg</span>

@@ -1006,7 +1006,11 @@ export default function IndianStocksPortfolioPage() {
           <div className="wv-card overflow-hidden">
             {/* Table header — sortable columns */}
             {(() => {
-              const arrow = (key: SortKey) => sortKey === key ? (sortDir === 'desc' ? ' ▼' : ' ▲') : '';
+              const arrow = (key: SortKey) => {
+                const active = sortKey === key;
+                const char = active ? (sortDir === 'desc' ? '▼' : '▲') : '▼';
+                return <span style={{ opacity: active ? 1 : 0.3, fontSize: '0.6rem', marginLeft: 2 }}>{char}</span>;
+              };
               const click = (key: SortKey) => () => {
                 if (sortKey === key) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
                 else { setSortKey(key); setSortDir(key === 'name' ? 'asc' : 'desc'); }
