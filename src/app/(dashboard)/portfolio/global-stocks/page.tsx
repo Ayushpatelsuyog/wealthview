@@ -329,6 +329,7 @@ export default function GlobalStocksPortfolioPage() {
   const [fxRates,        setFxRates]        = useState<Record<string, number>>({});
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [manualPriceInput, setManualPriceInput] = useState<Record<string, string>>({});
+  const [manualDateInput,  setManualDateInput]  = useState<Record<string, string>>({});
 
   // M&A / Demerger modal
 
@@ -565,7 +566,15 @@ export default function GlobalStocksPortfolioPage() {
     setHoldings(prev => prev.map(h => {
       if (!symbolSet.has(h.symbol)) return h;
       const result = allResults[h.symbol];
-      if (!result) return { ...h, priceLoading: false, priceUnavailable: true };
+      if (!result) {
+        // Fall back to manual CMP from metadata
+        const manualCmp = Number(h.metadata?.manual_cmp ?? 0);
+        if (manualCmp > 0) {
+          const updated = computeRow({ ...h, priceUnavailable: false }, manualCmp, rateMap);
+          return { ...updated, dayChange: null, dayChangePct: null };
+        }
+        return { ...h, priceLoading: false, priceUnavailable: true };
+      }
       succeeded++;
       const updated = computeRow(h, result.price, rateMap);
       return {
@@ -589,14 +598,25 @@ export default function GlobalStocksPortfolioPage() {
     return count > 0;
   }
 
-  function submitManualPrice(symbol: string) {
+  async function submitManualPrice(symbol: string) {
     const val = parseFloat(manualPriceInput[symbol] ?? '');
     if (!val || val <= 0) return;
+    const dateVal = manualDateInput[symbol] || new Date().toISOString().split('T')[0];
     setHoldings(prev => prev.map(h => {
       if (h.symbol !== symbol) return h;
-      return computeRow({ ...h, priceUnavailable: false }, val, fxRates);
+      const updated = computeRow({ ...h, priceUnavailable: false }, val, fxRates);
+      return { ...updated, metadata: { ...h.metadata, manual_cmp: val, manual_cmp_date: dateVal } };
     }));
     setManualPriceInput(prev => { const n = { ...prev }; delete n[symbol]; return n; });
+    setManualDateInput(prev => { const n = { ...prev }; delete n[symbol]; return n; });
+    // Persist to all holdings with this symbol
+    const ids = holdings.filter(h => h.symbol === symbol).map(h => h.id);
+    for (const id of ids) {
+      const h = holdings.find(x => x.id === id);
+      if (!h) continue;
+      const meta = { ...(h.metadata ?? {}), manual_cmp: val, manual_cmp_date: dateVal };
+      supabase.from('holdings').update({ metadata: meta }).eq('id', id).then(() => {});
+    }
   }
 
   useEffect(() => { loadHoldings(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -923,20 +943,51 @@ export default function GlobalStocksPortfolioPage() {
         <div className="text-right" onClick={e => e.stopPropagation()}>
           {h.priceLoading ? (
             <Loader2 className="w-3 h-3 animate-spin ml-auto" style={{ color: '#C9A84C' }} />
-          ) : h.currentPrice !== null ? (
+          ) : h.currentPrice !== null && !h.metadata?.manual_cmp ? (
             <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{fmtLocal(h.currentPrice, h.currency)}</p>
-          ) : h.priceUnavailable ? (
+          ) : h.currentPrice !== null && h.metadata?.manual_cmp ? (() => {
+            const cmpDate = String(h.metadata.manual_cmp_date ?? '');
+            const daysDiff = cmpDate ? Math.floor((Date.now() - new Date(cmpDate).getTime()) / 86400000) : 999;
+            const isStale = daysDiff > 7;
+            return (
+              <div className="flex flex-col items-end gap-0.5">
+                <div className="px-1.5 py-0.5 rounded" style={{ backgroundColor: isStale ? '#FEF2F2' : '#FFFBEB', border: `1px solid ${isStale ? '#FCA5A5' : '#FCD34D'}` }}>
+                  <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{fmtLocal(h.currentPrice, h.currency)}</p>
+                  <p className="text-[8px]" style={{ color: isStale ? '#DC2626' : '#92400E' }}>
+                    Manual{cmpDate ? ` · ${new Date(cmpDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}` : ''}
+                    {isStale ? ' ⚠' : ''}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <input type="number" placeholder="Update"
+                    value={manualPriceInput[h.symbol] ?? ''}
+                    onChange={e => setManualPriceInput(prev => ({ ...prev, [h.symbol]: e.target.value }))}
+                    onKeyDown={e => { if (e.key === 'Enter') submitManualPrice(h.symbol); }}
+                    className="w-14 h-5 text-[9px] text-right border rounded px-1 outline-none"
+                    style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }} />
+                  <button onClick={() => submitManualPrice(h.symbol)}
+                    className="text-[8px] px-1 py-0.5 rounded"
+                    style={{ backgroundColor: '#1B2A4A', color: 'white' }}>✓</button>
+                </div>
+              </div>
+            );
+          })() : h.priceUnavailable ? (
             <div className="flex flex-col items-end gap-1">
               <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Unavailable</p>
               <div className="flex items-center gap-1">
-                <input type="number" placeholder="Enter"
+                <input type="number" placeholder="Price"
                   value={manualPriceInput[h.symbol] ?? ''}
                   onChange={e => setManualPriceInput(prev => ({ ...prev, [h.symbol]: e.target.value }))}
                   onKeyDown={e => { if (e.key === 'Enter') submitManualPrice(h.symbol); }}
-                  className="w-16 h-6 text-[10px] text-right border rounded px-1 outline-none"
+                  className="w-14 h-5 text-[9px] text-right border rounded px-1 outline-none"
+                  style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }} />
+                <input type="date"
+                  value={manualDateInput[h.symbol] ?? new Date().toISOString().split('T')[0]}
+                  onChange={e => setManualDateInput(prev => ({ ...prev, [h.symbol]: e.target.value }))}
+                  className="w-[90px] h-5 text-[9px] border rounded px-1 outline-none"
                   style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }} />
                 <button onClick={() => submitManualPrice(h.symbol)}
-                  className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+                  className="text-[8px] px-1 py-0.5 rounded"
                   style={{ backgroundColor: '#1B2A4A', color: 'white' }}>✓</button>
               </div>
             </div>
