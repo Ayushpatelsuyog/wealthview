@@ -23,6 +23,13 @@ interface Transaction {
   notes?: string;
 }
 
+export interface ConsolidatedEntry {
+  id: string;
+  quantity: number;
+  portfolioName: string;
+  brokerName: string;
+}
+
 export interface StockHoldingDetail {
   id: string;
   symbol: string;
@@ -41,6 +48,7 @@ export interface StockHoldingDetail {
   gainLossPct: number | null;
   xirr: number | null;
   memberName: string;
+  _consolidatedEntries?: ConsolidatedEntry[];
 }
 
 // ─── Transaction config ────────────────────────────────────────────────────────
@@ -143,6 +151,7 @@ export function StockDetailSheet({
   const [deleting,    setDeleting]    = useState<string | null>(null);
   const [editingSector, setEditingSector] = useState(false);
   const [sectorValue, setSectorValue] = useState('');
+  const [entryPickerAction, setEntryPickerAction] = useState<string | null>(null);
 
   const SECTORS = ['IT', 'Banking', 'Pharma', 'Auto', 'FMCG', 'Energy', 'Metals', 'Chemicals',
     'Industrials', 'Infrastructure', 'Real Estate', 'Media', 'Telecom', 'Textiles', 'Healthcare',
@@ -192,6 +201,7 @@ export function StockDetailSheet({
   }
 
   if (!holding) return null;
+  const isConsolidated = holding.id.startsWith('consolidated:');
 
   const investedValue  = holding.investedValue;
   const currentValue   = holding.currentValue ?? investedValue;
@@ -497,23 +507,90 @@ export function StockDetailSheet({
 
           {/* Action buttons */}
           <div className="grid grid-cols-2 gap-2">
-            <Button
-              className="h-9 text-xs gap-1.5"
-              style={{ backgroundColor: '#1B2A4A', color: 'white' }}
-              onClick={() => { const ep = `${holding.portfolios?.family_id ? `&family_id=${holding.portfolios.family_id}` : ''}${holding.portfolios?.user_id ? `&member_id=${holding.portfolios.user_id}` : ''}`; onClose(); router.push(`/add-assets/indian-stocks?add_to=${holding.id}${ep}`); }}>
-              <Plus className="w-3.5 h-3.5" />Add More Shares
-            </Button>
-            <Button variant="outline" className="h-9 text-xs gap-1.5"
-              style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}
-              onClick={() => { onClose(); router.push(`/add-assets/indian-stocks`); }}>
-              Record Corporate Action
-            </Button>
-            <Button variant="outline" className="h-9 text-xs gap-1.5 col-span-2"
-              style={{ borderColor: 'rgba(220,38,38,0.2)', color: '#DC2626' }}
-              onClick={() => { if (confirm('Delete this holding and all its transactions?')) { onDelete(holding.id); onClose(); } }}>
-              <Trash2 className="w-3.5 h-3.5" />Delete Holding
-            </Button>
+            {(() => {
+              const h = holding!;
+              const entries = h._consolidatedEntries;
+              function navToEntry(action: string, hid: string) {
+                if (h.portfolios?.family_id) sessionStorage.setItem('wv_prefill_family', h.portfolios.family_id);
+                if (h.portfolios?.user_id) sessionStorage.setItem('wv_prefill_member', h.portfolios.user_id);
+                if (h.portfolios?.family_id || h.portfolios?.user_id) sessionStorage.setItem('wv_prefill_active', 'true');
+                onClose();
+                router.push(`/add-assets/indian-stocks?${action}=${hid}`);
+              }
+              function handleAction(action: string) {
+                if (isConsolidated && entries && entries.length > 1) {
+                  setEntryPickerAction(action);
+                } else {
+                  navToEntry(action, entries?.[0]?.id ?? h.id);
+                }
+              }
+              return (<>
+                <Button className="h-9 text-xs gap-1.5" style={{ backgroundColor: '#1B2A4A', color: 'white' }}
+                  onClick={() => handleAction('add_to')}>
+                  <Plus className="w-3.5 h-3.5" />Add More Shares
+                </Button>
+                <Button variant="outline" className="h-9 text-xs gap-1.5"
+                  style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}
+                  onClick={() => handleAction('sell')}>
+                  Sell / Exit
+                </Button>
+                <Button variant="outline" className="h-9 text-xs gap-1.5"
+                  style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}
+                  onClick={() => handleAction('dividend')}>
+                  Record Dividend
+                </Button>
+              </>);
+            })()}
+            {!isConsolidated && (
+              <Button variant="outline" className="h-9 text-xs gap-1.5"
+                style={{ borderColor: 'rgba(220,38,38,0.2)', color: '#DC2626' }}
+                onClick={() => { if (confirm('Delete this holding and all its transactions?')) { onDelete(holding.id); onClose(); } }}>
+                <Trash2 className="w-3.5 h-3.5" />Delete Holding
+              </Button>
+            )}
           </div>
+
+          {/* Entry picker for consolidated actions */}
+          {entryPickerAction && holding && holding._consolidatedEntries && (() => {
+            const h = holding;
+            const act = entryPickerAction;
+            return (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+                style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+                onClick={() => setEntryPickerAction(null)}>
+                <div className="w-full max-w-sm rounded-2xl p-5 shadow-xl"
+                  style={{ backgroundColor: 'var(--wv-surface)' }}
+                  onClick={e => e.stopPropagation()}>
+                  <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--wv-text)' }}>
+                    {act === 'sell' ? 'Sell from which holding?' : act === 'add_to' ? 'Add shares to which holding?' : 'Record for which holding?'}
+                  </h3>
+                  <p className="text-xs mb-4" style={{ color: 'var(--wv-text-muted)' }}>{h.name} ({h.symbol})</p>
+                  <div className="space-y-2">
+                    {h._consolidatedEntries!.map(entry => (
+                      <button
+                        key={entry.id}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl border transition-colors hover:bg-[#FAFAF8]"
+                        style={{ borderColor: 'var(--wv-border)' }}
+                        onClick={() => {
+                          setEntryPickerAction(null);
+                          if (h.portfolios?.family_id) sessionStorage.setItem('wv_prefill_family', h.portfolios.family_id);
+                          if (h.portfolios?.user_id) sessionStorage.setItem('wv_prefill_member', h.portfolios.user_id);
+                          if (h.portfolios?.family_id || h.portfolios?.user_id) sessionStorage.setItem('wv_prefill_active', 'true');
+                          onClose();
+                          router.push(`/add-assets/indian-stocks?${act}=${entry.id}`);
+                        }}>
+                        <div className="flex-1 text-left">
+                          <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{entry.portfolioName}</p>
+                          <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{entry.brokerName} · {entry.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })} shares</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <Button variant="outline" className="w-full h-9 text-xs mt-3" onClick={() => setEntryPickerAction(null)}>Cancel</Button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </SheetContent>
     </Sheet>

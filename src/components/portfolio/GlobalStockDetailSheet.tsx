@@ -24,6 +24,13 @@ interface Transaction {
   metadata?: Record<string, unknown>;
 }
 
+export interface ConsolidatedEntry {
+  id: string;
+  quantity: number;
+  portfolioName: string;
+  brokerName: string;
+}
+
 export interface GlobalStockHoldingDetail {
   id: string;
   symbol: string;
@@ -44,6 +51,7 @@ export interface GlobalStockHoldingDetail {
   fxRate: number | null;
   investedINR: number;
   currentValueINR: number | null;
+  _consolidatedEntries?: ConsolidatedEntry[];
 }
 
 // ─── Country flags ────────────────────────────────────────────────────────────
@@ -137,6 +145,7 @@ export function GlobalStockDetailSheet({
   const [deleting,    setDeleting]    = useState<string | null>(null);
   const [editingSector, setEditingSector] = useState(false);
   const [sectorValue, setSectorValue] = useState('');
+  const [entryPickerAction, setEntryPickerAction] = useState<string | null>(null);
 
   const SECTORS = ['Technology', 'Healthcare', 'Finance', 'Consumer', 'Energy', 'Materials',
     'Industrials', 'Communication', 'Real Estate', 'Utilities', 'ETF', 'Semiconductors',
@@ -837,6 +846,7 @@ export function GlobalStockDetailSheet({
           <div className="grid grid-cols-2 gap-2">
             {(() => {
               const h = holding!;
+              const entries = h._consolidatedEntries;
               function navTo(url: string) {
                 if (h.portfolios?.family_id) sessionStorage.setItem('wv_prefill_family', h.portfolios.family_id);
                 if (h.portfolios?.user_id) sessionStorage.setItem('wv_prefill_member', h.portfolios.user_id);
@@ -844,21 +854,29 @@ export function GlobalStockDetailSheet({
                 onClose();
                 router.push(url);
               }
+              function handleAction(action: string) {
+                if (isConsolidated && entries && entries.length > 1) {
+                  setEntryPickerAction(action);
+                } else {
+                  const hid = entries?.[0]?.id ?? h.id;
+                  navTo(`/add-assets/global-stocks?${action}=${hid}`);
+                }
+              }
               return (<>
             <Button
               className="h-9 text-xs gap-1.5"
               style={{ backgroundColor: '#1B2A4A', color: 'white' }}
-              onClick={() => navTo(`/add-assets/global-stocks?add_to=${h.id}`)}>
+              onClick={() => handleAction('add_to')}>
               <Plus className="w-3.5 h-3.5" />Add More Shares
             </Button>
             <Button variant="outline" className="h-9 text-xs gap-1.5"
               style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}
-              onClick={() => navTo(`/add-assets/global-stocks?sell=${h.id}`)}>
+              onClick={() => handleAction('sell')}>
               Sell / Exit
             </Button>
             <Button variant="outline" className="h-9 text-xs gap-1.5"
               style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text-secondary)' }}
-              onClick={() => navTo(`/add-assets/global-stocks?dividend=${h.id}`)}>
+              onClick={() => handleAction('dividend')}>
               Record Dividend
             </Button>
               </>);
@@ -871,6 +889,44 @@ export function GlobalStockDetailSheet({
               </Button>
             )}
           </div>
+
+          {/* Entry picker for consolidated actions */}
+          {entryPickerAction && holding._consolidatedEntries && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+              style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+              onClick={() => setEntryPickerAction(null)}>
+              <div className="w-full max-w-sm rounded-2xl p-5 shadow-xl"
+                style={{ backgroundColor: 'var(--wv-surface)' }}
+                onClick={e => e.stopPropagation()}>
+                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--wv-text)' }}>
+                  {entryPickerAction === 'sell' ? 'Sell from which holding?' : entryPickerAction === 'add_to' ? 'Add shares to which holding?' : 'Record for which holding?'}
+                </h3>
+                <p className="text-xs mb-4" style={{ color: 'var(--wv-text-muted)' }}>{holding.name} ({holding.symbol})</p>
+                <div className="space-y-2">
+                  {holding._consolidatedEntries.map(entry => (
+                    <button
+                      key={entry.id}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl border transition-colors hover:bg-[#FAFAF8]"
+                      style={{ borderColor: 'var(--wv-border)' }}
+                      onClick={() => {
+                        setEntryPickerAction(null);
+                        if (holding.portfolios?.family_id) sessionStorage.setItem('wv_prefill_family', holding.portfolios.family_id);
+                        if (holding.portfolios?.user_id) sessionStorage.setItem('wv_prefill_member', holding.portfolios.user_id);
+                        if (holding.portfolios?.family_id || holding.portfolios?.user_id) sessionStorage.setItem('wv_prefill_active', 'true');
+                        onClose();
+                        router.push(`/add-assets/global-stocks?${entryPickerAction}=${entry.id}`);
+                      }}>
+                      <div className="flex-1 text-left">
+                        <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{entry.portfolioName}</p>
+                        <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{entry.brokerName} · {entry.quantity.toLocaleString('en-IN', { maximumFractionDigits: 4 })} shares</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <Button variant="outline" className="w-full h-9 text-xs mt-3" onClick={() => setEntryPickerAction(null)}>Cancel</Button>
+              </div>
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

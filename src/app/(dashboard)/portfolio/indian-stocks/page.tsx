@@ -655,6 +655,12 @@ export default function IndianStocksPortfolioPage() {
         gainLossPct,
         xirr: null,
         memberName: (entries[0] as unknown as { memberName?: string }).memberName ?? '',
+        _consolidatedEntries: entries.map(e => ({
+          id: e.id,
+          quantity: Number(e.quantity),
+          portfolioName: e.portfolios?.name ?? '—',
+          brokerName: e.brokers?.name ?? '—',
+        })),
       };
     }
 
