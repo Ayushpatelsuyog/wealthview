@@ -237,6 +237,8 @@ function GlobalStocksFormContent() {
   const [originalFxRate, setOriginalFxRate] = useState('');
   const [originalFxRateLoaded, setOriginalFxRateLoaded] = useState(false);
   const [originalPurchaseDate, setOriginalPurchaseDate] = useState('');
+  // Merger/Demerger source holding info (for Step 2 context message)
+  const [mergerSourceInfo, setMergerSourceInfo] = useState<{ name: string; symbol: string; qty: number } | null>(null);
   // Demerger In (Received via Demerger)
   const [parentCompany, setParentCompany] = useState('');
   const [costBasisAllocated, setCostBasisAllocated] = useState('');  // in original currency
@@ -326,12 +328,19 @@ function GlobalStocksFormContent() {
     (async () => {
       const { data: srcHolding } = await supabase
         .from('holdings')
-        .select('symbol, name, quantity, avg_buy_price, metadata, brokers(id, name), portfolios(name, family_id, user_id)')
+        .select('symbol, name, quantity, avg_buy_price, metadata, brokers(id, name), portfolios(name, family_id, user_id), transactions(date, type, metadata)')
         .eq('id', srcId)
         .single();
       if (!srcHolding) return;
 
       const meta = (srcHolding.metadata ?? {}) as Record<string, unknown>;
+      const srcCurrency = String(meta.currency ?? 'USD');
+
+      // Set today's date as default
+      setDate(new Date().toISOString().split('T')[0]);
+
+      // Store source holding info for Step 2 context message
+      setMergerSourceInfo({ name: srcHolding.name, symbol: srcHolding.symbol, qty: Number(srcHolding.quantity) });
 
       if (isMergerMode) {
         setTxnType('merger_in');
@@ -339,10 +348,32 @@ function GlobalStocksFormContent() {
         setOriginalShares(String(srcHolding.quantity));
         const totalCost = Number(srcHolding.quantity) * Number(srcHolding.avg_buy_price);
         setOriginalCostBasis(totalCost.toFixed(2));
-        setOriginalCurrency(String(meta.currency ?? 'USD'));
+        setOriginalCurrency(srcCurrency);
+
+        // Set original FX rate from holding metadata
+        const holdingFx = Number(meta.fx_rate ?? 0);
+        if (holdingFx > 0) {
+          setOriginalFxRate(holdingFx.toFixed(4));
+          setOriginalFxRateLoaded(true);
+        }
+
+        // Find earliest buy transaction date as original purchase date
+        const buyTxns = ((srcHolding.transactions ?? []) as { date: string; type: string; metadata?: Record<string, unknown> }[])
+          .filter(t => t.type === 'buy' || t.type === 'sip')
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        if (buyTxns.length > 0) {
+          setOriginalPurchaseDate(buyTxns[0].date);
+        }
       } else if (isDemergerMode) {
         setTxnType('demerger_in');
         setParentCompany(srcHolding.name);
+        setDemergerOrigCurrency(srcCurrency);
+
+        const holdingFx = Number(meta.fx_rate ?? 0);
+        if (holdingFx > 0) {
+          setDemergerOrigFxRate(holdingFx.toFixed(4));
+          setDemergerOrigFxRateLoaded(true);
+        }
       }
 
       // Pre-fill family/member/portfolio/broker from source holding
@@ -1138,6 +1169,19 @@ function GlobalStocksFormContent() {
             <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
               Step 2 &mdash; Search Stock / ETF
             </p>
+
+            {/* Context message for merger/demerger mode */}
+            {mergerSourceInfo && !selectedStock && (isMergerMode || isDemergerMode) && (
+              <div className="mb-4 p-3 rounded-xl text-xs" style={{ backgroundColor: 'rgba(147,51,234,0.06)', border: '1px solid rgba(147,51,234,0.15)', color: '#7C3AED' }}>
+                {isMergerMode ? (
+                  <>Search for the <strong>acquiring company</strong> (the stock you received shares of).<br />
+                  Original holding: <strong>{mergerSourceInfo.name} ({mergerSourceInfo.symbol})</strong> — {mergerSourceInfo.qty.toLocaleString('en-IN', { maximumFractionDigits: 4 })} shares will be converted.</>
+                ) : (
+                  <>Search for the <strong>new demerged company</strong> (the stock you received shares of).<br />
+                  Parent company: <strong>{mergerSourceInfo.name} ({mergerSourceInfo.symbol})</strong></>
+                )}
+              </div>
+            )}
 
             <div className="relative">
               <div className="relative">

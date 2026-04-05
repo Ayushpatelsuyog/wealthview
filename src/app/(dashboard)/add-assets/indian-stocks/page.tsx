@@ -253,6 +253,8 @@ function IndianStocksFormContent() {
   const [originalShares, setOriginalShares] = useState('');
   const [originalCostBasis, setOriginalCostBasis] = useState('');
   const [mergerCashComponent, setMergerCashComponent] = useState('');
+  // Merger/Demerger source holding info (for Step 2 context message)
+  const [mergerSourceInfo, setMergerSourceInfo] = useState<{ name: string; symbol: string; qty: number } | null>(null);
   // Demerger In (Received via Demerger)
   const [parentCompany, setParentCompany] = useState('');
   const [costBasisAllocated, setCostBasisAllocated] = useState('');
@@ -338,10 +340,16 @@ function IndianStocksFormContent() {
     (async () => {
       const { data: srcHolding } = await supabase
         .from('holdings')
-        .select('symbol, name, quantity, avg_buy_price, metadata, brokers(id, name), portfolios(name, family_id, user_id)')
+        .select('symbol, name, quantity, avg_buy_price, metadata, brokers(id, name), portfolios(name, family_id, user_id), transactions(date, type)')
         .eq('id', srcId)
         .single();
       if (!srcHolding) return;
+
+      // Set today's date as default
+      setDate(new Date().toISOString().split('T')[0]);
+
+      // Store source holding info for Step 2 context message
+      setMergerSourceInfo({ name: srcHolding.name, symbol: srcHolding.symbol, qty: Number(srcHolding.quantity) });
 
       if (isMergerMode) {
         setTxnType('merger_in');
@@ -349,6 +357,7 @@ function IndianStocksFormContent() {
         setOriginalShares(String(srcHolding.quantity));
         const totalCost = Number(srcHolding.quantity) * Number(srcHolding.avg_buy_price);
         setOriginalCostBasis(totalCost.toFixed(2));
+
       } else if (isDemergerMode) {
         setTxnType('demerger_in');
         setParentCompany(srcHolding.name);
@@ -919,6 +928,19 @@ function IndianStocksFormContent() {
             <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
               Step 2 — Search Stock
             </p>
+
+            {/* Context message for merger/demerger mode */}
+            {mergerSourceInfo && !selectedStock && (isMergerMode || isDemergerMode) && (
+              <div className="mb-4 p-3 rounded-xl text-xs" style={{ backgroundColor: 'rgba(147,51,234,0.06)', border: '1px solid rgba(147,51,234,0.15)', color: '#7C3AED' }}>
+                {isMergerMode ? (
+                  <>Search for the <strong>acquiring company</strong> (the stock you received shares of).<br />
+                  Original holding: <strong>{mergerSourceInfo.name} ({mergerSourceInfo.symbol})</strong> — {mergerSourceInfo.qty.toLocaleString('en-IN', { maximumFractionDigits: 4 })} shares will be converted.</>
+                ) : (
+                  <>Search for the <strong>new demerged company</strong> (the stock you received shares of).<br />
+                  Parent company: <strong>{mergerSourceInfo.name} ({mergerSourceInfo.symbol})</strong></>
+                )}
+              </div>
+            )}
 
             <div className="relative">
               <div className="relative">
