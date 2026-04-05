@@ -381,7 +381,8 @@ export default function GlobalStocksPortfolioPage() {
       if (group.length === 1) { rawRows.push(group[0]); return; }
       const primary = { ...group[0] };
       primary.quantity = group.reduce((s, h) => s + Number(h.quantity), 0);
-      primary.transactions = group.flatMap(h => h.transactions ?? []);
+      primary.transactions = group.flatMap(h => h.transactions ?? [])
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const totalCost = group.reduce((s, h) => s + Number(h.quantity) * Number(h.avg_buy_price), 0);
       primary.avg_buy_price = primary.quantity > 0 ? totalCost / primary.quantity : 0;
       rawRows.push(primary);
@@ -1141,12 +1142,12 @@ export default function GlobalStocksPortfolioPage() {
                 const gDayPnlPct = group.holdings[0]?.dayChangePct ?? null;
                 const tGainLocal = group.totalCurrentValueLocal != null ? group.totalCurrentValueLocal - group.totalInvestedLocal : null;
                 const tGainLocalPct = tGainLocal != null && group.totalInvestedLocal > 0 ? (tGainLocal / group.totalInvestedLocal) * 100 : null;
-                const ubSet = new Set(group.holdings.map(h => h.brokers?.id ?? h.brokers?.name ?? ''));
-                const upSet = new Set(group.holdings.map(h => h.portfolios?.id ?? h.portfolios?.name ?? ''));
-                const subtitle = ubSet.size > 1 && upSet.size > 1
-                  ? `${group.holdings.length} entries · ${ubSet.size} brokers, ${upSet.size} portfolios`
-                  : ubSet.size > 1 ? `${ubSet.size} brokers`
-                  : upSet.size > 1 ? `${upSet.size} portfolios`
+                const uniqueBrokerIds = new Set(group.holdings.map(h => h.brokers?.id).filter(Boolean));
+                const uniquePortfolioIds = new Set(group.holdings.map(h => h.portfolios?.id).filter(Boolean));
+                const subtitle = uniqueBrokerIds.size > 1 && uniquePortfolioIds.size > 1
+                  ? `${group.holdings.length} entries · ${uniqueBrokerIds.size} brokers, ${uniquePortfolioIds.size} portfolios`
+                  : uniqueBrokerIds.size > 1 ? `${uniqueBrokerIds.size} brokers`
+                  : uniquePortfolioIds.size > 1 ? `${uniquePortfolioIds.size} portfolios`
                   : group.holdings[0]?.brokers?.name ?? '';
                 return (
                   <div key={group.symbol}>
