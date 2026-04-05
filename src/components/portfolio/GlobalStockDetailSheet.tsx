@@ -183,6 +183,7 @@ export function GlobalStockDetailSheet({
 
   if (!holding) return null;
 
+  const isConsolidated = holding.id.startsWith('consolidated:');
   const currency       = holding.currency;
   const fxRate         = holding.fxRate ?? 1;  // current FX rate
   const investedLocal  = holding.investedValue;  // includes fees in local currency
@@ -315,6 +316,12 @@ export function GlobalStockDetailSheet({
                 style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'white' }}>
                 {holding.symbol}
               </span>
+              {isConsolidated && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                  style={{ backgroundColor: 'rgba(201,168,76,0.25)', color: '#F6E27A' }}>
+                  Consolidated
+                </span>
+              )}
               {exchange && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded"
                   style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#A0AEC0' }}>
@@ -759,6 +766,11 @@ export function GlobalStockDetailSheet({
                             <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                               FX: {txnFx.toFixed(2)}
                             </span>
+                            {isConsolidated && (t as unknown as { _portfolioName?: string })._portfolioName && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(201,168,76,0.10)', color: '#C9A84C' }}>
+                                {(t as unknown as { _portfolioName: string })._portfolioName}
+                              </span>
+                            )}
                           </div>
                           {t.notes && !t.notes.startsWith('Buy') && !t.notes.startsWith('Sell at') && !t.notes.includes('meta:') && (
                             <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--wv-text-muted)' }}>{t.notes}</p>
@@ -775,31 +787,33 @@ export function GlobalStockDetailSheet({
                             );
                           })()}
                         </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <button
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-blue-50 transition-all"
-                            onClick={() => {
-                              if (holding.portfolios) {
-                                sessionStorage.setItem('wv_prefill_family', holding.portfolios.family_id);
-                                sessionStorage.setItem('wv_prefill_member', holding.portfolios.user_id);
-                                sessionStorage.setItem('wv_prefill_active', 'true');
-                              }
-                              onClose();
-                              router.push(`/add-assets/global-stocks?edit_txn=${t.id}&holding_id=${holding.id}`);
-                            }}
-                            title="Edit transaction">
-                            <Pencil className="w-3 h-3" style={{ color: '#3B82F6' }} />
-                          </button>
-                          <button
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 transition-all"
-                            onClick={() => deleteTxn(t)}
-                            disabled={deleting === t.id}
-                            title="Delete transaction">
-                            {deleting === t.id
-                              ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#DC2626' }} />
-                              : <Trash2 className="w-3 h-3" style={{ color: '#DC2626' }} />}
-                          </button>
-                        </div>
+                        {!isConsolidated && (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-blue-50 transition-all"
+                              onClick={() => {
+                                if (holding.portfolios) {
+                                  sessionStorage.setItem('wv_prefill_family', holding.portfolios.family_id);
+                                  sessionStorage.setItem('wv_prefill_member', holding.portfolios.user_id);
+                                  sessionStorage.setItem('wv_prefill_active', 'true');
+                                }
+                                onClose();
+                                router.push(`/add-assets/global-stocks?edit_txn=${t.id}&holding_id=${holding.id}`);
+                              }}
+                              title="Edit transaction">
+                              <Pencil className="w-3 h-3" style={{ color: '#3B82F6' }} />
+                            </button>
+                            <button
+                              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 transition-all"
+                              onClick={() => deleteTxn(t)}
+                              disabled={deleting === t.id}
+                              title="Delete transaction">
+                              {deleting === t.id
+                                ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#DC2626' }} />
+                                : <Trash2 className="w-3 h-3" style={{ color: '#DC2626' }} />}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     );
                   });
@@ -849,11 +863,13 @@ export function GlobalStockDetailSheet({
             </Button>
               </>);
             })()}
-            <Button variant="outline" className="h-9 text-xs gap-1.5"
-              style={{ borderColor: 'rgba(220,38,38,0.2)', color: '#DC2626' }}
-              onClick={() => { if (confirm('Delete this holding and all its transactions?')) { onDelete(holding.id); onClose(); } }}>
-              <Trash2 className="w-3.5 h-3.5" />Delete
-            </Button>
+            {!isConsolidated && (
+              <Button variant="outline" className="h-9 text-xs gap-1.5"
+                style={{ borderColor: 'rgba(220,38,38,0.2)', color: '#DC2626' }}
+                onClick={() => { if (confirm('Delete this holding and all its transactions?')) { onDelete(holding.id); onClose(); } }}>
+                <Trash2 className="w-3.5 h-3.5" />Delete
+              </Button>
+            )}
           </div>
         </div>
       </SheetContent>

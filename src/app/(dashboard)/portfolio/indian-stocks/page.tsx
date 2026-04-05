@@ -617,6 +617,47 @@ export default function IndianStocksPortfolioPage() {
 
   const detailHolding: StockHoldingDetail | null = useMemo(() => {
     if (!detailId) return null;
+
+    // Consolidated view
+    if (detailId.startsWith('consolidated:')) {
+      const sym = detailId.replace('consolidated:', '');
+      const group = groupedFiltered.find(g => g.symbol === sym);
+      if (!group || group.holdings.length === 0) return null;
+      const entries = group.holdings;
+      const totalQty = entries.reduce((s, e) => s + Number(e.quantity), 0);
+      const totalInvested = entries.reduce((s, e) => s + e.investedValue, 0);
+      const totalCurrent = entries.every(e => e.currentValue != null)
+        ? entries.reduce((s, e) => s + (e.currentValue ?? 0), 0) : null;
+      const allTxns = entries.flatMap(e => (e.transactions ?? []).map(t => {
+        const extended = { ...t, _portfolioName: e.portfolios?.name ?? '' };
+        return extended as typeof t;
+      })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const gainLoss = totalCurrent != null ? totalCurrent - totalInvested : null;
+      const gainLossPct = gainLoss != null && totalInvested > 0 ? (gainLoss / totalInvested) * 100 : null;
+      const uniqueBrokers = Array.from(new Set(entries.map(e => e.brokers?.name).filter(Boolean) as string[]));
+      const uniquePortfolios = Array.from(new Set(entries.map(e => e.portfolios?.name).filter(Boolean) as string[]));
+      const first = entries[0];
+      return {
+        id: `consolidated:${sym}`,
+        symbol: sym,
+        name: first.name,
+        quantity: totalQty,
+        avg_buy_price: totalQty > 0 ? totalInvested / totalQty : 0,
+        metadata: first.metadata ?? {},
+        transactions: allTxns,
+        portfolios: { id: '', name: uniquePortfolios.join(', '), type: '', user_id: '', family_id: first.portfolios?.family_id ?? '' },
+        brokers: { id: '', name: uniqueBrokers.join(', '), platform_type: '' },
+        currentPrice: first.currentPrice,
+        priceLoading: false,
+        investedValue: totalInvested,
+        currentValue: totalCurrent,
+        gainLoss,
+        gainLossPct,
+        xirr: null,
+        memberName: (entries[0] as unknown as { memberName?: string }).memberName ?? '',
+      };
+    }
+
     const h = holdings.find(x => x.id === detailId);
     if (!h) return null;
     return {
@@ -626,7 +667,7 @@ export default function IndianStocksPortfolioPage() {
       gainLoss:      h.gainLoss,
       gainLossPct:   h.gainLossPct,
     };
-  }, [detailId, holdings]);
+  }, [detailId, holdings, groupedFiltered]);
 
   // ── Row renderer ──────────────────────────────────────────────────────────
 
@@ -1017,9 +1058,11 @@ export default function IndianStocksPortfolioPage() {
                         backgroundColor: 'rgba(201,168,76,0.08)',
                         borderLeft: '3px solid #C9A84C',
                       }}
-                      onClick={() => setExpandedGroups(prev => { const next = new Set(prev); if (next.has(group.symbol)) next.delete(group.symbol); else next.add(group.symbol); return next; })}>
+                      onClick={() => setDetailId(`consolidated:${group.symbol}`)}>
                       <div className="flex items-center gap-2 min-w-0 pr-2">
-                        {isExpanded ? <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} /> : <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} />}
+                        <span onClick={(e) => { e.stopPropagation(); setExpandedGroups(prev => { const next = new Set(prev); if (next.has(group.symbol)) next.delete(group.symbol); else next.add(group.symbol); return next; }); }} className="cursor-pointer">
+                          {isExpanded ? <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} /> : <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} />}
+                        </span>
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
                           style={{ backgroundColor: sectorColor(group.sector) }}>
                           {group.symbol.slice(0, 2)}
