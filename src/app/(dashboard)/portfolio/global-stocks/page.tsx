@@ -169,6 +169,7 @@ function ActionMenu({
   const [open, setOpen] = useState(false);
   const router = useRouter();
   function navTo(url: string) {
+    console.log('=== NAVTO DEBUG ===', { holdingId, familyId, memberId, url });
     if (familyId) sessionStorage.setItem('wv_prefill_family', familyId);
     if (memberId) sessionStorage.setItem('wv_prefill_member', memberId);
     if (familyId || memberId) sessionStorage.setItem('wv_prefill_active', 'true');

@@ -267,7 +267,11 @@ function GlobalStocksFormContent() {
         .select('symbol, name, quantity, avg_buy_price, metadata, brokers(id, name), portfolios(name, family_id, user_id)')
         .eq('id', preloadHoldingId)
         .single();
-      if (!holdingData) return;
+      if (!holdingData) {
+        console.error('[Add Page] Holding not found for ID:', preloadHoldingId);
+        return;
+      }
+      console.log('[Add Page] Preloaded holding:', holdingData.symbol, holdingData.name, { portfolios: holdingData.portfolios, brokers: holdingData.brokers });
 
       const meta = (holdingData.metadata ?? {}) as Record<string, unknown>;
       const holdingSector = String(meta.sector ?? '');
