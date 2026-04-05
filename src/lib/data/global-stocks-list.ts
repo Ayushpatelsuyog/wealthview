@@ -430,4 +430,5 @@ export const GLOBAL_STOCKS_LIST: GlobalStockInfo[] = [
   { symbol: 'GOLD.AX', companyName: 'Global X Physical Gold', exchange: 'ASX', currency: 'AUD', sector: 'Commodities', country: 'Australia' },
   { symbol: 'QAU.AX', companyName: 'BetaShares Gold Bullion ETF', exchange: 'ASX', currency: 'AUD', sector: 'Commodities', country: 'Australia' },
   { symbol: 'PMGOLD.AX', companyName: 'Perth Mint Gold', exchange: 'ASX', currency: 'AUD', sector: 'Commodities', country: 'Australia' },
+  { symbol: 'ETPMPM.AX', companyName: 'Global X Physical Precious Metals Basket', exchange: 'ASX', currency: 'AUD', sector: 'Commodities', country: 'Australia' },
 ];
