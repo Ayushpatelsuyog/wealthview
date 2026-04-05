@@ -63,10 +63,7 @@ const TXN_TYPES = [
   { key: 'demerger_in', label: 'Received via Demerger' },
 ];
 
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  USD: '$', EUR: '€', GBP: '£', JPY: '¥', HKD: 'HK$',
-  AUD: 'A$', KRW: '₩', SGD: 'S$', CHF: 'CHF', CAD: 'C$',
-};
+import { getCurrencySymbol as currencySymbolFromMap } from '@/lib/utils/currency';
 
 const COUNTRY_FLAGS: Record<string, string> = {
   'US': '🇺🇸', 'UK': '🇬🇧', 'Germany': '🇩🇪',
@@ -82,7 +79,7 @@ const DEFAULT_WITHHOLDING_TAX: Record<string, number> = {
 };
 
 function currencySymbol(code: string): string {
-  return CURRENCY_SYMBOLS[code] ?? code;
+  return currencySymbolFromMap(code);
 }
 
 function countryFlag(country: string): string {

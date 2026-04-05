@@ -104,12 +104,8 @@ function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-function fmtLocal(v: number, currency: string): string {
-  const sym = currency === 'GBP' || currency === 'GBp' ? '£' : currency === 'EUR' ? '€' : currency === 'JPY' ? '¥' : '$';
-  const divisor = currency === 'GBp' ? 100 : 1;
-  const val = v / divisor;
-  return `${sym}${val.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
-}
+import { fmtLocalCurrency } from '@/lib/utils/currency';
+const fmtLocal = fmtLocalCurrency;
 
 function holdingPeriodStr(buyDate: string): string {
   const ms = Date.now() - new Date(buyDate).getTime();

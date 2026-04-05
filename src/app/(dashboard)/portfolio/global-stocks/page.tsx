@@ -107,12 +107,8 @@ function fmt(v: number): string {
   return `₹${Math.round(v)}`;
 }
 
-function fmtLocal(v: number, currency: string): string {
-  const sym = currency === 'GBP' || currency === 'GBp' ? '£' : currency === 'EUR' ? '€' : currency === 'JPY' ? '¥' : '$';
-  const divisor = currency === 'GBp' ? 100 : 1;
-  const val = v / divisor;
-  return `${sym}${val.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
-}
+import { fmtLocalCurrency } from '@/lib/utils/currency';
+const fmtLocal = fmtLocalCurrency;
 
 function _PnlBadge({ value, pct }: { value: number; pct: number }) {
   const up = value >= 0;
