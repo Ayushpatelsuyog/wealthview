@@ -1646,7 +1646,7 @@ export default function MutualFundsPage() {
 
               <div className="space-y-1.5">
                 <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Platform / Distributor</Label>
-                <BrokerSelector familyId={familyId} selectedBrokerId={broker}
+                <BrokerSelector familyId={familyId} memberId={member} selectedBrokerId={broker}
                   onChange={(id) => { setBroker(id); setErrors((e) => ({ ...e, broker: '' })); }}
                   error={errors.broker} />
               </div>

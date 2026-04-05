@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
     } else {
       const { data: newBroker, error: brokerErr } = await supabase
         .from('brokers')
-        .insert({ family_id: familyId, name: brokerName, platform_type: platformType })
+        .insert({ family_id: familyId, user_id: targetUserId, name: brokerName, platform_type: platformType })
         .select('id').single();
       if (brokerErr) return NextResponse.json({ error: brokerErr.message }, { status: 500 });
       brokerId = newBroker.id;

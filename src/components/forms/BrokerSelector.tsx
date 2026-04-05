@@ -19,6 +19,7 @@ export interface DbBroker {
 
 interface BrokerSelectorProps {
   familyId: string | null;
+  memberId?: string;
   selectedBrokerId: string | null;
   onChange: (id: string) => void;
   error?: string;
@@ -52,7 +53,7 @@ function brokerLetter(name: string): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: BrokerSelectorProps) {
+export function BrokerSelector({ familyId, memberId, selectedBrokerId, onChange, error }: BrokerSelectorProps) {
   const supabase = createClient();
 
   const [brokers,    setBrokers]    = useState<DbBroker[]>([]);
@@ -76,17 +77,19 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
   useEffect(() => {
     if (!familyId) return;
     setLoading(true);
-    supabase
+    let query = supabase
       .from('brokers')
       .select('id, name, platform_type, logo_color')
       .eq('family_id', familyId)
-      .eq('is_active', true)
+      .eq('is_active', true);
+    if (memberId) query = query.eq('user_id', memberId);
+    query
       .order('created_at')
       .then(({ data }) => {
         setBrokers(data ?? []);
         setLoading(false);
       });
-  }, [familyId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [familyId, memberId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Add broker ─────────────────────────────────────────────────────────────
   async function handleAdd() {
@@ -99,6 +102,7 @@ export function BrokerSelector({ familyId, selectedBrokerId, onChange, error }: 
       .from('brokers')
       .insert({
         family_id:     familyId,
+        user_id:       memberId || null,
         name:          addName.trim(),
         platform_type: (['zerodha','groww','upstox','angel','icicidirect','hdfc_securities','motilal','kotak','paytm_money','coin'].includes(addPlatform) ? addPlatform : 'other') as string,
         logo_color:    addColor,

@@ -559,6 +559,7 @@ export function CASImporter({ familyId, members, portfolios, memberId, onImporte
             <Label className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Distributor / Platform</Label>
             <BrokerSelector
               familyId={familyId}
+              memberId={assignMember}
               selectedBrokerId={brokerId}
               onChange={setBrokerId}
             />

@@ -1154,6 +1154,7 @@ function GlobalStocksFormContent() {
               <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>Distributor / Broker</Label>
               <BrokerSelector
                 familyId={familyId}
+                memberId={member}
                 selectedBrokerId={brokerId}
                 onChange={setBrokerId}
                 error={errors.broker}
