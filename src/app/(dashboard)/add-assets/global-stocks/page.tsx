@@ -746,7 +746,7 @@ function GlobalStocksFormContent() {
     try {
       const res = await fetch(`/api/stocks/global/price?symbol=${encodeURIComponent(stock.symbol)}`);
       const data = await res.json();
-      setStockPrice(data);
+      setStockPrice(data?.price != null && data.price > 0 ? data : null);
     } catch { setStockPrice(null); }
     setPriceLoading(false);
 
@@ -1268,18 +1268,18 @@ function GlobalStocksFormContent() {
                   ) : stockPrice ? (
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
                       <span className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>
-                        {cSymbol}{stockPrice.price.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                        {cSymbol}{(stockPrice.price ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}
                       </span>
                       <span className="text-xs font-medium flex items-center gap-0.5"
-                        style={{ color: stockPrice.changePct >= 0 ? '#059669' : '#DC2626' }}>
-                        {stockPrice.changePct >= 0
+                        style={{ color: (stockPrice.changePct ?? 0) >= 0 ? '#059669' : '#DC2626' }}>
+                        {(stockPrice.changePct ?? 0) >= 0
                           ? <TrendingUp className="w-3 h-3" />
                           : <TrendingDown className="w-3 h-3" />}
-                        {stockPrice.changePct >= 0 ? '+' : ''}{stockPrice.changePct.toFixed(2)}%
+                        {(stockPrice.changePct ?? 0) >= 0 ? '+' : ''}{(stockPrice.changePct ?? 0).toFixed(2)}%
                       </span>
                       {fxRate && (
                         <span className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
-                          ({fmtINR(stockPrice.price * fxRate.rate)} @ {fmtINR(fxRate.rate)}/{stockCurrency})
+                          ({fmtINR((stockPrice.price ?? 0) * (fxRate.rate ?? 0))} @ {fmtINR(fxRate.rate ?? 0)}/{stockCurrency})
                         </span>
                       )}
                     </div>

@@ -238,10 +238,18 @@ export async function GET(req: NextRequest) {
   // Try Yahoo Finance live search first
   let results = await yahooSearch(q);
 
-  // Fallback to hardcoded list if Yahoo fails
+  // Always merge hardcoded matches (Yahoo may miss some stocks like ASX ETPs)
+  const hardcodedMatches = fallbackSearch(q);
+  const existingSymbols = new Set(results.map(r => r.symbol));
+  for (const hc of hardcodedMatches) {
+    if (!existingSymbols.has(hc.symbol)) {
+      results.push(hc);
+    }
+  }
+
+  // Fallback entirely if Yahoo returned nothing
   if (results.length === 0) {
-    console.warn(`[Global Search] Yahoo returned 0 results for "${q}", using fallback`);
-    results = fallbackSearch(q);
+    console.warn(`[Global Search] No results for "${q}"`);
   }
 
   // Enrich with sector data from hardcoded list

@@ -420,4 +420,14 @@ export const GLOBAL_STOCKS_LIST: GlobalStockInfo[] = [
   { symbol: 'FXI', companyName: 'iShares China Large-Cap ETF', exchange: 'NYSE Arca', currency: 'USD', sector: 'ETF', country: 'US' },
   { symbol: 'INDA', companyName: 'iShares MSCI India ETF', exchange: 'NASDAQ', currency: 'USD', sector: 'ETF', country: 'US' },
   { symbol: 'EWZ', companyName: 'iShares MSCI Brazil ETF', exchange: 'NYSE Arca', currency: 'USD', sector: 'ETF', country: 'US' },
+
+  // ============================================================
+  // ASX EXCHANGE-TRADED PRODUCTS (ETP) — COMMODITIES
+  // ============================================================
+  { symbol: 'ETPMAG.AX', companyName: 'Global X Physical Silver', exchange: 'ASX', currency: 'AUD', sector: 'Commodities', country: 'Australia' },
+  { symbol: 'ETPMPT.AX', companyName: 'Global X Physical Platinum', exchange: 'ASX', currency: 'AUD', sector: 'Commodities', country: 'Australia' },
+  { symbol: 'ETPMPD.AX', companyName: 'Global X Physical Palladium', exchange: 'ASX', currency: 'AUD', sector: 'Commodities', country: 'Australia' },
+  { symbol: 'GOLD.AX', companyName: 'Global X Physical Gold', exchange: 'ASX', currency: 'AUD', sector: 'Commodities', country: 'Australia' },
+  { symbol: 'QAU.AX', companyName: 'BetaShares Gold Bullion ETF', exchange: 'ASX', currency: 'AUD', sector: 'Commodities', country: 'Australia' },
+  { symbol: 'PMGOLD.AX', companyName: 'Perth Mint Gold', exchange: 'ASX', currency: 'AUD', sector: 'Commodities', country: 'Australia' },
 ];
