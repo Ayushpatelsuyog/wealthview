@@ -51,7 +51,7 @@ interface HoldingRow extends RawHolding {
   fxRate:           number | null;
 }
 
-type SortKey = 'value' | 'pnlPct' | 'xirr' | 'name';
+type SortKey = 'name' | 'invested' | 'value' | 'dayPnl' | 'pnl' | 'pnlPct' | 'xirr';
 
 // ─── Country / Currency helpers ──────────────────────────────────────────────
 
@@ -330,6 +330,7 @@ export default function GlobalStocksPortfolioPage() {
   const [filterPortfolios, setFilterPortfolios] = useState<Set<string>>(new Set());
   const [filterCountries,  setFilterCountries]  = useState<Set<string>>(new Set());
   const [sortKey,          setSortKey]          = useState<SortKey>('value');
+  const [sortDir,          setSortDir]          = useState<'asc' | 'desc'>('desc');
   const [searchQuery,      setSearchQuery]      = useState('');
   const [activeMemberIds,  setActiveMemberIds]  = useState<string[]>([]);
 
@@ -633,16 +634,20 @@ export default function GlobalStocksPortfolioPage() {
       h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       h.symbol.toLowerCase().includes(searchQuery.toLowerCase())
     );
+    const dir = sortDir === 'asc' ? 1 : -1;
     return [...rows].sort((a, b) => {
       switch (sortKey) {
-        case 'value':  return (b.currentValueINR ?? b.investedINR) - (a.currentValueINR ?? a.investedINR);
-        case 'pnlPct': return (b.gainLossPct ?? 0) - (a.gainLossPct ?? 0);
-        case 'xirr':   return (b.xirr ?? -Infinity) - (a.xirr ?? -Infinity);
-        case 'name':   return a.name.localeCompare(b.name);
-        default:       return 0;
+        case 'name':     return dir * a.name.localeCompare(b.name);
+        case 'invested': return dir * (a.investedINR - b.investedINR);
+        case 'value':    return dir * ((a.currentValueINR ?? a.investedINR) - (b.currentValueINR ?? b.investedINR));
+        case 'dayPnl':   return dir * (((a.dayChange ?? 0) * Number(a.quantity) * (a.fxRate ?? 1)) - ((b.dayChange ?? 0) * Number(b.quantity) * (b.fxRate ?? 1)));
+        case 'pnl':      return dir * ((a.gainLoss ?? 0) - (b.gainLoss ?? 0));
+        case 'pnlPct':   return dir * ((a.gainLossPct ?? 0) - (b.gainLossPct ?? 0));
+        case 'xirr':     return dir * ((a.xirr ?? -Infinity) - (b.xirr ?? -Infinity));
+        default:         return 0;
       }
     });
-  }, [holdings, activeMemberIds, filterBrokers, filterPortfolios, filterCountries, searchQuery, sortKey]);
+  }, [holdings, activeMemberIds, filterBrokers, filterPortfolios, filterCountries, searchQuery, sortKey, sortDir]);
 
   // ── Grouped holdings (multi-distributor consolidation) ────────────────────
 
@@ -873,9 +878,9 @@ export default function GlobalStocksPortfolioPage() {
           </div>
         </div>
         {/* Country */}
-        <div className="min-w-0">
-          <span className="text-[11px] font-medium" style={{ color: 'var(--wv-text-secondary)' }}>
-            {countryFlag(h.country)} {h.country}
+        <div className="min-w-0 text-center">
+          <span className="text-base" title={h.country}>
+            {countryFlag(h.country)}
           </span>
         </div>
         {/* Distributor */}
@@ -1149,36 +1154,18 @@ export default function GlobalStocksPortfolioPage() {
               )}
             </div>
 
-            {/* Sort + clear */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--wv-text-muted)' }}>Sort:</span>
-                {(['value','pnlPct','xirr','name'] as SortKey[]).map(k => {
-                  const labels: Record<SortKey, string> = { value: 'Value', pnlPct: 'P&L %', xirr: 'XIRR', name: 'Name' };
-                  return (
-                    <button key={k} onClick={() => setSortKey(k)}
-                      className="px-2.5 py-0.5 rounded-full text-[10px] font-medium transition-colors"
-                      style={{
-                        backgroundColor: sortKey === k ? '#1B2A4A' : '#F7F5F0',
-                        color:           sortKey === k ? 'white'   : '#6B7280',
-                      }}>
-                      {labels[k]}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="flex items-center gap-2">
-                <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
-                  Showing {uniqueStockCount} of {totalUniqueStockCount} stocks
-                </p>
-                {isFiltered && (
-                  <button onClick={clearFilters}
-                    className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                    style={{ backgroundColor: 'rgba(220,38,38,0.08)', color: '#DC2626' }}>
-                    Clear
-                  </button>
-                )}
-              </div>
+            {/* Stock count + clear */}
+            <div className="flex items-center justify-end gap-2">
+              <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
+                Showing {uniqueStockCount} of {totalUniqueStockCount} stocks
+              </p>
+              {isFiltered && (
+                <button onClick={clearFilters}
+                  className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                  style={{ backgroundColor: 'rgba(220,38,38,0.08)', color: '#DC2626' }}>
+                  Clear
+                </button>
+              )}
             </div>
           </div>
 
@@ -1222,21 +1209,31 @@ export default function GlobalStocksPortfolioPage() {
 
           {/* Holdings table */}
           <div className="wv-card">
-            {/* Table header */}
-            <div className="grid text-[10px] font-semibold uppercase tracking-wide px-4 py-2 border-b"
-              style={{ gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 40px', borderColor: '#F0EDE6', color: 'var(--wv-text-muted)', backgroundColor: 'var(--wv-surface-2)' }}>
-              <span>Stock</span>
-              <span>Country</span>
-              <span>Distributor</span>
-              <span>Portfolio</span>
-              <span className="text-right">Qty &middot; Avg</span>
-              <span className="text-right">Invested</span>
-              <span className="text-right">CMP</span>
-              <span className="text-right">Value</span>
-              <span className="text-right">Day P&amp;L</span>
-              <span className="text-right">Unrealized</span>
-              <span />
-            </div>
+            {/* Table header — sortable columns */}
+            {(() => {
+              const arrow = (key: SortKey) => sortKey === key ? (sortDir === 'desc' ? ' ▼' : ' ▲') : '';
+              const click = (key: SortKey) => () => {
+                if (sortKey === key) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+                else { setSortKey(key); setSortDir(key === 'name' ? 'asc' : 'desc'); }
+              };
+              const cls = (key: SortKey) => `cursor-pointer hover:text-[#1B2A4A] transition-colors ${sortKey === key ? 'text-[#1B2A4A]' : ''}`;
+              return (
+                <div className="grid text-[10px] font-semibold uppercase tracking-wide px-4 py-2 border-b select-none"
+                  style={{ gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 40px', borderColor: '#F0EDE6', color: 'var(--wv-text-muted)', backgroundColor: 'var(--wv-surface-2)' }}>
+                  <span className={cls('name')} onClick={click('name')}>Stock{arrow('name')}</span>
+                  <span>Country</span>
+                  <span>Distributor</span>
+                  <span>Portfolio</span>
+                  <span className="text-right">Qty · Avg</span>
+                  <span className={`text-right ${cls('invested')}`} onClick={click('invested')}>Invested{arrow('invested')}</span>
+                  <span className="text-right">CMP</span>
+                  <span className={`text-right ${cls('value')}`} onClick={click('value')}>Value{arrow('value')}</span>
+                  <span className={`text-right ${cls('dayPnl')}`} onClick={click('dayPnl')}>Day P&L{arrow('dayPnl')}</span>
+                  <span className={`text-right ${cls('pnl')}`} onClick={click('pnl')}>Unrealized{arrow('pnl')}</span>
+                  <span />
+                </div>
+              );
+            })()}
 
             {groupedFiltered.length === 0 ? (
               <div className="px-4 py-12 text-center">
@@ -1284,7 +1281,7 @@ export default function GlobalStocksPortfolioPage() {
                           <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{subtitle}</p>
                         </div>
                       </div>
-                      <div><span className="text-[11px] font-medium" style={{ color: 'var(--wv-text-secondary)' }}>{countryFlag(group.country)} {group.country}</span></div>
+                      <div className="text-center"><span className="text-base" title={group.country}>{countryFlag(group.country)}</span></div>
                       <div className="text-center" style={{ gridColumn: 'span 2' }}><p className="text-[11px] font-medium italic" style={{ color: 'var(--wv-text-muted)' }}>Consolidated</p></div>
                       <div className="text-right">
                         <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{group.totalQty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
