@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
+import { CountryFlag } from '@/components/shared/CountryFlag';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -339,8 +340,8 @@ export function GlobalStockDetailSheet({
               )}
             </div>
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <span className="text-xs" style={{ color: '#A0AEC0' }}>
-                {countryFlag(country)} {country}
+              <span className="text-xs flex items-center gap-1" style={{ color: '#A0AEC0' }}>
+                <CountryFlag country={country} size={14} /> {country}
               </span>
               <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
                 style={{ backgroundColor: 'rgba(37,99,235,0.15)', color: '#93C5FD' }}>

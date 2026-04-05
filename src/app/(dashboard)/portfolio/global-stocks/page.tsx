@@ -13,6 +13,7 @@ import { formatLargeINR, formatPercentage } from '@/lib/utils/formatters';
 import { calculateXIRR } from '@/lib/utils/calculations';
 import { holdingsCacheGet, holdingsCacheSet, holdingsCacheClear, holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
 import { FamilyMemberSelector } from '@/components/shared/FamilyMemberSelector';
+import { CountryFlag } from '@/components/shared/CountryFlag';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -215,8 +216,9 @@ function ActionMenu({
 
 interface PieEntry { name: string; value: number }
 
-function DonutChart({ title, data, getColor }: {
+function DonutChart({ title, data, getColor, renderLabel }: {
   title: string; data: PieEntry[]; getColor: (name: string, index: number) => string;
+  renderLabel?: (name: string) => React.ReactNode;
 }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (data.length === 0) {
@@ -260,8 +262,8 @@ function DonutChart({ title, data, getColor }: {
           return (
             <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
               <span style={{ flexShrink: 0, width: 8, height: 8, borderRadius: 2, backgroundColor: color, display: 'inline-block' }} />
-              <span style={{ flex: 1, fontSize: 11, color: 'var(--wv-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {entry.name}
+              <span style={{ flex: 1, fontSize: 11, color: 'var(--wv-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {renderLabel ? renderLabel(entry.name) : entry.name}
               </span>
               <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, color: 'var(--wv-text)', fontVariantNumeric: 'tabular-nums' }}>
                 {fmt(entry.value)}
@@ -736,7 +738,7 @@ export default function GlobalStocksPortfolioPage() {
 
   const countryPieData = useMemo(() => {
     const map: Record<string, number> = {};
-    filtered.forEach(h => { const k = `${countryFlag(h.country)} ${h.country}`; map[k] = (map[k] ?? 0) + (h.currentValueINR ?? h.investedINR); });
+    filtered.forEach(h => { map[h.country] = (map[h.country] ?? 0) + (h.currentValueINR ?? h.investedINR); });
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [filtered]);
 
@@ -879,9 +881,7 @@ export default function GlobalStocksPortfolioPage() {
         </div>
         {/* Country */}
         <div className="min-w-0 text-center">
-          <span className="text-base" title={h.country}>
-            {countryFlag(h.country)}
-          </span>
+          <CountryFlag country={h.country} size={18} />
         </div>
         {/* Distributor */}
         <div className="min-w-0">
@@ -1091,10 +1091,10 @@ export default function GlobalStocksPortfolioPage() {
             <DonutChart
               title="Allocation by Country / Region"
               data={countryPieData}
-              getColor={(name) => {
-                const code = name.split(' ').pop() ?? '';
-                return countryColor(code);
-              }}
+              getColor={(name) => countryColor(name)}
+              renderLabel={(name) => (
+                <><CountryFlag country={name} size={12} /> {name}</>
+              )}
             />
             <DonutChart
               title="Allocation by Portfolio"
@@ -1225,7 +1225,7 @@ export default function GlobalStocksPortfolioPage() {
                 <div className="grid text-[10px] font-semibold uppercase tracking-wide px-4 py-2 border-b select-none"
                   style={{ gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 40px', borderColor: '#F0EDE6', color: 'var(--wv-text-muted)', backgroundColor: 'var(--wv-surface-2)' }}>
                   <span className={cls('name')} onClick={click('name')}>Stock{arrow('name')}</span>
-                  <span>🏳️</span>
+                  <span><Globe className="w-3 h-3 inline" /></span>
                   <span>Distributor</span>
                   <span>Portfolio</span>
                   <span className="text-right">Qty · Avg</span>
@@ -1285,7 +1285,7 @@ export default function GlobalStocksPortfolioPage() {
                           <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{subtitle}</p>
                         </div>
                       </div>
-                      <div className="text-center"><span className="text-base" title={group.country}>{countryFlag(group.country)}</span></div>
+                      <div className="text-center"><CountryFlag country={group.country} size={18} /></div>
                       <div className="text-center" style={{ gridColumn: 'span 2' }}><p className="text-[11px] font-medium italic" style={{ color: 'var(--wv-text-muted)' }}>Consolidated</p></div>
                       <div className="text-right">
                         <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{group.totalQty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
