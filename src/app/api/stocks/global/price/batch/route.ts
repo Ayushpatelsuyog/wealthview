@@ -97,11 +97,36 @@ async function fetchBatchPrices(symbols: string[], nocache: boolean): Promise<Re
   }
 
   if (uncached.length > 0) {
-    await Promise.allSettled(uncached.map(async (sym) => {
-      const data = await fetchYahooPrice(sym);
-      if (data) cacheSet(`global_stock_price_${sym}`, data, ttl);
-      results[sym] = data;
-    }));
+    // Fetch in chunks of 5 to avoid Yahoo rate-limiting
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < uncached.length; i += CHUNK_SIZE) {
+      const chunk = uncached.slice(i, i + CHUNK_SIZE);
+      await Promise.allSettled(chunk.map(async (sym) => {
+        const data = await fetchYahooPrice(sym);
+        if (data) cacheSet(`global_stock_price_${sym}`, data, ttl);
+        results[sym] = data;
+      }));
+      // Small delay between chunks to avoid rate-limiting
+      if (i + CHUNK_SIZE < uncached.length) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+
+    // Retry failed symbols individually (one more attempt)
+    const failed = uncached.filter(s => !results[s]);
+    if (failed.length > 0) {
+      console.log(`[Batch Price] Retrying ${failed.length} failed symbols: ${failed.join(', ')}`);
+      for (const sym of failed) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const data = await fetchYahooPrice(sym);
+        if (data) {
+          cacheSet(`global_stock_price_${sym}`, data, ttl);
+          results[sym] = data;
+        } else {
+          console.warn(`[Batch Price] Final failure for ${sym}`);
+        }
+      }
+    }
   }
 
   return results;

@@ -321,6 +321,7 @@ export default function GlobalStocksPortfolioPage() {
   const [_memberNames,   setMemberNames]    = useState<Record<string, string>>({});
   const [fxRates,        setFxRates]        = useState<Record<string, number>>({});
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [manualPriceInput, setManualPriceInput] = useState<Record<string, string>>({});
 
   // M&A / Demerger modal
 
@@ -563,6 +564,16 @@ export default function GlobalStocksPortfolioPage() {
     }
     const count = await fetchPriceBatch([symbol], undefined, undefined, bypassCache);
     return count > 0;
+  }
+
+  function submitManualPrice(symbol: string) {
+    const val = parseFloat(manualPriceInput[symbol] ?? '');
+    if (!val || val <= 0) return;
+    setHoldings(prev => prev.map(h => {
+      if (h.symbol !== symbol) return h;
+      return computeRow({ ...h, priceUnavailable: false }, val, fxRates);
+    }));
+    setManualPriceInput(prev => { const n = { ...prev }; delete n[symbol]; return n; });
   }
 
   useEffect(() => { loadHoldings(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -879,7 +890,20 @@ export default function GlobalStocksPortfolioPage() {
           ) : h.currentPrice !== null ? (
             <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{fmtLocal(h.currentPrice, h.currency)}</p>
           ) : h.priceUnavailable ? (
-            <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Unavailable</p>
+            <div className="flex flex-col items-end gap-1">
+              <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Unavailable</p>
+              <div className="flex items-center gap-1">
+                <input type="number" placeholder="Enter"
+                  value={manualPriceInput[h.symbol] ?? ''}
+                  onChange={e => setManualPriceInput(prev => ({ ...prev, [h.symbol]: e.target.value }))}
+                  onKeyDown={e => { if (e.key === 'Enter') submitManualPrice(h.symbol); }}
+                  className="w-16 h-6 text-[10px] text-right border rounded px-1 outline-none"
+                  style={{ borderColor: 'var(--wv-border)', color: 'var(--wv-text)' }} />
+                <button onClick={() => submitManualPrice(h.symbol)}
+                  className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+                  style={{ backgroundColor: '#1B2A4A', color: 'white' }}>✓</button>
+              </div>
+            </div>
           ) : (
             <p className="text-[10px]" style={{ color: '#DC2626' }}>Error</p>
           )}
