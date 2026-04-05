@@ -205,15 +205,13 @@ export function GlobalStockDetailSheet({
   const gainLossPct    = investedINR > 0 ? (gainLossINR / investedINR) * 100 : 0;
   const isGain         = gainLossINR >= 0;
 
-  // FX impact = difference between INR P&L and what local P&L would be at current FX rate
-  const localGainINR   = localGainLoss * fxRate; // P&L from stock movement alone (at current FX)
-  const fxImpact       = gainLossINR - localGainINR; // P&L from currency movement
+  // Stock P&L at current FX (no FX impact included)
+  const localGainINR   = localGainLoss * fxRate;
 
   // ── Realized P&L from sell transactions ─────────────────────────────────────
   const sellTxns = (holding.transactions ?? []).filter(t => t.type === 'sell');
   const totalSoldQty = sellTxns.reduce((s, t) => s + Number(t.quantity), 0);
   let realizedPnlLocal = 0;
-  let realizedPnlINR = 0;
   let totalSaleValueLocal = 0;
 
   for (const t of sellTxns) {
@@ -222,7 +220,6 @@ export function GlobalStockDetailSheet({
       try {
         const meta = JSON.parse(metaMatch[1]);
         realizedPnlLocal += meta.pnl_local ?? 0;
-        realizedPnlINR += meta.pnl_inr ?? 0;
       } catch { /* skip */ }
     }
     totalSaleValueLocal += Number(t.quantity) * Number(t.price);
@@ -244,9 +241,68 @@ export function GlobalStockDetailSheet({
   // Fallback if no metadata
   if (realizedPnlLocal === 0 && totalSoldQty > 0) {
     realizedPnlLocal = totalSaleValueLocal - totalSaleCostLocal;
-    realizedPnlINR = realizedPnlLocal * fxRate;
   }
   const hasSells = totalSoldQty > 0;
+
+  // ── FIFO lot tracking for FX impact (unrealized vs realized) ──────────────
+  const fifoLots = buyTxnsSorted.map(t => ({
+    date: t.date,
+    qty: Number(t.quantity),
+    remainingQty: Number(t.quantity),
+    priceLocal: Number(t.price),
+    fxRate: Number((t.metadata as Record<string, unknown>)?.fx_rate ?? fxRate),
+  }));
+
+  // Allocate sells to buy lots (FIFO) to compute realized FX
+  let realizedFxPnl = 0;
+  const sellTxnsSorted = [...sellTxns].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const realizedFxDetails: { sellDate: string; sellQty: number; sellFx: number; avgBuyFx: number; fxGain: number }[] = [];
+
+  for (const sell of sellTxnsSorted) {
+    let sellQty = Number(sell.quantity);
+    const sellFx = Number((sell.metadata as Record<string, unknown>)?.fx_rate ?? fxRate);
+    let sellFxGain = 0;
+    let weightedBuyFx = 0;
+    let totalAllocated = 0;
+
+    for (const lot of fifoLots) {
+      if (sellQty <= 0) break;
+      if (lot.remainingQty <= 0) continue;
+      const allocated = Math.min(sellQty, lot.remainingQty);
+      const fxGain = allocated * lot.priceLocal * (sellFx - lot.fxRate);
+      realizedFxPnl += fxGain;
+      sellFxGain += fxGain;
+      weightedBuyFx += lot.fxRate * allocated;
+      totalAllocated += allocated;
+      lot.remainingQty -= allocated;
+      sellQty -= allocated;
+    }
+
+    if (totalAllocated > 0) {
+      realizedFxDetails.push({
+        sellDate: sell.date,
+        sellQty: totalAllocated,
+        sellFx,
+        avgBuyFx: weightedBuyFx / totalAllocated,
+        fxGain: sellFxGain,
+      });
+    }
+  }
+
+  // Unrealized FX = remaining lots only
+  let unrealizedFxPnl = 0;
+  const unrealizedFxDetails: { date: string; qty: number; remainingQty: number; priceLocal: number; purchaseFx: number; fxGain: number }[] = [];
+  for (const lot of fifoLots) {
+    if (lot.remainingQty > 0) {
+      const fxGain = lot.remainingQty * lot.priceLocal * (fxRate - lot.fxRate);
+      unrealizedFxPnl += fxGain;
+      unrealizedFxDetails.push({
+        date: lot.date, qty: lot.qty, remainingQty: lot.remainingQty,
+        priceLocal: lot.priceLocal, purchaseFx: lot.fxRate, fxGain,
+      });
+    }
+  }
+  const totalFxImpact = unrealizedFxPnl + realizedFxPnl;
 
   return (
     <Sheet open={open} onOpenChange={o => { if (!o) onClose(); }}>
@@ -416,15 +472,24 @@ export function GlobalStockDetailSheet({
                   <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{fmtLocal(totalSaleCostLocal, currency)}</p>
                 </div>
                 <div>
-                  <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Realized P&L ({currency})</p>
+                  <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Realized Stock P&L ({currency})</p>
                   <p className="text-xs font-bold" style={{ color: realizedPnlLocal >= 0 ? '#059669' : '#DC2626' }}>
                     {realizedPnlLocal >= 0 ? '+' : ''}{fmtLocal(realizedPnlLocal, currency)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Realized P&L (INR)</p>
-                  <p className="text-xs font-bold" style={{ color: realizedPnlINR >= 0 ? '#059669' : '#DC2626' }}>
-                    {realizedPnlINR >= 0 ? '+' : ''}{formatLargeINR(realizedPnlINR)}
+                  <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Realized FX Impact (INR)</p>
+                  <p className="text-xs font-bold" style={{ color: realizedFxPnl >= 0 ? '#059669' : '#DC2626' }}>
+                    {realizedFxPnl >= 0 ? '+' : ''}{formatLargeINR(realizedFxPnl)}
+                  </p>
+                </div>
+                <div className="col-span-2 pt-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                  <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Total Realized P&L (INR)</p>
+                  <p className="text-xs font-bold" style={{ color: (realizedPnlLocal * fxRate + realizedFxPnl) >= 0 ? '#059669' : '#DC2626' }}>
+                    {(realizedPnlLocal * fxRate + realizedFxPnl) >= 0 ? '+' : ''}{formatLargeINR(realizedPnlLocal * fxRate + realizedFxPnl)}
+                    <span className="text-[10px] font-normal ml-1" style={{ color: 'var(--wv-text-muted)' }}>
+                      = Stock ({realizedPnlLocal >= 0 ? '+' : ''}{fmtLocal(realizedPnlLocal, currency)}) + FX ({realizedFxPnl >= 0 ? '+' : ''}{formatLargeINR(realizedFxPnl)})
+                    </span>
                   </p>
                 </div>
               </div>
@@ -432,25 +497,39 @@ export function GlobalStockDetailSheet({
           )}
 
           {/* Total P&L (if sells exist) */}
-          {hasSells && (
-            <div className="wv-card p-3" style={{ backgroundColor: 'rgba(201,168,76,0.06)' }}>
-              <p className="text-[9px] font-semibold uppercase tracking-widest text-center mb-2" style={{ color: 'var(--wv-text-muted)' }}>Total P&L (Unrealized + Realized)</p>
-              <div className="grid grid-cols-2 gap-2 text-center">
-                <div>
-                  <p className="text-[9px]" style={{ color: 'var(--wv-text-secondary)' }}>Total ({currency})</p>
-                  <p className="text-sm font-bold" style={{ color: (localGainLoss + realizedPnlLocal) >= 0 ? '#059669' : '#DC2626' }}>
-                    {(localGainLoss + realizedPnlLocal) >= 0 ? '+' : ''}{fmtLocal(localGainLoss + realizedPnlLocal, currency)}
-                  </p>
+          {hasSells && (() => {
+            const totalStockLocal = localGainLoss + realizedPnlLocal;
+            const totalInrPnl = localGainLoss * fxRate + unrealizedFxPnl + realizedPnlLocal * fxRate + realizedFxPnl;
+            return (
+              <div className="wv-card p-3" style={{ backgroundColor: 'rgba(201,168,76,0.06)' }}>
+                <p className="text-[9px] font-semibold uppercase tracking-widest text-center mb-2" style={{ color: 'var(--wv-text-muted)' }}>Total P&L (Unrealized + Realized)</p>
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  <div>
+                    <p className="text-[9px]" style={{ color: 'var(--wv-text-secondary)' }}>Total Stock P&L ({currency})</p>
+                    <p className="text-sm font-bold" style={{ color: totalStockLocal >= 0 ? '#059669' : '#DC2626' }}>
+                      {totalStockLocal >= 0 ? '+' : ''}{fmtLocal(totalStockLocal, currency)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[9px]" style={{ color: 'var(--wv-text-secondary)' }}>Total FX Impact (INR)</p>
+                    <p className="text-sm font-bold" style={{ color: totalFxImpact >= 0 ? '#059669' : '#DC2626' }}>
+                      {totalFxImpact >= 0 ? '+' : ''}{formatLargeINR(totalFxImpact)}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[9px]" style={{ color: 'var(--wv-text-secondary)' }}>Total (INR)</p>
-                  <p className="text-sm font-bold" style={{ color: (gainLossINR + realizedPnlINR) >= 0 ? '#059669' : '#DC2626' }}>
-                    {(gainLossINR + realizedPnlINR) >= 0 ? '+' : ''}{formatLargeINR(gainLossINR + realizedPnlINR)}
+                <div className="mt-2 pt-2 text-center" style={{ borderTop: '1px solid rgba(201,168,76,0.15)' }}>
+                  <p className="text-[9px]" style={{ color: 'var(--wv-text-secondary)' }}>Total P&L (INR)</p>
+                  <p className="text-base font-bold" style={{ color: totalInrPnl >= 0 ? '#059669' : '#DC2626' }}>
+                    {totalInrPnl >= 0 ? '+' : ''}{formatLargeINR(totalInrPnl)}
+                  </p>
+                  <p className="text-[9px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>
+                    Unrealized ({(localGainLoss * fxRate + unrealizedFxPnl) >= 0 ? '+' : ''}{formatLargeINR(localGainLoss * fxRate + unrealizedFxPnl)})
+                    {' + '}Realized ({(realizedPnlLocal * fxRate + realizedFxPnl) >= 0 ? '+' : ''}{formatLargeINR(realizedPnlLocal * fxRate + realizedFxPnl)})
                   </p>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Returns card */}
           <div className="wv-card p-4">
@@ -514,55 +593,71 @@ export function GlobalStockDetailSheet({
 
             {/* FX Impact row */}
             {(() => {
-              const avgBuyFxRate = investedLocal > 0 ? investedINR / investedLocal : fxRate;
-              const fxChangePct = avgBuyFxRate > 0 ? ((fxRate - avgBuyFxRate) / avgBuyFxRate) * 100 : 0;
-              // Per-transaction FX details
-              const buyTxnsForFx = (holding.transactions ?? [])
-                .filter(t => (t.type === 'buy' || t.type === 'sip') && Number(t.quantity) > 0)
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-              const fxDetails = buyTxnsForFx.map(t => {
-                const txFx = Number((t.metadata as Record<string, unknown>)?.fx_rate ?? fxRate);
-                const q = Number(t.quantity);
-                const p = Number(t.price);
-                const fxGain = q * p * (fxRate - txFx);
-                return { date: t.date, qty: q, price: p, purchaseFx: txFx, fxGain };
-              });
+              const avgBuyFxRemaining = unrealizedFxDetails.length > 0
+                ? unrealizedFxDetails.reduce((s, d) => s + d.purchaseFx * d.remainingQty, 0) / unrealizedFxDetails.reduce((s, d) => s + d.remainingQty, 0)
+                : (investedLocal > 0 ? investedINR / investedLocal : fxRate);
+              const fxChangePct = avgBuyFxRemaining > 0 ? ((fxRate - avgBuyFxRemaining) / avgBuyFxRemaining) * 100 : 0;
               return (
-                <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: fxImpact >= 0 ? 'rgba(5,150,105,0.04)' : 'rgba(220,38,38,0.04)', border: `1px solid ${fxImpact >= 0 ? 'rgba(5,150,105,0.10)' : 'rgba(220,38,38,0.10)'}` }}>
-                  <p className="text-[10px] font-bold mb-2" style={{ color: fxImpact >= 0 ? '#059669' : '#DC2626' }}>
-                    FX Impact
+                <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: unrealizedFxPnl >= 0 ? 'rgba(5,150,105,0.04)' : 'rgba(220,38,38,0.04)', border: `1px solid ${unrealizedFxPnl >= 0 ? 'rgba(5,150,105,0.10)' : 'rgba(220,38,38,0.10)'}` }}>
+                  <p className="text-[10px] font-bold mb-2" style={{ color: unrealizedFxPnl >= 0 ? '#059669' : '#DC2626' }}>
+                    Unrealized FX Impact <span className="font-normal">(remaining shares)</span>
                   </p>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Avg Purchase FX</p>
-                      <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>₹{avgBuyFxRate.toFixed(2)}/{currency}</p>
+                      <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>₹{avgBuyFxRemaining.toFixed(2)}/{currency}</p>
                     </div>
                     <div>
                       <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Current FX Rate</p>
                       <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>₹{fxRate.toFixed(2)}/{currency}</p>
                     </div>
                     <div>
-                      <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>FX Gain/Loss</p>
-                      <p className="text-xs font-bold" style={{ color: fxImpact >= 0 ? '#059669' : '#DC2626' }}>
-                        {fxImpact >= 0 ? '+' : ''}{formatLargeINR(fxImpact)}
+                      <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Unrealized FX</p>
+                      <p className="text-xs font-bold" style={{ color: unrealizedFxPnl >= 0 ? '#059669' : '#DC2626' }}>
+                        {unrealizedFxPnl >= 0 ? '+' : ''}{formatLargeINR(unrealizedFxPnl)}
                         <span className="text-[10px] font-medium ml-1">({fxChangePct >= 0 ? '+' : ''}{fxChangePct.toFixed(2)}%)</span>
                       </p>
                     </div>
                   </div>
-                  {/* Per-transaction FX breakdown */}
-                  {fxDetails.length > 1 && (
+                  {/* Per-lot unrealized FX breakdown */}
+                  {unrealizedFxDetails.length > 1 && (
                     <div className="mt-2 pt-2 space-y-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-                      <p className="text-[9px] font-semibold" style={{ color: 'var(--wv-text-muted)' }}>Per-Transaction FX</p>
-                      {fxDetails.map((d, i) => (
+                      <p className="text-[9px] font-semibold" style={{ color: 'var(--wv-text-muted)' }}>Per-Lot FX (remaining shares)</p>
+                      {unrealizedFxDetails.map((d, i) => (
                         <div key={i} className="flex items-center justify-between text-[10px]">
                           <span style={{ color: 'var(--wv-text-secondary)' }}>
-                            {fmtDate(d.date)} · {d.qty} @ ₹{d.purchaseFx.toFixed(2)}/{currency}
+                            {fmtDate(d.date)} · {d.remainingQty}{d.remainingQty < d.qty ? `/${d.qty}` : ''} @ ₹{d.purchaseFx.toFixed(2)}/{currency}
                           </span>
                           <span className="font-medium" style={{ color: d.fxGain >= 0 ? '#059669' : '#DC2626' }}>
                             {d.fxGain >= 0 ? '+' : ''}{formatLargeINR(d.fxGain)}
                           </span>
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {/* Realized FX breakdown */}
+                  {realizedFxDetails.length > 0 && (
+                    <div className="mt-2 pt-2 space-y-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                      <p className="text-[9px] font-semibold" style={{ color: 'var(--wv-text-muted)' }}>Realized FX (sold shares)</p>
+                      {realizedFxDetails.map((d, i) => (
+                        <div key={i} className="flex items-center justify-between text-[10px]">
+                          <span style={{ color: 'var(--wv-text-secondary)' }}>
+                            {fmtDate(d.sellDate)} · Sold {d.sellQty} · Buy FX ₹{d.avgBuyFx.toFixed(2)} → Sell FX ₹{d.sellFx.toFixed(2)}
+                          </span>
+                          <span className="font-medium" style={{ color: d.fxGain >= 0 ? '#059669' : '#DC2626' }}>
+                            {d.fxGain >= 0 ? '+' : ''}{formatLargeINR(d.fxGain)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Total FX summary */}
+                  {hasSells && (
+                    <div className="mt-2 pt-2 flex justify-between text-[10px]" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                      <span className="font-semibold" style={{ color: 'var(--wv-text-muted)' }}>Total FX Impact</span>
+                      <span className="font-bold" style={{ color: totalFxImpact >= 0 ? '#059669' : '#DC2626' }}>
+                        {totalFxImpact >= 0 ? '+' : ''}{formatLargeINR(totalFxImpact)}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -572,11 +667,11 @@ export function GlobalStockDetailSheet({
             {/* Total P&L summary */}
             <div className="mt-2 p-2 rounded-lg text-center" style={{ backgroundColor: 'rgba(201,168,76,0.06)' }}>
               <p className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
-                Total INR P&L:{' '}
+                Unrealized INR P&L:{' '}
                 <span className="font-bold" style={{ color: gainLossINR >= 0 ? '#059669' : '#DC2626' }}>
                   {gainLossINR >= 0 ? '+' : ''}{formatLargeINR(gainLossINR)}
                 </span>
-                {' '}= Stock ({localGainINR >= 0 ? '+' : ''}{formatLargeINR(localGainINR)}) + FX ({fxImpact >= 0 ? '+' : ''}{formatLargeINR(fxImpact)})
+                {' '}= Stock ({localGainINR >= 0 ? '+' : ''}{formatLargeINR(localGainINR)}) + FX ({unrealizedFxPnl >= 0 ? '+' : ''}{formatLargeINR(unrealizedFxPnl)})
               </p>
             </div>
           </div>
