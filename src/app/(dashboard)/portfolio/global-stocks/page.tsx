@@ -49,6 +49,7 @@ interface HoldingRow extends RawHolding {
   memberName:       string;
   country:          string;
   currency:         string;
+  sector:           string;
   fxRate:           number | null;
 }
 
@@ -280,6 +281,9 @@ function DonutChart({ title, data, getColor, renderLabel }: {
   );
 }
 
+const GRID_COLS = '2fr 0.35fr 0.45fr 0.45fr 0.5fr 0.6fr 0.6fr 0.55fr 0.6fr 0.5fr 0.6fr 36px';
+// Stock, Country, Distributor, Portfolio, Sector, Qty·Avg, Invested, CMP, Value, DayPnL, Unrealized, Actions
+
 const BROKER_PALETTE = [
   '#1B2A4A', '#2E8B8B', '#C9A84C', '#059669', '#7C3AED', '#EA580C', '#2563EB', '#DB2777',
   '#D97706', '#0891B2', '#84CC16', '#6366F1', '#14B8A6', '#F97316', '#A855F7', '#EF4444',
@@ -332,6 +336,7 @@ export default function GlobalStocksPortfolioPage() {
   const [filterBrokers,    setFilterBrokers]    = useState<Set<string>>(new Set());
   const [filterPortfolios, setFilterPortfolios] = useState<Set<string>>(new Set());
   const [filterCountries,  setFilterCountries]  = useState<Set<string>>(new Set());
+  const [filterSectors,    setFilterSectors]    = useState<Set<string>>(new Set());
   const [sortKey,          setSortKey]          = useState<SortKey>('value');
   const [sortDir,          setSortDir]          = useState<'asc' | 'desc'>('desc');
   const [searchQuery,      setSearchQuery]      = useState('');
@@ -345,10 +350,10 @@ export default function GlobalStocksPortfolioPage() {
 
   function clearFilters() {
     setFilterBrokers(new Set()); setFilterPortfolios(new Set());
-    setFilterCountries(new Set()); setSearchQuery('');
+    setFilterCountries(new Set()); setFilterSectors(new Set()); setSearchQuery('');
   }
 
-  const isFiltered = filterBrokers.size > 0 || filterPortfolios.size > 0 || filterCountries.size > 0 || !!searchQuery;
+  const isFiltered = filterBrokers.size > 0 || filterPortfolios.size > 0 || filterCountries.size > 0 || filterSectors.size > 0 || !!searchQuery;
 
   // ── Fetch FX rates ──────────────────────────────────────────────────────────
 
@@ -435,6 +440,7 @@ export default function GlobalStocksPortfolioPage() {
     const rows: HoldingRow[] = rawRows.map(h => {
       const cur        = String(h.metadata?.currency ?? 'USD');
       const country    = resolveCountry(h.metadata, cur);
+      const sectorVal  = String(h.metadata?.sector ?? '');
       const rate       = rates[cur] ?? null;
       const ownerId    = h.portfolios?.user_id ?? '';
 
@@ -482,6 +488,7 @@ export default function GlobalStocksPortfolioPage() {
         memberName: names[ownerId] ?? '',
         country,
         currency: cur,
+        sector: sectorVal,
         fxRate: rate,
       };
     });
@@ -623,6 +630,7 @@ export default function GlobalStocksPortfolioPage() {
   const brokers    = useMemo(() => Array.from(new Set(holdings.map(h => h.brokers?.name ?? '—').filter(Boolean))), [holdings]);
   const portfolios = useMemo(() => Array.from(new Set(holdings.map(h => h.portfolios?.name ?? 'My Portfolio').filter(Boolean))), [holdings]);
   const countries  = useMemo(() => Array.from(new Set(holdings.map(h => h.country).filter(Boolean))).sort(), [holdings]);
+  const sectors    = useMemo(() => Array.from(new Set(holdings.map(h => h.sector || 'Other').filter(Boolean))).sort(), [holdings]);
 
   // ── Filtered + sorted holdings ────────────────────────────────────────────
 
@@ -633,6 +641,7 @@ export default function GlobalStocksPortfolioPage() {
     if (filterBrokers.size > 0)    rows = rows.filter(h => filterBrokers.has(h.brokers?.name ?? '—'));
     if (filterPortfolios.size > 0) rows = rows.filter(h => filterPortfolios.has(h.portfolios?.name ?? 'My Portfolio'));
     if (filterCountries.size > 0)  rows = rows.filter(h => filterCountries.has(h.country));
+    if (filterSectors.size > 0)    rows = rows.filter(h => filterSectors.has(h.sector || 'Other'));
     if (searchQuery)               rows = rows.filter(h =>
       h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       h.symbol.toLowerCase().includes(searchQuery.toLowerCase())
@@ -650,7 +659,7 @@ export default function GlobalStocksPortfolioPage() {
         default:         return 0;
       }
     });
-  }, [holdings, activeMemberIds, filterBrokers, filterPortfolios, filterCountries, searchQuery, sortKey, sortDir]);
+  }, [holdings, activeMemberIds, filterBrokers, filterPortfolios, filterCountries, filterSectors, searchQuery, sortKey, sortDir]);
 
   // ── Grouped holdings (multi-distributor consolidation) ────────────────────
 
@@ -855,7 +864,7 @@ export default function GlobalStocksPortfolioPage() {
       <div key={h.id}
         className="grid items-center px-4 py-3 border-b hover:bg-[#FAFAF8] transition-colors cursor-pointer"
         style={{
-          gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 40px',
+          gridTemplateColumns: GRID_COLS,
           borderColor: '#F0EDE6',
           backgroundColor: h.gainLoss != null ? (isGain ? 'rgba(5,150,105,0.01)' : 'rgba(220,38,38,0.01)') : 'transparent',
           ...extraStyle,
@@ -891,6 +900,14 @@ export default function GlobalStocksPortfolioPage() {
         {/* Portfolio */}
         <div className="min-w-0">
           <p className="text-[10px] font-medium truncate" style={{ color: 'var(--wv-text-muted)' }}>{h.portfolios?.name ?? '—'}</p>
+        </div>
+        {/* Sector */}
+        <div className="min-w-0 text-center">
+          {h.sector ? (
+            <p className="text-[10px] font-medium truncate" title={h.sector} style={{ color: 'var(--wv-text-secondary)' }}>{h.sector}</p>
+          ) : (
+            <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>
+          )}
         </div>
         {/* Qty + Avg */}
         <div className="text-right">
@@ -1153,6 +1170,14 @@ export default function GlobalStocksPortfolioPage() {
                   ))}
                 </div>
               )}
+              {sectors.length > 1 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide flex-shrink-0" style={{ color: 'var(--wv-text-muted)' }}>Sector:</span>
+                  {sectors.map(s => (
+                    <Pill key={s} label={s} active={filterSectors.has(s)} onClick={() => toggleSet(filterSectors, setFilterSectors, s)} />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Stock count + clear */}
@@ -1224,11 +1249,12 @@ export default function GlobalStocksPortfolioPage() {
               const cls = (key: SortKey) => `cursor-pointer hover:text-[#1B2A4A] transition-colors ${sortKey === key ? 'text-[#1B2A4A]' : ''}`;
               return (
                 <div className="grid text-[10px] font-semibold uppercase tracking-wide px-4 py-2 border-b select-none"
-                  style={{ gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 40px', borderColor: '#F0EDE6', color: 'var(--wv-text-muted)', backgroundColor: 'var(--wv-surface-2)' }}>
+                  style={{ gridTemplateColumns: GRID_COLS, borderColor: '#F0EDE6', color: 'var(--wv-text-muted)', backgroundColor: 'var(--wv-surface-2)' }}>
                   <span className={cls('name')} onClick={click('name')}>Stock{arrow('name')}</span>
                   <span><Globe className="w-3 h-3 inline" /></span>
                   <span>Distributor</span>
                   <span>Portfolio</span>
+                  <span className="text-center">Sector</span>
                   <span className="text-right">Qty · Avg</span>
                   <span className={`text-right ${cls('invested')}`} onClick={click('invested')}>Invested{arrow('invested')}</span>
                   <span className="text-right">CMP</span>
@@ -1267,7 +1293,7 @@ export default function GlobalStocksPortfolioPage() {
                     <div
                       className="grid items-center px-4 py-3 border-b cursor-pointer"
                       style={{
-                        gridTemplateColumns: '2fr 0.5fr 0.5fr 0.5fr 0.7fr 0.7fr 0.7fr 0.7fr 0.6fr 0.7fr 40px',
+                        gridTemplateColumns: GRID_COLS,
                         borderColor: '#F0EDE6',
                         backgroundColor: 'rgba(201,168,76,0.08)',
                         borderLeft: '3px solid #C9A84C',
@@ -1287,7 +1313,7 @@ export default function GlobalStocksPortfolioPage() {
                         </div>
                       </div>
                       <div className="text-center"><CountryFlag country={group.country} size={18} /></div>
-                      <div className="text-center" style={{ gridColumn: 'span 2' }}><p className="text-[11px] font-medium italic" style={{ color: 'var(--wv-text-muted)' }}>Consolidated</p></div>
+                      <div className="text-center" style={{ gridColumn: 'span 3' }}><p className="text-[11px] font-medium italic" style={{ color: 'var(--wv-text-muted)' }}>Consolidated</p></div>
                       <div className="text-right">
                         <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{group.totalQty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                         <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{fmtLocal(wtdAvgLocal, group.currency)}</p>
