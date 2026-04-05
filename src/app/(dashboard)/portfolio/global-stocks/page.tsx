@@ -524,38 +524,50 @@ export default function GlobalStocksPortfolioPage() {
   }
 
   async function fetchPriceBatch(
-    symbols: string[], baseRows?: HoldingRow[], rates?: Record<string, number>, nocache = false
+    symbols: string[], _baseRows?: HoldingRow[], rates?: Record<string, number>, nocache = false
   ): Promise<number> {
     const rateMap = rates ?? fxRates;
-    try {
-      const res = await fetch('/api/stocks/global/price/batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbols, nocache }),
-      });
-      const json = await res.json();
-      const batchResults: Record<string, { price: number; currency?: string; change?: number; changePct?: number; previousClose?: number } | null> = json.results ?? {};
-      let succeeded = 0;
-      setHoldings(prev => {
-        const source = baseRows ?? prev;
-        return source.map(h => {
-          if (!symbols.includes(h.symbol)) return h;
-          const result = batchResults[h.symbol];
-          if (!result) return { ...h, priceLoading: false, priceUnavailable: true };
-          succeeded++;
-          const updated = computeRow(h, result.price, rateMap);
-          return {
-            ...updated,
-            dayChange: result.change ?? null,
-            dayChangePct: result.changePct ?? null,
-          };
+
+    // Split into chunks of 50 for the API
+    const BATCH_SIZE = 50;
+    const allResults: Record<string, { price: number; currency?: string; change?: number; changePct?: number; previousClose?: number } | null> = {};
+
+    for (let i = 0; i < symbols.length; i += BATCH_SIZE) {
+      const chunk = symbols.slice(i, i + BATCH_SIZE);
+      try {
+        const res = await fetch('/api/stocks/global/price/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbols: chunk, nocache }),
         });
-      });
-      return succeeded;
-    } catch {
-      setHoldings(prev => prev.map(h => symbols.includes(h.symbol) ? { ...h, priceLoading: false, priceUnavailable: true } : h));
-      return 0;
+        const json = await res.json();
+        const chunkResults = json.results ?? {};
+        Object.assign(allResults, chunkResults);
+      } catch (err) {
+        console.warn('[Client] Batch chunk failed:', chunk, err);
+      }
     }
+
+    // Apply all prices to holdings in one state update
+    let succeeded = 0;
+    const symbolSet = new Set(symbols);
+    setHoldings(prev => prev.map(h => {
+      if (!symbolSet.has(h.symbol)) return h;
+      const result = allResults[h.symbol];
+      if (!result) return { ...h, priceLoading: false, priceUnavailable: true };
+      succeeded++;
+      const updated = computeRow(h, result.price, rateMap);
+      return {
+        ...updated,
+        dayChange: result.change ?? null,
+        dayChangePct: result.changePct ?? null,
+      };
+    }));
+
+    const missing = symbols.filter(s => !allResults[s]);
+    if (missing.length > 0) console.warn('[Client] Missing prices for:', missing);
+
+    return succeeded;
   }
 
   async function fetchPrice(symbol: string, bypassCache = false): Promise<boolean> {
@@ -581,11 +593,12 @@ export default function GlobalStocksPortfolioPage() {
   async function refreshAllPrices() {
     setPriceRefreshing(true);
     holdingsCacheClearAll();
-    // Refresh FX rates too
-    const currencySet = new Set(holdings.map(h => h.currency));
+    // Refresh FX rates too — only for active holdings
+    const active = holdings.filter(h => Number(h.quantity) > 0);
+    const currencySet = new Set(active.map(h => h.currency));
     const freshRates = await fetchFxRates(Array.from(currencySet));
     setFxRates(freshRates);
-    const unique = Array.from(new Set(holdings.map(h => h.symbol)));
+    const unique = Array.from(new Set(active.map(h => h.symbol)));
     const succeeded = await fetchPriceBatch(unique, undefined, freshRates, true);
     const total = unique.length;
     setPriceRefreshing(false);

@@ -146,7 +146,7 @@ export async function GET(req: NextRequest) {
   const raw = (req.nextUrl.searchParams.get('symbols') ?? '').trim();
   if (!raw) return NextResponse.json({ error: 'symbols required' }, { status: 400 });
 
-  const symbols = raw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean).slice(0, 50);
+  const symbols = raw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean).slice(0, 200);
   if (symbols.length === 0) return NextResponse.json({ results: {} });
 
   const nocache = req.nextUrl.searchParams.get('nocache') === '1';
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'symbols array required' }, { status: 400 });
     }
 
-    const symbols = rawSymbols.map(s => String(s).trim().toUpperCase()).filter(Boolean).slice(0, 50);
+    const symbols = rawSymbols.map(s => String(s).trim().toUpperCase()).filter(Boolean).slice(0, 200);
     if (symbols.length === 0) return NextResponse.json({ results: {} });
 
     const nocache = body?.nocache === true;

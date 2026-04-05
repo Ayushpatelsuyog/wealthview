@@ -458,7 +458,8 @@ export default function IndianStocksPortfolioPage() {
   async function refreshAllPrices() {
     setPriceRefreshing(true);
     holdingsCacheClearAll();
-    const unique = Array.from(new Set(holdings.map(h => h.symbol)));
+    const active = holdings.filter(h => Number(h.quantity) > 0);
+    const unique = Array.from(new Set(active.map(h => h.symbol)));
     const succeeded = await fetchPriceBatch(unique, undefined, true);
     const total = unique.length;
     setPriceRefreshing(false);
