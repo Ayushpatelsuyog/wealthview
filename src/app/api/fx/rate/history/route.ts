@@ -109,6 +109,34 @@ async function fetchYahooFxHistoryForDate(from: string, to: string, targetDate: 
   return null;
 }
 
+/**
+ * Invert an FxHistoryData: all closes become 1/close.
+ */
+function invertHistory(data: FxHistoryData): FxHistoryData {
+  return {
+    timestamps: data.timestamps,
+    closes: data.closes.map(c => (c && c > 0 ? Math.round((1 / c) * 10000) / 10000 : 0)),
+  };
+}
+
+/**
+ * Try fetching FX history: first direct pair, then reversed (inverted).
+ */
+async function fetchFxHistoryWithFallback(
+  from: string, to: string,
+  fetcher: (f: string, t: string) => Promise<FxHistoryData | null>,
+): Promise<FxHistoryData | null> {
+  const direct = await fetcher(from, to);
+  if (direct) return direct;
+  // Try reverse pair and invert
+  const reverse = await fetcher(to, from);
+  if (reverse) {
+    console.log(`[FX History] Using inverted ${to}/${from} for ${from}/${to}`);
+    return invertHistory(reverse);
+  }
+  return null;
+}
+
 function findClosestRate(timestamps: number[], closes: number[], targetDate: string): number | null {
   const targetMs = new Date(targetDate).getTime();
   let bestIdx  = -1;
@@ -154,24 +182,24 @@ export async function GET(req: NextRequest) {
   let rate: number | null = null;
 
   if (isWithin2y) {
-    // Use cached 2y history for recent dates
+    // Use cached 2y history for recent dates (direct pair only — no reverse)
     const cacheKey = `fx_history_${from}_${to}`;
     let history = cacheGet<FxHistoryData>(cacheKey);
 
     if (!history) {
       history = await fetchYahooFxHistory(from, to);
-      if (history) {
+      if (history && history.timestamps.length >= 10) {
         cacheSet(cacheKey, history, 6 * 60 * 60 * 1000);
       }
     }
 
-    if (history) {
+    if (history && history.timestamps.length >= 10) {
       rate = findClosestRate(history.timestamps, history.closes, dateStr);
     }
   }
 
   if (rate == null) {
-    // Date beyond 2y range or not found in cached data — fetch specific date window
+    // Date beyond 2y range or not found — fetch specific date window (direct pair only)
     const dateCacheKey = `fx_date_${from}_${to}_${dateStr}`;
     const cachedRate = cacheGet<number>(dateCacheKey);
 
@@ -182,25 +210,35 @@ export async function GET(req: NextRequest) {
       if (dateHistory) {
         rate = findClosestRate(dateHistory.timestamps, dateHistory.closes, dateStr);
         if (rate != null) {
-          // Cache date-specific result for 24h
           cacheSet(dateCacheKey, rate, 24 * 60 * 60 * 1000);
         }
       }
     }
   }
 
-  // Cross-rate via USD if direct pair not available
+  // Cross-rate via USD if direct pair not available (use reverse-pair fallback for legs)
   if (rate == null && from !== 'USD' && to !== 'USD') {
-    const [fromHistory, toHistory] = await Promise.all([
-      isWithin2y ? fetchYahooFxHistory(from, 'USD') : fetchYahooFxHistoryForDate(from, 'USD', parsed),
-      isWithin2y ? fetchYahooFxHistory('USD', to) : fetchYahooFxHistoryForDate('USD', to, parsed),
-    ]);
-    if (fromHistory && toHistory) {
-      const fromRate = findClosestRate(fromHistory.timestamps, fromHistory.closes, dateStr);
-      const toRate = findClosestRate(toHistory.timestamps, toHistory.closes, dateStr);
-      if (fromRate && toRate) {
-        rate = Math.round(fromRate * toRate * 10000) / 10000;
-        console.log(`[FX History] Cross-rate ${from}→USD→${to} on ${dateStr}: ${fromRate} × ${toRate} = ${rate}`);
+    const crossCacheKey = `fx_cross_${from}_${to}_${dateStr}`;
+    const cachedCross = cacheGet<number>(crossCacheKey);
+    if (cachedCross != null) {
+      rate = cachedCross;
+    } else {
+      const fetchLeg = (f: string, t: string) =>
+        fetchFxHistoryWithFallback(f, t, isWithin2y
+          ? (a, b) => fetchYahooFxHistory(a, b)
+          : (a, b) => fetchYahooFxHistoryForDate(a, b, parsed));
+      const [fromHistory, toHistory] = await Promise.all([
+        fetchLeg(from, 'USD'),
+        fetchLeg('USD', to),
+      ]);
+      if (fromHistory && toHistory) {
+        const fromRate = findClosestRate(fromHistory.timestamps, fromHistory.closes, dateStr);
+        const toRate = findClosestRate(toHistory.timestamps, toHistory.closes, dateStr);
+        if (fromRate && toRate) {
+          rate = Math.round(fromRate * toRate * 10000) / 10000;
+          cacheSet(crossCacheKey, rate, 6 * 60 * 60 * 1000);
+          console.log(`[FX History] Cross-rate ${from}→USD→${to} on ${dateStr}: ${fromRate} × ${toRate} = ${rate}`);
+        }
       }
     }
   }

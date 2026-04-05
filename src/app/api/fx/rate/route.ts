@@ -90,9 +90,22 @@ export async function GET(req: NextRequest) {
 
   let rate = await fetchYahooFxRate(from, to);
 
-  // Cross-rate via USD if direct pair not available
+  // Try reverse pair (inverted) if direct pair not available
+  if (!rate) {
+    const reverse = await fetchYahooFxRate(to, from);
+    if (reverse && reverse > 0) {
+      rate = Math.round((1 / reverse) * 10000) / 10000;
+      console.log(`[FX Rate] Using inverted ${to}/${from} for ${from}/${to}: 1/${reverse} = ${rate}`);
+    }
+  }
+
+  // Cross-rate via USD if still not available
   if (!rate && from !== 'USD' && to !== 'USD') {
-    const fromToUsd = await fetchYahooFxRate(from, 'USD');
+    // Try both directions for each leg
+    const fromToUsd = await fetchYahooFxRate(from, 'USD') ?? await (async () => {
+      const inv = await fetchYahooFxRate('USD', from);
+      return inv && inv > 0 ? Math.round((1 / inv) * 10000) / 10000 : null;
+    })();
     const usdToTarget = await fetchYahooFxRate('USD', to);
     if (fromToUsd && usdToTarget) {
       rate = Math.round(fromToUsd * usdToTarget * 10000) / 10000;
