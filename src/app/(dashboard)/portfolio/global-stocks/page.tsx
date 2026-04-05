@@ -281,7 +281,7 @@ function DonutChart({ title, data, getColor, renderLabel }: {
   );
 }
 
-const GRID_COLS = '2fr 0.35fr 0.45fr 0.45fr 0.5fr 0.6fr 0.6fr 0.55fr 0.6fr 0.5fr 0.6fr 36px';
+const GRID_COLS = '2fr 0.3fr 0.45fr 0.5fr 0.45fr 0.55fr 0.6fr 0.55fr 0.6fr 0.5fr 0.6fr 40px';
 // Stock, Country, Distributor, Portfolio, Sector, Qty·Avg, Invested, CMP, Value, DayPnL, Unrealized, Actions
 
 const BROKER_PALETTE = [
@@ -890,7 +890,7 @@ export default function GlobalStocksPortfolioPage() {
           </div>
         </div>
         {/* Country */}
-        <div className="min-w-0 text-center">
+        <div className="flex justify-center items-center">
           <CountryFlag country={h.country} size={18} />
         </div>
         {/* Distributor */}
@@ -899,7 +899,7 @@ export default function GlobalStocksPortfolioPage() {
         </div>
         {/* Portfolio */}
         <div className="min-w-0">
-          <p className="text-[10px] font-medium truncate" style={{ color: 'var(--wv-text-muted)' }}>{h.portfolios?.name ?? '—'}</p>
+          <p className="text-[10px] font-medium truncate" title={h.portfolios?.name ?? ''} style={{ color: 'var(--wv-text-muted)' }}>{h.portfolios?.name ?? '—'}</p>
         </div>
         {/* Sector */}
         <div className="min-w-0 text-center">
@@ -1251,7 +1251,7 @@ export default function GlobalStocksPortfolioPage() {
                 <div className="grid text-[10px] font-semibold uppercase tracking-wide px-4 py-2 border-b select-none"
                   style={{ gridTemplateColumns: GRID_COLS, borderColor: '#F0EDE6', color: 'var(--wv-text-muted)', backgroundColor: 'var(--wv-surface-2)' }}>
                   <span className={cls('name')} onClick={click('name')}>Stock{arrow('name')}</span>
-                  <span><Globe className="w-3 h-3 inline" /></span>
+                  <span className="flex justify-center"><Globe className="w-3 h-3" /></span>
                   <span>Distributor</span>
                   <span>Portfolio</span>
                   <span className="text-center">Sector</span>
@@ -1312,8 +1312,15 @@ export default function GlobalStocksPortfolioPage() {
                           <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>{subtitle}</p>
                         </div>
                       </div>
-                      <div className="text-center"><CountryFlag country={group.country} size={18} /></div>
-                      <div className="text-center" style={{ gridColumn: 'span 3' }}><p className="text-[11px] font-medium italic" style={{ color: 'var(--wv-text-muted)' }}>Consolidated</p></div>
+                      <div className="flex justify-center"><CountryFlag country={group.country} size={18} /></div>
+                      <div className="text-center" style={{ gridColumn: 'span 2' }}><p className="text-[11px] font-medium italic" style={{ color: 'var(--wv-text-muted)' }}>Consolidated</p></div>
+                      <div className="min-w-0 text-center">
+                        {(() => {
+                          const sectors = Array.from(new Set(group.holdings.map(h => h.sector).filter(Boolean)));
+                          const s = sectors.length === 1 ? sectors[0] : sectors.length > 1 ? 'Mixed' : '';
+                          return s ? <p className="text-[10px] font-medium truncate" title={s} style={{ color: 'var(--wv-text-secondary)' }}>{s}</p> : <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>—</p>;
+                        })()}
+                      </div>
                       <div className="text-right">
                         <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{group.totalQty.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                         <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{fmtLocal(wtdAvgLocal, group.currency)}</p>
