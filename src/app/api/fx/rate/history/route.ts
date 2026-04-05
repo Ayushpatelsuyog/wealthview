@@ -27,7 +27,10 @@ const FALLBACK_RATES: Record<string, number> = {
   BRLINR: 16.80,
   MXNINR: 5.00,
   TWDINR: 2.70,
-  CNYIN: 11.80,
+  THBINR: 2.50,
+  MYRINR: 19.50,
+  CNYINR: 11.80,
+  CNHINR: 11.80,
 };
 
 async function fetchYahooFxHistory(from: string, to: string, range = '2y'): Promise<FxHistoryData | null> {
@@ -182,6 +185,22 @@ export async function GET(req: NextRequest) {
           // Cache date-specific result for 24h
           cacheSet(dateCacheKey, rate, 24 * 60 * 60 * 1000);
         }
+      }
+    }
+  }
+
+  // Cross-rate via USD if direct pair not available
+  if (rate == null && from !== 'USD' && to !== 'USD') {
+    const [fromHistory, toHistory] = await Promise.all([
+      isWithin2y ? fetchYahooFxHistory(from, 'USD') : fetchYahooFxHistoryForDate(from, 'USD', parsed),
+      isWithin2y ? fetchYahooFxHistory('USD', to) : fetchYahooFxHistoryForDate('USD', to, parsed),
+    ]);
+    if (fromHistory && toHistory) {
+      const fromRate = findClosestRate(fromHistory.timestamps, fromHistory.closes, dateStr);
+      const toRate = findClosestRate(toHistory.timestamps, toHistory.closes, dateStr);
+      if (fromRate && toRate) {
+        rate = Math.round(fromRate * toRate * 10000) / 10000;
+        console.log(`[FX History] Cross-rate ${from}→USD→${to} on ${dateStr}: ${fromRate} × ${toRate} = ${rate}`);
       }
     }
   }

@@ -29,7 +29,10 @@ const FALLBACK_RATES: Record<string, number> = {
   BRLINR: 16.80,
   MXNINR: 5.00,
   TWDINR: 2.70,
-  CNYIN: 11.80,
+  THBINR: 2.50,
+  MYRINR: 19.50,
+  CNYINR: 11.80,
+  CNHINR: 11.80,
 };
 
 async function fetchYahooFxRate(from: string, to: string): Promise<number | null> {
@@ -85,7 +88,17 @@ export async function GET(req: NextRequest) {
   const cached = cacheGet<FxRateData>(cacheKey);
   if (cached) return NextResponse.json(cached);
 
-  const rate = await fetchYahooFxRate(from, to);
+  let rate = await fetchYahooFxRate(from, to);
+
+  // Cross-rate via USD if direct pair not available
+  if (!rate && from !== 'USD' && to !== 'USD') {
+    const fromToUsd = await fetchYahooFxRate(from, 'USD');
+    const usdToTarget = await fetchYahooFxRate('USD', to);
+    if (fromToUsd && usdToTarget) {
+      rate = Math.round(fromToUsd * usdToTarget * 10000) / 10000;
+      console.log(`[FX Rate] Cross-rate ${from}→USD→${to}: ${fromToUsd} × ${usdToTarget} = ${rate}`);
+    }
+  }
 
   if (rate) {
     const data: FxRateData = { from, to, rate, lastUpdated: new Date().toISOString() };
