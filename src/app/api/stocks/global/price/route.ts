@@ -43,7 +43,7 @@ async function fetchGlobalYahooPrice(symbol: string): Promise<GlobalStockPriceDa
       const controller = new AbortController();
       const tid = setTimeout(() => controller.abort(), 8_000);
       // Global stocks: do NOT append .NS — symbols are already in Yahoo format
-      const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
+      const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
       const res = await fetch(url, { headers, signal: controller.signal });
       clearTimeout(tid);
       if (!res.ok) {

@@ -490,7 +490,7 @@ export default function GlobalStocksPortfolioPage() {
 
     // Batch-fetch all prices in a single request (active holdings only)
     const uniqueSymbols = Array.from(new Set(activeRows.map(r => r.symbol)));
-    await fetchPriceBatch(uniqueSymbols, rows, rates, false);
+    await fetchPriceBatch(uniqueSymbols, undefined, rates, false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function computeRow(h: HoldingRow, price: number, rates: Record<string, number>): HoldingRow {
@@ -659,12 +659,12 @@ export default function GlobalStocksPortfolioPage() {
       totalQty: rows.reduce((s, r) => s + Number(r.quantity), 0),
       totalInvestedINR: rows.reduce((s, r) => s + r.investedINR, 0),
       totalInvestedLocal: rows.reduce((s, r) => s + r.investedValue, 0),
-      totalCurrentValueINR: rows.every(r => r.currentValueINR != null)
+      totalCurrentValueINR: rows.some(r => r.currentValueINR != null)
         ? rows.reduce((s, r) => s + (r.currentValueINR ?? 0), 0) : null,
-      totalCurrentValueLocal: rows.every(r => r.currentValue != null)
+      totalCurrentValueLocal: rows.some(r => r.currentValue != null)
         ? rows.reduce((s, r) => s + (r.currentValue ?? 0), 0) : null,
-      currentPrice: rows[0].currentPrice,
-      priceLoading: rows.some(r => r.priceLoading),
+      currentPrice: rows.find(r => r.currentPrice != null)?.currentPrice ?? null,
+      priceLoading: rows.some(r => r.priceLoading) && !rows.some(r => r.currentPrice != null),
       priceUnavailable: rows.every(r => r.priceUnavailable),
       fxRate: rows[0].fxRate,
     }));
@@ -766,9 +766,9 @@ export default function GlobalStocksPortfolioPage() {
       const totalQty = entries.reduce((s, e) => s + Number(e.quantity), 0);
       const totalInvestedLocal = entries.reduce((s, e) => s + e.investedValue, 0);
       const totalInvestedINR = entries.reduce((s, e) => s + e.investedINR, 0);
-      const totalCurrentLocal = entries.every(e => e.currentValue != null)
+      const totalCurrentLocal = entries.some(e => e.currentValue != null)
         ? entries.reduce((s, e) => s + (e.currentValue ?? 0), 0) : null;
-      const totalCurrentINR = entries.every(e => e.currentValueINR != null)
+      const totalCurrentINR = entries.some(e => e.currentValueINR != null)
         ? entries.reduce((s, e) => s + (e.currentValueINR ?? 0), 0) : null;
       const allTxns = entries.flatMap(e => (e.transactions ?? []).map(t => {
         const extended = { ...t, _portfolioName: e.portfolios?.name ?? '' };

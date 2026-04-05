@@ -373,7 +373,7 @@ export default function IndianStocksPortfolioPage() {
 
     // Batch-fetch all prices in a single request
     const unique = Array.from(new Set(rows.map(r => r.symbol)));
-    await fetchPriceBatch(unique, rows, false);
+    await fetchPriceBatch(unique, undefined, false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function applyPrice(symbol: string, price: number) {
@@ -529,7 +529,7 @@ export default function IndianStocksPortfolioPage() {
       isMultiBroker: rows.length > 1,
       totalQty: rows.reduce((s, r) => s + Number(r.quantity), 0),
       totalInvested: rows.reduce((s, r) => s + r.investedValue, 0),
-      totalCurrentValue: rows.every(r => r.currentValue != null)
+      totalCurrentValue: rows.some(r => r.currentValue != null)
         ? rows.reduce((s, r) => s + (r.currentValue ?? 0), 0) : null,
       currentPrice: rows[0].currentPrice,
       priceLoading: rows.some(r => r.priceLoading),
@@ -626,7 +626,7 @@ export default function IndianStocksPortfolioPage() {
       const entries = group.holdings;
       const totalQty = entries.reduce((s, e) => s + Number(e.quantity), 0);
       const totalInvested = entries.reduce((s, e) => s + e.investedValue, 0);
-      const totalCurrent = entries.every(e => e.currentValue != null)
+      const totalCurrent = entries.some(e => e.currentValue != null)
         ? entries.reduce((s, e) => s + (e.currentValue ?? 0), 0) : null;
       const allTxns = entries.flatMap(e => (e.transactions ?? []).map(t => {
         const extended = { ...t, _portfolioName: e.portfolios?.name ?? '' };
