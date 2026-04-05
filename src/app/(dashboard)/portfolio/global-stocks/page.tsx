@@ -446,13 +446,37 @@ export default function GlobalStocksPortfolioPage() {
       const ownerId    = h.portfolios?.user_id ?? '';
 
       // Compute invested from transactions using FIFO (account for sells)
-      const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip')
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      const sellTxns = (h.transactions ?? []).filter(t => t.type === 'sell');
+      const allTxns = h.transactions ?? [];
+      const hasSplitOrBonus = allTxns.some(t => {
+        const n = (t.notes ?? '').toLowerCase();
+        return n.includes('split') || n.includes('bonus');
+      });
+      // Exclude split/bonus transactions — they don't change total invested
+      const buyTxns = allTxns.filter(t => {
+        if (t.type !== 'buy' && t.type !== 'sip') return false;
+        const n = (t.notes ?? '').toLowerCase();
+        return !n.includes('split') && !n.includes('bonus');
+      }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const sellTxns = allTxns.filter(t => t.type === 'sell');
       const totalSold = sellTxns.reduce((sum, t) => sum + Number(t.quantity), 0);
       let investedLocal = 0;
       let investedINR = 0;
-      if (buyTxns.length > 0) {
+      if (hasSplitOrBonus || buyTxns.length === 0) {
+        // After splits/bonuses, FIFO on raw txns is unreliable — use holding's adjusted values
+        // For no-sell case: invested = qty × avg_price. For sell case: approximate from remaining holding.
+        investedLocal = Number(h.quantity) * Number(h.avg_buy_price);
+        investedINR = rate != null ? investedLocal * rate : investedLocal;
+        // Refine INR using weighted avg FX from buy transactions (if available)
+        if (buyTxns.length > 0 && rate != null) {
+          const totalBuyCost = buyTxns.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
+          const totalBuyINR = buyTxns.reduce((s, t) => {
+            const txFx = Number((t.metadata as Record<string, unknown>)?.fx_rate ?? rate ?? 1);
+            return s + Number(t.quantity) * Number(t.price) * txFx;
+          }, 0);
+          const avgFx = totalBuyCost > 0 ? totalBuyINR / totalBuyCost : (rate ?? 1);
+          investedINR = investedLocal * avgFx;
+        }
+      } else if (buyTxns.length > 0) {
         const lots = buyTxns.map(t => {
           const q = Number(t.quantity);
           return { qty: q, origQty: q, price: Number(t.price), fees: Number(t.fees) || 0,
@@ -472,9 +496,6 @@ export default function GlobalStocksPortfolioPage() {
           investedLocal += tLocal;
           investedINR += tLocal * lot.fxRate;
         }
-      } else {
-        investedLocal = Number(h.quantity) * Number(h.avg_buy_price);
-        investedINR = rate != null ? investedLocal * rate : investedLocal;
       }
 
       return {

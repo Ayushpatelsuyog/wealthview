@@ -332,12 +332,23 @@ export default function IndianStocksPortfolioPage() {
       const ownerId  = h.portfolios?.user_id ?? '';
 
       // Compute invested from transactions using FIFO (account for sells)
-      const buyTxns = (h.transactions ?? []).filter(t => t.type === 'buy' || t.type === 'sip')
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      const sellTxns = (h.transactions ?? []).filter(t => t.type === 'sell');
+      const allTxns = h.transactions ?? [];
+      const hasSplitOrBonus = allTxns.some(t => {
+        const n = (t.notes ?? '').toLowerCase();
+        return n.includes('split') || n.includes('bonus');
+      });
+      const buyTxns = allTxns.filter(t => {
+        if (t.type !== 'buy' && t.type !== 'sip') return false;
+        const n = (t.notes ?? '').toLowerCase();
+        return !n.includes('split') && !n.includes('bonus');
+      }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const sellTxns = allTxns.filter(t => t.type === 'sell');
       const totalSold = sellTxns.reduce((sum, t) => sum + Number(t.quantity), 0);
       let invested: number;
-      if (buyTxns.length > 0) {
+      if (hasSplitOrBonus || buyTxns.length === 0) {
+        // After splits/bonuses, FIFO on raw txns is unreliable — use holding's adjusted values
+        invested = Number(h.quantity) * Number(h.avg_buy_price);
+      } else if (buyTxns.length > 0) {
         const lots = buyTxns.map(t => {
           const q = Number(t.quantity);
           return { qty: q, origQty: q, price: Number(t.price), fees: Number(t.fees) || 0 };
