@@ -10,6 +10,7 @@ export interface MemberInfo {
   name: string;
   role: string;
   familyId: string;
+  memberType?: string;
 }
 
 interface FamilyStore {

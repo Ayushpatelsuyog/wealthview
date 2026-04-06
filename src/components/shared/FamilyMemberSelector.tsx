@@ -82,7 +82,7 @@ export function FamilyMemberSelector({ onSelectionChange, compact }: FamilyMembe
         const famIds = famList.map(f => f.id);
         const { data: membersData } = await supabase
           .from('users')
-          .select('id, name, role, family_id')
+          .select('id, name, role, family_id, member_type')
           .in('family_id', famIds);
 
         if (membersData) {
@@ -91,6 +91,7 @@ export function FamilyMemberSelector({ onSelectionChange, compact }: FamilyMembe
             name: m.name || m.id.slice(0, 8),
             role: m.role || 'member',
             familyId: m.family_id,
+            memberType: (m as Record<string, unknown>).member_type as string | undefined,
           }));
           setAllMembers(members);
         }
@@ -183,7 +184,7 @@ export function FamilyMemberSelector({ onSelectionChange, compact }: FamilyMembe
                   color: selected && !allSelected ? 'white' : '#6B7280',
                   border: `1px solid ${selected && !allSelected ? '#C9A84C' : 'var(--wv-border)'}`,
                 }}>
-                {m.name}
+                {m.name}{m.memberType && m.memberType !== 'individual' ? ` [${m.memberType.toUpperCase()}]` : ''}
               </button>
             );
           })}

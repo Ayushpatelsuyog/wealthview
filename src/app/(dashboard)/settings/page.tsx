@@ -20,10 +20,26 @@ interface UserRow {
   name: string;
   family_id: string | null;
   role: string;
+  member_type?: string | null;
   pan?: string | null;
   primary_mobile?: string | null;
   primary_email?: string | null;
 }
+
+const MEMBER_TYPES = [
+  { value: 'individual',   label: 'Individual' },
+  { value: 'huf',          label: 'HUF' },
+  { value: 'company',      label: 'Company' },
+  { value: 'partnership',  label: 'Partnership Firm' },
+  { value: 'llp',          label: 'LLP' },
+  { value: 'trust',        label: 'Trust' },
+  { value: 'society',      label: 'Society' },
+  { value: 'aop_boi',      label: 'AOP/BOI' },
+  { value: 'nri',          label: 'NRI Individual' },
+  { value: 'minor',        label: 'Minor' },
+];
+
+const MEMBER_TYPE_LABEL: Record<string, string> = Object.fromEntries(MEMBER_TYPES.map(t => [t.value, t.label]));
 
 interface FamilyRow {
   id: string;
@@ -129,6 +145,12 @@ function MemberCard({
           {(name || member.email).charAt(0).toUpperCase()}
         </div>
         <span className="text-xs text-gray-400 capitalize">{member.role}</span>
+        {member.member_type && member.member_type !== 'individual' && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+            style={{ backgroundColor: 'rgba(201,168,76,0.12)', color: '#C9A84C' }}>
+            {MEMBER_TYPE_LABEL[member.member_type] ?? member.member_type}
+          </span>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
@@ -212,6 +234,7 @@ function SettingsContent() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberRole, setNewMemberRole] = useState('member');
+  const [newMemberType, setNewMemberType] = useState('individual');
   const [addingMember, setAddingMember] = useState(false);
 
   // Multi-Family
@@ -492,11 +515,16 @@ function SettingsContent() {
         : error.message;
       showToast('error', msg);
     } else if (newId) {
+      // Update member_type (the RPC doesn't support it yet, so update separately)
+      if (newMemberType !== 'individual') {
+        await supabase.from('users').update({ member_type: newMemberType }).eq('id', newId);
+      }
       const { data: refreshed } = await supabase.from('users').select('*').eq('family_id', targetFamily);
       if (refreshed) setMembers(refreshed as UserRow[]);
       setNewMemberName('');
       setNewMemberEmail('');
       setNewMemberRole('member');
+      setNewMemberType('individual');
       setShowAddMember(false);
       showToast('success', 'Family member added');
     }
@@ -759,13 +787,24 @@ function SettingsContent() {
               {showAddMember && (
                 <div className="border rounded-lg p-4 space-y-3" style={{ borderColor: '#C9A84C', backgroundColor: '#FDFBF5' }}>
                   <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>New Family Member</p>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">Full Name <span className="text-red-400">*</span></Label>
+                      <Label className="text-xs">Member Type</Label>
+                      <Select value={newMemberType} onValueChange={setNewMemberType}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {MEMBER_TYPES.map(t => (
+                            <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">{newMemberType === 'individual' || newMemberType === 'nri' || newMemberType === 'minor' ? 'Full Name' : 'Entity Name'} <span className="text-red-400">*</span></Label>
                       <Input
                         value={newMemberName}
                         onChange={e => setNewMemberName(e.target.value)}
-                        placeholder="e.g. Priya Sharma"
+                        placeholder={newMemberType === 'huf' ? 'e.g. Sharma HUF' : newMemberType === 'company' ? 'e.g. ABC Pvt Ltd' : 'e.g. Priya Sharma'}
                         className="h-8 text-sm"
                       />
                     </div>
@@ -774,7 +813,7 @@ function SettingsContent() {
                       <Input
                         value={newMemberEmail}
                         onChange={e => setNewMemberEmail(e.target.value)}
-                        placeholder="priya@example.com"
+                        placeholder={newMemberType === 'individual' ? 'priya@example.com' : 'info@company.com'}
                         className="h-8 text-sm"
                       />
                     </div>
@@ -805,7 +844,7 @@ function SettingsContent() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => { setShowAddMember(false); setNewMemberName(''); setNewMemberEmail(''); setNewMemberRole('member'); }}
+                      onClick={() => { setShowAddMember(false); setNewMemberName(''); setNewMemberEmail(''); setNewMemberRole('member'); setNewMemberType('individual'); }}
                       className="text-xs text-gray-500"
                     >
                       Cancel
