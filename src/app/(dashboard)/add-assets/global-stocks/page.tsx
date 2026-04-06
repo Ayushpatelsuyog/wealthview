@@ -252,6 +252,7 @@ function GlobalStocksFormContent() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Stays TRUE permanently when prefill/URL params specified family/member — prevents any overwrite
   const prefillLockedRef = useRef(hasPrefill);
+  const editInitialLoadDone = useRef(false);
   // Store the target member ID permanently so it can be re-applied when members list loads
   const targetMemberRef = useRef(urlMemberId || '');
   // Always-current family ref to avoid stale closures in async member fetches
@@ -645,11 +646,17 @@ function GlobalStocksFormContent() {
   }, [query]);
 
   // ── Auto-fetch historical price + FX rate on date change ──────────────────
-  // Only auto-fill price if user hasn't manually edited it
   useEffect(() => {
     if (!selectedStock || !date) return;
-    if (isEditMode) return; // in edit mode, price and FX come from saved transaction
 
+    // In edit mode: skip FIRST trigger (saved values already loaded by preload useEffect)
+    // Allow ALL subsequent triggers (user changed the date)
+    if (isEditMode && !editInitialLoadDone.current) {
+      editInitialLoadDone.current = true;
+      return;
+    }
+
+    // Auto-fill price (skip if user manually edited it)
     if (!priceManuallyEdited) {
       setPriceLoaded(false);
       fetch(`/api/stocks/global/price-history?symbol=${encodeURIComponent(selectedStock.symbol)}&date=${date}`)
@@ -663,7 +670,7 @@ function GlobalStocksFormContent() {
         .catch(() => {/* silent */});
     }
 
-    // FX rate auto-fetch is always OK (less likely to be manually edited)
+    // FX rate auto-fetch — always runs when date changes
     if (selectedStock.currency && selectedStock.currency !== 'INR') {
       setFxRateLoaded(false);
       fetch(`/api/fx/rate/history?from=${selectedStock.currency}&to=INR&date=${date}`)
@@ -676,7 +683,7 @@ function GlobalStocksFormContent() {
         })
         .catch(() => {/* silent */});
     }
-  }, [selectedStock, date, priceManuallyEdited, isEditMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedStock, date, priceManuallyEdited]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Auto-fetch FX rate on dividend payment date change ─────────────────────
   useEffect(() => {
