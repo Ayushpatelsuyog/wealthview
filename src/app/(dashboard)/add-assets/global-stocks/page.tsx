@@ -570,9 +570,28 @@ function GlobalStocksFormContent() {
       setQuantity(String(txn.quantity || ''));
       setPrice(String(txn.price || ''));
       setDate(txn.date || '');
-      setFxRateValue(String(meta.fx_rate || ''));
-      setBrokerage(String(meta.brokerage || txn.fees || '0'));
-      setNotes(txn.notes || '');
+
+      // Extract FX rate: try metadata column first, then parse from notes JSON
+      let txnFx = meta.fx_rate != null ? Number(meta.fx_rate) : null;
+      let notesMeta: Record<string, unknown> = {};
+      const rawNotes = txn.notes || '';
+      const metaMatch = rawNotes.match(/\|?\s*meta:\s*(\{[^}]+\})/);
+      if (metaMatch) {
+        try { notesMeta = JSON.parse(metaMatch[1]); } catch { /* skip */ }
+        if (!txnFx && notesMeta.fx_rate != null) txnFx = Number(notesMeta.fx_rate);
+      }
+      if (txnFx != null && txnFx > 0) {
+        setFxRateValue(txnFx.toFixed(4));
+        setFxRateLoaded(true);
+      }
+
+      // Brokerage: try metadata, then notes meta, then fees column
+      const brokerage = meta.brokerage ?? notesMeta.brokerage ?? txn.fees ?? 0;
+      setBrokerage(String(brokerage));
+
+      // Clean notes: strip meta JSON for display
+      const cleanNotes = rawNotes.replace(/\s*\|?\s*meta:\s*\{[^}]*\}/, '').trim();
+      setNotes(cleanNotes);
 
       // Set portfolio, family, member from holding's portfolio record
       if (holdingData.portfolios) {
@@ -629,7 +648,7 @@ function GlobalStocksFormContent() {
   // Only auto-fill price if user hasn't manually edited it
   useEffect(() => {
     if (!selectedStock || !date) return;
-    if (isEditMode) return; // in edit mode, price comes from saved transaction
+    if (isEditMode) return; // in edit mode, price and FX come from saved transaction
 
     if (!priceManuallyEdited) {
       setPriceLoaded(false);
