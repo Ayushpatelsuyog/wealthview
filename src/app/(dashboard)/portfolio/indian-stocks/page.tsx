@@ -239,6 +239,8 @@ export default function IndianStocksPortfolioPage() {
   const supabase = createClient();
 
   const [holdings,       setHoldings]       = useState<HoldingRow[]>([]);
+  const [pastHoldings,   setPastHoldings]   = useState<HoldingRow[]>([]);
+  const [showPast,       setShowPast]       = useState(false);
   const [loading,        setLoading]        = useState(true);
   const [error,          setError]          = useState<string | null>(null);
   const [priceRefreshing,setPriceRefreshing]= useState(false);
@@ -298,7 +300,7 @@ export default function IndianStocksPortfolioPage() {
           transactions(id, date, price, quantity, type, fees, notes, metadata)
         `)
         .eq('asset_type', 'indian_stock')
-        .gt('quantity', 0)  // only active holdings
+        .gte('quantity', 0)  // include past holdings (qty=0)
         .order('created_at', { ascending: false });
 
       if (dbErr) { setError(dbErr.message); setLoading(false); return; }
@@ -380,11 +382,14 @@ export default function IndianStocksPortfolioPage() {
       };
     });
 
-    setHoldings(rows);
+    const activeRows = rows.filter(r => Number(r.quantity) > 0);
+    const pastRows = rows.filter(r => Number(r.quantity) <= 0);
+    setHoldings(activeRows);
+    setPastHoldings(pastRows);
     setLoading(false);
 
-    // Batch-fetch all prices in a single request
-    const unique = Array.from(new Set(rows.map(r => r.symbol)));
+    // Batch-fetch all prices in a single request (active only)
+    const unique = Array.from(new Set(activeRows.map(r => r.symbol)));
     await fetchPriceBatch(unique, undefined, false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -681,7 +686,7 @@ export default function IndianStocksPortfolioPage() {
       };
     }
 
-    const h = holdings.find(x => x.id === detailId);
+    const h = holdings.find(x => x.id === detailId) ?? pastHoldings.find(x => x.id === detailId);
     if (!h) return null;
     return {
       ...h,
@@ -1130,7 +1135,85 @@ export default function IndianStocksPortfolioPage() {
             )}
           </div>
 
-          {/* Past Holdings (qty=0) section — would need separate query */}
+          {/* Past Holdings (fully exited) */}
+          {pastHoldings.length > 0 && (() => {
+            let totalRealizedINR = 0;
+            const pastData = pastHoldings.map(h => {
+              const txns = h.transactions ?? [];
+              const buys = txns.filter(t => t.type === 'buy' || t.type === 'sip');
+              const sells = txns.filter(t => t.type === 'sell');
+              const totalCost = buys.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
+              const totalProceeds = sells.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
+              const realizedPnl = totalProceeds - totalCost;
+              totalRealizedINR += realizedPnl;
+              const firstBuy = buys.length > 0 ? buys.reduce((a, b) => new Date(a.date) < new Date(b.date) ? a : b).date : '';
+              const lastSell = sells.length > 0 ? sells.reduce((a, b) => new Date(a.date) > new Date(b.date) ? a : b).date : '';
+              return { h, totalCost, totalProceeds, realizedPnl, firstBuy, lastSell };
+            });
+            return (
+              <div className="wv-card mt-4">
+                <button
+                  className="w-full flex items-center justify-between px-4 py-3 text-xs font-semibold"
+                  style={{ color: 'var(--wv-text-muted)' }}
+                  onClick={() => setShowPast(!showPast)}>
+                  <span>Past Holdings ({pastHoldings.length} exited positions)</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-semibold" style={{ color: totalRealizedINR >= 0 ? '#059669' : '#DC2626' }}>
+                      Total: {totalRealizedINR >= 0 ? '+' : ''}{formatLargeINR(totalRealizedINR)}
+                    </span>
+                    {showPast ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                  </div>
+                </button>
+                {showPast && (
+                  <div className="divide-y" style={{ borderColor: '#F0EDE6' }}>
+                    <div className="grid text-[9px] font-semibold uppercase tracking-wide px-4 py-1.5 border-b"
+                      style={{ gridTemplateColumns: '2fr 0.6fr 0.6fr 0.8fr 0.5fr', borderColor: '#F0EDE6', color: 'var(--wv-text-muted)', backgroundColor: 'var(--wv-surface-2)' }}>
+                      <span>Stock</span>
+                      <span className="text-right">Cost</span>
+                      <span className="text-right">Proceeds</span>
+                      <span className="text-right">Realized P&L</span>
+                      <span className="text-right">Period</span>
+                    </div>
+                    {pastData.map(({ h, totalCost, totalProceeds, realizedPnl, firstBuy, lastSell }) => {
+                      const pctGain = totalCost > 0 ? (realizedPnl / totalCost) * 100 : 0;
+                      const period = firstBuy && lastSell ? (() => {
+                        const days = Math.floor((new Date(lastSell).getTime() - new Date(firstBuy).getTime()) / 86400000);
+                        if (days < 30) return `${days}d`;
+                        if (days < 365) return `${Math.floor(days / 30)}m`;
+                        return `${Math.floor(days / 365)}y ${Math.floor((days % 365) / 30)}m`;
+                      })() : '—';
+                      return (
+                        <div key={h.id}
+                          className="grid items-center px-4 py-2.5 cursor-pointer hover:bg-[#FAFAF8] transition-colors"
+                          style={{ gridTemplateColumns: '2fr 0.6fr 0.6fr 0.8fr 0.5fr' }}
+                          onClick={() => setDetailId(h.id)}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-lg flex items-center justify-center text-white text-[8px] font-bold"
+                              style={{ backgroundColor: '#9CA3AF' }}>{h.symbol.slice(0, 2)}</div>
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-medium truncate" style={{ color: 'var(--wv-text-secondary)' }}>{h.name}</p>
+                              <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>{h.symbol}</p>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-right" style={{ color: 'var(--wv-text-secondary)' }}>{formatLargeINR(totalCost)}</p>
+                          <p className="text-[10px] text-right" style={{ color: 'var(--wv-text-secondary)' }}>{formatLargeINR(totalProceeds)}</p>
+                          <div className="text-right">
+                            <p className="text-[10px] font-semibold" style={{ color: realizedPnl >= 0 ? '#059669' : '#DC2626' }}>
+                              {realizedPnl >= 0 ? '+' : ''}{formatLargeINR(realizedPnl)}
+                            </p>
+                            <p className="text-[9px]" style={{ color: pctGain >= 0 ? '#059669' : '#DC2626' }}>
+                              {pctGain >= 0 ? '+' : ''}{pctGain.toFixed(1)}%
+                            </p>
+                          </div>
+                          <p className="text-[9px] text-right" style={{ color: 'var(--wv-text-muted)' }}>{period}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </>
       )}
 

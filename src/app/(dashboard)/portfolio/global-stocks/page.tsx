@@ -1458,54 +1458,106 @@ export default function GlobalStocksPortfolioPage() {
       )}
 
       {/* Past Holdings (fully exited) */}
-      {pastHoldings.length > 0 && (
-        <div className="wv-card mt-4">
-          <button
-            className="w-full flex items-center justify-between px-4 py-3 text-xs font-semibold"
-            style={{ color: 'var(--wv-text-muted)' }}
-            onClick={() => setShowPast(!showPast)}>
-            <span>Past Holdings ({pastHoldings.length})</span>
-            {showPast ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-          </button>
-          {showPast && (
-            <div className="divide-y" style={{ borderColor: '#F0EDE6' }}>
-              {pastHoldings.map(h => {
-                const sellTxns = (h.transactions ?? []).filter(t => t.type === 'sell');
-                let realizedLocal = 0;
-                let realizedINR = 0;
-                for (const t of sellTxns) {
-                  const m = (t.notes ?? '').match(/meta:(\{[^}]+\})/);
-                  if (m) { try { const p = JSON.parse(m[1]); realizedLocal += p.pnl_local ?? 0; realizedINR += p.pnl_inr ?? 0; } catch {} }
-                }
-                return (
-                  <div key={h.id} className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-[#FAFAF8]"
-                    onClick={() => setDetailId(h.id)}>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[9px] font-bold"
-                        style={{ backgroundColor: '#9CA3AF' }}>{h.symbol.slice(0, 2)}</div>
-                      <div>
-                        <p className="text-xs font-medium" style={{ color: 'var(--wv-text-secondary)' }}>{h.name}</p>
-                        <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>{h.symbol} · Fully exited</p>
+      {pastHoldings.length > 0 && (() => {
+        // Compute total realized P&L across all past holdings
+        let totalRealizedINR = 0;
+        const pastData = pastHoldings.map(h => {
+          const txns = h.transactions ?? [];
+          const buys = txns.filter(t => t.type === 'buy' || t.type === 'sip');
+          const sells = txns.filter(t => t.type === 'sell');
+          const totalBought = buys.reduce((s, t) => s + Number(t.quantity), 0);
+          const totalCostLocal = buys.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
+          const totalSold = sells.reduce((s, t) => s + Number(t.quantity), 0);
+          const totalProceedsLocal = sells.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
+          let realizedLocal = 0; let realizedINR = 0;
+          for (const t of sells) {
+            const m = (t.notes ?? '').match(/meta:(\{[^}]+\})/);
+            if (m) { try { const p = JSON.parse(m[1]); realizedLocal += p.pnl_local ?? 0; realizedINR += p.pnl_inr ?? 0; } catch {} }
+          }
+          if (realizedLocal === 0) realizedLocal = totalProceedsLocal - totalCostLocal;
+          if (realizedINR === 0) realizedINR = realizedLocal * (h.fxRate ?? 1);
+          totalRealizedINR += realizedINR;
+          const firstBuy = buys.length > 0 ? buys.reduce((a, b) => new Date(a.date) < new Date(b.date) ? a : b).date : '';
+          const lastSell = sells.length > 0 ? sells.reduce((a, b) => new Date(a.date) > new Date(b.date) ? a : b).date : '';
+          return { h, totalBought, totalCostLocal, totalSold, totalProceedsLocal, realizedLocal, realizedINR, firstBuy, lastSell };
+        });
+        return (
+          <div className="wv-card mt-4">
+            <button
+              className="w-full flex items-center justify-between px-4 py-3 text-xs font-semibold"
+              style={{ color: 'var(--wv-text-muted)' }}
+              onClick={() => setShowPast(!showPast)}>
+              <span>Past Holdings ({pastHoldings.length} exited positions)</span>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-semibold" style={{ color: totalRealizedINR >= 0 ? '#059669' : '#DC2626' }}>
+                  Total: {totalRealizedINR >= 0 ? '+' : ''}{formatLargeINR(totalRealizedINR)}
+                </span>
+                {showPast ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              </div>
+            </button>
+            {showPast && (
+              <div className="divide-y" style={{ borderColor: '#F0EDE6' }}>
+                {/* Header */}
+                <div className="grid text-[9px] font-semibold uppercase tracking-wide px-4 py-1.5 border-b"
+                  style={{ gridTemplateColumns: '2fr 0.6fr 0.6fr 0.7fr 0.7fr 0.5fr', borderColor: '#F0EDE6', color: 'var(--wv-text-muted)', backgroundColor: 'var(--wv-surface-2)' }}>
+                  <span>Stock</span>
+                  <span className="text-right">Cost</span>
+                  <span className="text-right">Proceeds</span>
+                  <span className="text-right">Realized P&L</span>
+                  <span className="text-right">P&L (INR)</span>
+                  <span className="text-right">Period</span>
+                </div>
+                {pastData.map(({ h, totalCostLocal, totalProceedsLocal, realizedLocal, realizedINR, firstBuy, lastSell }) => {
+                  const pctGain = totalCostLocal > 0 ? (realizedLocal / totalCostLocal) * 100 : 0;
+                  const period = firstBuy && lastSell ? (() => {
+                    const days = Math.floor((new Date(lastSell).getTime() - new Date(firstBuy).getTime()) / 86400000);
+                    if (days < 30) return `${days}d`;
+                    if (days < 365) return `${Math.floor(days / 30)}m`;
+                    return `${Math.floor(days / 365)}y ${Math.floor((days % 365) / 30)}m`;
+                  })() : '—';
+                  return (
+                    <div key={h.id}
+                      className="grid items-center px-4 py-2.5 cursor-pointer hover:bg-[#FAFAF8] transition-colors"
+                      style={{ gridTemplateColumns: '2fr 0.6fr 0.6fr 0.7fr 0.7fr 0.5fr', borderColor: '#F0EDE6' }}
+                      onClick={() => setDetailId(h.id)}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center text-white text-[8px] font-bold"
+                          style={{ backgroundColor: '#9CA3AF' }}>{h.symbol.slice(0, 2)}</div>
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-medium truncate" style={{ color: 'var(--wv-text-secondary)' }}>{h.name}</p>
+                          <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>{h.symbol}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>Realized P&L</p>
-                      <p className="text-xs font-semibold" style={{ color: realizedLocal >= 0 ? '#059669' : '#DC2626' }}>
-                        {realizedLocal >= 0 ? '+' : ''}{fmtLocal(realizedLocal, h.currency)}
-                      </p>
-                      {realizedINR !== 0 && (
-                        <p className="text-[9px]" style={{ color: realizedINR >= 0 ? '#059669' : '#DC2626' }}>
+                      <div className="text-right">
+                        <p className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>{fmtLocal(totalCostLocal, h.currency)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>{fmtLocal(totalProceedsLocal, h.currency)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-semibold" style={{ color: realizedLocal >= 0 ? '#059669' : '#DC2626' }}>
+                          {realizedLocal >= 0 ? '+' : ''}{fmtLocal(realizedLocal, h.currency)}
+                        </p>
+                        <p className="text-[9px]" style={{ color: pctGain >= 0 ? '#059669' : '#DC2626' }}>
+                          {pctGain >= 0 ? '+' : ''}{pctGain.toFixed(1)}%
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-semibold" style={{ color: realizedINR >= 0 ? '#059669' : '#DC2626' }}>
                           {realizedINR >= 0 ? '+' : ''}{formatLargeINR(realizedINR)}
                         </p>
-                      )}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>{period}</p>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Detail sheet */}
       <GlobalStockDetailSheet
