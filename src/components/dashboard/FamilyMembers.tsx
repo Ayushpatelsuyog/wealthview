@@ -33,20 +33,23 @@ export function FamilyMembers({ snapshot }: Props) {
   const { selectedFamilyId, families } = useFamilyStore();
   const [displayMembers, setDisplayMembers] = useState<DashboardMember[]>(snapshot.members ?? []);
 
-  // When family selection changes, fetch members for that family
+  // When family selection changes, fetch members for that family (excluding auth user)
   useEffect(() => {
-    if (!selectedFamilyId) {
-      // "All Families" — use snapshot members (primary family) + fetch others
-      if (families.length <= 1) {
-        setDisplayMembers(snapshot.members ?? []);
-        return;
-      }
-      // Fetch members from all families
-      (async () => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const authUid = user?.id;
+
+      if (!selectedFamilyId) {
+        // "All Families" — use snapshot members (already filtered server-side)
+        if (families.length <= 1) {
+          setDisplayMembers(snapshot.members ?? []);
+          return;
+        }
+        // Fetch members from all families
         const famIds = families.map(f => f.id);
         const { data } = await supabase.from('users').select('id, name, role, family_id').in('family_id', famIds);
         if (data) {
-          setDisplayMembers(data.map((m, i) => ({
+          setDisplayMembers(data.filter(m => m.id !== authUid).map((m, i) => ({
             id: m.id,
             name: m.name || 'Unknown',
             role: m.role || 'member',
@@ -56,13 +59,11 @@ export function FamilyMembers({ snapshot }: Props) {
             color: MEMBER_COLORS[i % MEMBER_COLORS.length],
           })));
         }
-      })();
-    } else {
-      // Specific family selected — fetch its members
-      (async () => {
+      } else {
+        // Specific family selected — fetch its members
         const { data } = await supabase.from('users').select('id, name, role').eq('family_id', selectedFamilyId);
         if (data) {
-          setDisplayMembers(data.map((m, i) => ({
+          setDisplayMembers(data.filter(m => m.id !== authUid).map((m, i) => ({
             id: m.id,
             name: m.name || 'Unknown',
             role: m.role || 'member',
@@ -72,8 +73,8 @@ export function FamilyMembers({ snapshot }: Props) {
             color: MEMBER_COLORS[i % MEMBER_COLORS.length],
           })));
         }
-      })();
-    }
+      }
+    })();
   }, [selectedFamilyId, families, snapshot.members]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectedFamilyName = selectedFamilyId
