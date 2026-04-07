@@ -86,13 +86,16 @@ export function FamilyMemberSelector({ onSelectionChange, compact }: FamilyMembe
           .in('family_id', famIds);
 
         if (membersData) {
-          const members: MemberInfo[] = membersData.map(m => ({
-            id: m.id,
-            name: m.name || m.id.slice(0, 8),
-            role: m.role || 'member',
-            familyId: m.family_id,
-            memberType: (m as Record<string, unknown>).member_type as string | undefined,
-          }));
+          // Exclude auth user — they are the admin, not a family member
+          const members: MemberInfo[] = membersData
+            .filter(m => m.id !== user.id)
+            .map(m => ({
+              id: m.id,
+              name: m.name || m.id.slice(0, 8),
+              role: m.role || 'member',
+              familyId: m.family_id,
+              memberType: (m as Record<string, unknown>).member_type as string | undefined,
+            }));
           setAllMembers(members);
         }
       }

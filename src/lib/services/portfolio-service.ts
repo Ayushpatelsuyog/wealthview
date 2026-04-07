@@ -110,7 +110,8 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     const insurance: Row[] = insuranceRes.data ?? [];
 
     // Get members from ALL accessible families (not just primary)
-    let familyMembers: Row[] = membersRes.data ?? [];
+    // Exclude the auth user — they are the admin, not a family member
+    let familyMembers: Row[] = (membersRes.data ?? []).filter((m: Row) => m.id !== user.id);
     try {
       // Get families created by or membershipped to this user
       const { data: createdFams } = await supabase.from('families').select('id').eq('created_by', user.id);
@@ -131,8 +132,11 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
 
       if (allFamIds.length > 1) {
         const { data: allUsers } = await supabase.from('users').select('id, name, role, family_id').in('family_id', allFamIds);
-        if (allUsers && allUsers.length > familyMembers.length) {
-          familyMembers = allUsers;
+        if (allUsers) {
+          const filtered = allUsers.filter((m: Row) => m.id !== user.id);
+          if (filtered.length > familyMembers.length) {
+            familyMembers = filtered;
+          }
         }
       }
     } catch { /* fallback to primary family members */ }
