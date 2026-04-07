@@ -78,7 +78,8 @@ export function DashboardClient() {
     setError(null);
 
     try {
-      const url = force ? '/api/dashboard?force=1' : '/api/dashboard';
+      // Always bypass server cache on initial load to prevent stale data
+      const url = '/api/dashboard?force=1';
       const controller = new AbortController();
       const tid = setTimeout(() => controller.abort(), 10_000); // 10s timeout
       const res = await fetch(url, { signal: controller.signal });
