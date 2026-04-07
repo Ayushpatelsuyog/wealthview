@@ -537,9 +537,19 @@ function SettingsContent() {
 
           try {
             const { data: membersData } = await supabase.from('users').select('*').eq('family_id', userData.family_id);
-            // Filter out the auth user — they manage their info in Profile tab
-            if (membersData) setMembers((membersData as UserRow[]).filter(m => m.id !== user.id));
-          } catch { /* ignore */ }
+            console.log('=== MEMBERS LOADED (init) ===', {
+              authUserId: user.id,
+              familyId: userData.family_id,
+              rawFromDb: membersData?.map((m: UserRow) => ({ id: m.id, name: m.name, email: m.email })),
+              count: membersData?.length,
+            });
+            // Show all family members EXCEPT the auth user's own profile row
+            if (membersData) {
+              const visible = (membersData as UserRow[]).filter(m => m.id !== user.id);
+              console.log('=== VISIBLE MEMBERS ===', visible.map(m => ({ id: m.id, name: m.name })));
+              setMembers(visible);
+            }
+          } catch (e) { console.error('Members load error:', e); }
 
           try {
             const { data: brokersData } = await supabase
@@ -637,21 +647,21 @@ function SettingsContent() {
     if (error) {
       showToast('error', error.message);
     } else if (newFamily) {
+      const fam = newFamily as {id: string; name: string; created_by: string};
+
       try {
-        await supabase.from('family_memberships').insert({ auth_user_id: user.id, family_id: (newFamily as {id: string}).id, role: 'admin' });
+        await supabase.from('family_memberships').insert({ auth_user_id: user.id, family_id: fam.id, role: 'admin' });
       } catch { /* table may not exist yet */ }
 
-      // If user has no family_id yet, set this as primary
-      if (!familyId) {
-        await supabase.from('users').update({ family_id: (newFamily as {id: string}).id, role: 'admin' }).eq('id', user.id);
-        setFamilyId((newFamily as {id: string}).id);
-      }
+      // Always link auth user to this family (for RLS access)
+      await supabase.from('users').update({ family_id: fam.id, role: 'admin' }).eq('id', user.id);
+      setFamilyId(fam.id);
 
-      const fam = newFamily as {id: string; name: string; created_by: string};
       setAllFamilies(prev => [...prev, fam]);
       setSelectedFamilyTab(fam.id);
       setFamilyName(fam.name);
       setFamilyCurrency('INR');
+      setMembers([]); // New family has no members yet
       setNewFamilyName('');
       setShowCreateFamily(false);
       showToast('success', `Family "${fam.name}" created successfully`);
@@ -671,10 +681,11 @@ function SettingsContent() {
       .eq('id', id);
     if (error) showToast('error', error.message);
     else {
-      // Refresh member list (exclude auth user)
+      // Refresh member list
       const targetFamily = selectedFamilyTab || familyId;
       if (targetFamily) {
         const { data: refreshed } = await supabase.from('users').select('*').eq('family_id', targetFamily);
+        console.log('=== MEMBERS REFRESHED (saveMember) ===', refreshed?.length);
         if (refreshed) setMembers((refreshed as UserRow[]).filter(m => m.id !== userId));
       }
       showToast('success', 'Member saved');
@@ -717,27 +728,52 @@ function SettingsContent() {
       return;
     }
     if (newId) {
-      // Update all extra fields on the newly created member
-      const extraFields: Record<string, unknown> = {};
-      if (newMemberType !== 'individual') extraFields.member_type = newMemberType;
-      if (newMemberPan) extraFields.pan = newMemberPan.toUpperCase();
-      if (newMemberMobile) extraFields.primary_mobile = newMemberMobile;
-      if (newMemberDob) extraFields.date_of_birth = newMemberDob;
-      if (newMemberRelationship) extraFields.relationship = newMemberRelationship;
-      if (newMemberKartaName) extraFields.karta_name = newMemberKartaName;
-      if (newMemberCin) extraFields.cin = newMemberCin;
-      if (newMemberLlpin) extraFields.llpin = newMemberLlpin;
-      // Also set primary_email if user entered one
-      if (newMemberEmail.trim()) extraFields.primary_email = newMemberEmail.trim();
+      // Update extra fields on the newly created member
+      // Split into two updates: safe columns first, then optional columns that may not exist
+      const safeFields: Record<string, unknown> = {};
+      if (newMemberType !== 'individual') safeFields.member_type = newMemberType;
+      if (newMemberPan) safeFields.pan = newMemberPan.toUpperCase();
+      if (newMemberMobile) safeFields.primary_mobile = newMemberMobile;
+      if (newMemberEmail.trim()) safeFields.primary_email = newMemberEmail.trim();
 
-      if (Object.keys(extraFields).length > 0) {
-        await supabase.from('users').update(extraFields).eq('id', newId);
+      if (Object.keys(safeFields).length > 0) {
+        const { error: safeErr } = await supabase.from('users').update(safeFields).eq('id', newId);
+        if (safeErr) console.warn('[addMember] safe fields update error:', safeErr.message);
       }
 
-      // Refresh members list (exclude auth user)
-      const { data: refreshed } = await supabase.from('users').select('*').eq('family_id', targetFamily);
-      console.log('[addFamilyMember] refreshed members:', refreshed?.length, 'userId:', userId);
-      if (refreshed) setMembers((refreshed as UserRow[]).filter(m => m.id !== userId));
+      // Optional columns that may not exist in the schema yet
+      const optionalFields: Record<string, unknown> = {};
+      if (newMemberDob) optionalFields.date_of_birth = newMemberDob;
+      if (newMemberRelationship) optionalFields.relationship = newMemberRelationship;
+      if (newMemberKartaName) optionalFields.karta_name = newMemberKartaName;
+      if (newMemberCin) optionalFields.cin = newMemberCin;
+      if (newMemberLlpin) optionalFields.llpin = newMemberLlpin;
+
+      if (Object.keys(optionalFields).length > 0) {
+        const { error: optErr } = await supabase.from('users').update(optionalFields).eq('id', newId);
+        if (optErr) console.warn('[addMember] optional fields update error (columns may not exist):', optErr.message);
+      }
+
+      // Ensure auth user's family_id matches target (so RLS allows query)
+      if (familyId !== targetFamily) {
+        await supabase.from('users').update({ family_id: targetFamily }).eq('id', userId);
+        setFamilyId(targetFamily);
+      }
+
+      // Refresh members list
+      const { data: refreshed, error: refreshErr } = await supabase.from('users').select('*').eq('family_id', targetFamily);
+      console.log('=== MEMBERS REFRESHED (addFamilyMember) ===', {
+        count: refreshed?.length,
+        authUserId: userId,
+        newMemberId: newId,
+        allIds: refreshed?.map((r: UserRow) => ({ id: r.id, name: r.name })),
+        refreshErr,
+      });
+      if (refreshed) {
+        const visible = (refreshed as UserRow[]).filter(m => m.id !== userId);
+        console.log('=== VISIBLE AFTER ADD ===', visible.map(m => ({ id: m.id, name: m.name })));
+        setMembers(visible);
+      }
 
       resetAddMemberForm();
       setShowAddMember(false);
@@ -1009,11 +1045,14 @@ function SettingsContent() {
                 <div className="flex items-center gap-2 mb-4 flex-wrap">
                   {allFamilies.map(f => (
                     <button key={f.id}
-                      onClick={() => {
+                      onClick={async () => {
                         setSelectedFamilyTab(f.id);
-                        supabase.from('users').select('*').eq('family_id', f.id).then(({ data }) => {
-                          if (data) setMembers((data as UserRow[]).filter(m => m.id !== userId));
-                        });
+                        // Switch auth user's family_id for RLS access
+                        await supabase.from('users').update({ family_id: f.id }).eq('id', userId);
+                        setFamilyId(f.id);
+                        const { data } = await supabase.from('users').select('*').eq('family_id', f.id);
+                        console.log('=== MEMBERS LOADED (tab switch) ===', { familyId: f.id, count: data?.length, ids: data?.map((m: UserRow) => ({ id: m.id, name: m.name })) });
+                        if (data) setMembers((data as UserRow[]).filter(m => m.id !== userId));
                         supabase.from('families').select('*').eq('id', f.id).single().then(({ data }) => {
                           if (data) {
                             setFamilyName((data as FamilyRow).name ?? '');
