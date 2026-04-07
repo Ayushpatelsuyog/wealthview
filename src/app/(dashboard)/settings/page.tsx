@@ -704,20 +704,7 @@ function SettingsContent() {
     if (!targetFamily || !newMemberName.trim()) return;
     if (addingMember) return;
     setAddingMember(true);
-    // Generate a unique email that will NEVER collide with the auth user's email.
-    // The RPC reuses existing users by email, so we must avoid collisions.
-    const userEmail = newMemberEmail.trim();
-    const uniqueSuffix = Date.now().toString(36);
-    const generatedEmail = `${newMemberName.trim().toLowerCase().replace(/\s+/g, '.')}.${uniqueSuffix}@family.local`;
-    const email = userEmail || generatedEmail;
-
-    // Warn if user enters the auth user's own email
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (authUser && userEmail && userEmail.toLowerCase() === (authUser.email ?? '').toLowerCase()) {
-      showToast('error', 'Cannot use the admin account email for a family member. Leave email blank or use a different one.');
-      setAddingMember(false);
-      return;
-    }
+    const email = newMemberEmail.trim() || `${newMemberName.trim().toLowerCase().replace(/\s+/g, '.')}@family.local`;
 
     const { data: newId, error } = await supabase.rpc('add_family_member', {
       target_family_id: targetFamily,
