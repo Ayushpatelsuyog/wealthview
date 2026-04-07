@@ -130,7 +130,6 @@ function MemberCard({
   const [panVisible, setPanVisible] = useState(false);
   const [panError, setPanError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [hovered, setHovered] = useState(false);
 
   const memberType = member.member_type || 'individual';
   const isIndividual = memberType === 'individual' || memberType === 'nri' || memberType === 'minor';
@@ -168,24 +167,7 @@ function MemberCard({
   // ── Display mode ──
   if (!editing) {
     return (
-      <div
-        className="border rounded-lg p-4 relative group transition-colors"
-        style={{ borderColor: 'var(--wv-border)' }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        {/* Delete button (top-right, on hover) */}
-        {canDelete && hovered && (
-          <button
-            onClick={() => onDelete(member)}
-            className="absolute top-2 right-2 p-1.5 rounded-lg transition-colors"
-            style={{ backgroundColor: 'rgba(220,38,38,0.08)' }}
-            title="Delete member"
-          >
-            <Trash2 className="w-3.5 h-3.5" style={{ color: '#DC2626' }} />
-          </button>
-        )}
-
+      <div className="border rounded-lg p-4 relative" style={{ borderColor: 'var(--wv-border)' }}>
         <div className="flex items-start gap-3">
           {/* Avatar */}
           <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold text-white flex-shrink-0"
@@ -255,14 +237,19 @@ function MemberCard({
               )}
             </div>
 
-            {/* Edit button */}
-            <button
-              onClick={() => setEditing(true)}
-              className="mt-2 text-[10px] font-semibold underline-offset-2 hover:underline"
-              style={{ color: '#C9A84C' }}
-            >
-              Edit
-            </button>
+            {/* Action buttons — always visible */}
+            <div className="mt-2.5 flex items-center gap-3">
+              <button onClick={() => setEditing(true)}
+                className="text-[10px] font-semibold underline-offset-2 hover:underline" style={{ color: '#C9A84C' }}>
+                Edit
+              </button>
+              {canDelete && (
+                <button onClick={() => onDelete(member)}
+                  className="flex items-center gap-1 text-[10px] font-semibold underline-offset-2 hover:underline" style={{ color: '#DC2626' }}>
+                  <Trash2 className="w-3 h-3" />Delete
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -471,6 +458,13 @@ function SettingsContent() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberType, setNewMemberType] = useState('individual');
+  const [newMemberPan, setNewMemberPan] = useState('');
+  const [newMemberMobile, setNewMemberMobile] = useState('');
+  const [newMemberDob, setNewMemberDob] = useState('');
+  const [newMemberRelationship, setNewMemberRelationship] = useState('');
+  const [newMemberKartaName, setNewMemberKartaName] = useState('');
+  const [newMemberCin, setNewMemberCin] = useState('');
+  const [newMemberLlpin, setNewMemberLlpin] = useState('');
   const [addingMember, setAddingMember] = useState(false);
 
   // Delete member
@@ -687,6 +681,13 @@ function SettingsContent() {
     }
   }
 
+  function resetAddMemberForm() {
+    setNewMemberName(''); setNewMemberEmail(''); setNewMemberType('individual');
+    setNewMemberPan(''); setNewMemberMobile(''); setNewMemberDob('');
+    setNewMemberRelationship(''); setNewMemberKartaName('');
+    setNewMemberCin(''); setNewMemberLlpin('');
+  }
+
   async function addFamilyMember() {
     const targetFamily = selectedFamilyTab || familyId;
     if (!targetFamily || !newMemberName.trim()) return;
@@ -707,33 +708,45 @@ function SettingsContent() {
       member_email: email,
       member_role: 'member',
     });
-    setAddingMember(false);
     if (error) {
+      setAddingMember(false);
       const msg = error.message.includes('duplicate key') || error.message.includes('unique constraint')
         ? 'A member with this email already exists.'
         : error.message;
       showToast('error', msg);
-    } else if (newId) {
-      if (newMemberType !== 'individual') {
-        await supabase.from('users').update({ member_type: newMemberType }).eq('id', newId);
-      }
-      const { data: refreshed } = await supabase.from('users').select('*').eq('family_id', targetFamily);
-      if (refreshed) setMembers((refreshed as UserRow[]).filter(m => m.id !== userId));
-      setNewMemberName('');
-      setNewMemberEmail('');
-      setNewMemberType('individual');
-      setShowAddMember(false);
-      showToast('success', 'Family member added');
+      return;
     }
+    if (newId) {
+      // Update all extra fields on the newly created member
+      const extraFields: Record<string, unknown> = {};
+      if (newMemberType !== 'individual') extraFields.member_type = newMemberType;
+      if (newMemberPan) extraFields.pan = newMemberPan.toUpperCase();
+      if (newMemberMobile) extraFields.primary_mobile = newMemberMobile;
+      if (newMemberDob) extraFields.date_of_birth = newMemberDob;
+      if (newMemberRelationship) extraFields.relationship = newMemberRelationship;
+      if (newMemberKartaName) extraFields.karta_name = newMemberKartaName;
+      if (newMemberCin) extraFields.cin = newMemberCin;
+      if (newMemberLlpin) extraFields.llpin = newMemberLlpin;
+      // Also set primary_email if user entered one
+      if (newMemberEmail.trim()) extraFields.primary_email = newMemberEmail.trim();
+
+      if (Object.keys(extraFields).length > 0) {
+        await supabase.from('users').update(extraFields).eq('id', newId);
+      }
+
+      // Refresh members list (exclude auth user)
+      const { data: refreshed } = await supabase.from('users').select('*').eq('family_id', targetFamily);
+      console.log('[addFamilyMember] refreshed members:', refreshed?.length, 'userId:', userId);
+      if (refreshed) setMembers((refreshed as UserRow[]).filter(m => m.id !== userId));
+
+      resetAddMemberForm();
+      setShowAddMember(false);
+      showToast('success', `${newMemberName.trim()} added to the family`);
+    }
+    setAddingMember(false);
   }
 
   async function handleDeleteMemberClick(member: UserRow) {
-    // Check if this is the last member
-    if (members.length <= 1) {
-      showToast('error', 'Cannot delete the only member in a family');
-      return;
-    }
-
     // Check for active holdings
     const { data: portfolios } = await supabase.from('portfolios').select('id').eq('user_id', member.id);
     let holdingsCount = 0;
@@ -1124,52 +1137,144 @@ function SettingsContent() {
                   <Separator />
 
                   {/* Add Member inline form — NO role dropdown */}
-                  {showAddMember && (
-                    <div className="border rounded-lg p-4 space-y-3" style={{ borderColor: '#C9A84C', backgroundColor: '#FDFBF5' }}>
-                      <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>New Family Member</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Member Type</Label>
-                          <Select value={newMemberType} onValueChange={setNewMemberType}>
-                            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {MEMBER_TYPES.map(t => (
-                                <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                  {showAddMember && (() => {
+                    const isInd = newMemberType === 'individual' || newMemberType === 'nri' || newMemberType === 'minor';
+                    return (
+                      <div className="border rounded-lg p-4 space-y-3" style={{ borderColor: '#C9A84C', backgroundColor: '#FDFBF5' }}>
+                        <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>New Family Member</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* Row 1: Type + Name */}
+                          <div className="space-y-1">
+                            <Label className="text-xs">Member Type</Label>
+                            <Select value={newMemberType} onValueChange={v => { setNewMemberType(v); }}>
+                              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {MEMBER_TYPES.map(t => (
+                                  <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">{isInd ? 'Full Name' : 'Entity Name'} <span className="text-red-400">*</span></Label>
+                            <Input value={newMemberName} onChange={e => setNewMemberName(e.target.value)}
+                              placeholder={newMemberType === 'huf' ? 'e.g. Sharma HUF' : newMemberType === 'company' ? 'e.g. ABC Pvt Ltd' : 'e.g. Priya Sharma'}
+                              className="h-8 text-sm" />
+                          </div>
+
+                          {/* Row 2: PAN + Mobile */}
+                          <div className="space-y-1">
+                            <Label className="text-xs">{newMemberType === 'huf' ? 'HUF PAN' : 'PAN'}</Label>
+                            <Input value={newMemberPan} onChange={e => setNewMemberPan(e.target.value.toUpperCase().slice(0, 10))}
+                              placeholder="ABCDE1234F" className="h-8 text-sm font-mono" maxLength={10} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">{newMemberType === 'huf' ? 'Karta Mobile' : 'Mobile'}</Label>
+                            <Input value={newMemberMobile} onChange={e => setNewMemberMobile(e.target.value)}
+                              placeholder="+91 98765 43210" className="h-8 text-sm" />
+                          </div>
+
+                          {/* Row 3: Email + DOB/Relationship */}
+                          <div className="space-y-1">
+                            <Label className="text-xs">{newMemberType === 'huf' ? 'Karta Email' : 'Email'}</Label>
+                            <Input value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)}
+                              placeholder={isInd ? 'priya@example.com' : 'info@company.com'} className="h-8 text-sm" />
+                          </div>
+
+                          {isInd && (
+                            <div className="space-y-1">
+                              <Label className="text-xs">Date of Birth</Label>
+                              <Input type="date" value={newMemberDob} onChange={e => setNewMemberDob(e.target.value)} className="h-8 text-sm" />
+                            </div>
+                          )}
+
+                          {/* Type-specific fields */}
+                          {isInd && (
+                            <div className="space-y-1">
+                              <Label className="text-xs">Relationship</Label>
+                              <Select value={newMemberRelationship} onValueChange={setNewMemberRelationship}>
+                                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                <SelectContent>
+                                  {['Self', 'Spouse', 'Father', 'Mother', 'Son', 'Daughter', 'Brother', 'Sister', 'Other'].map(r => (
+                                    <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
+                          {newMemberType === 'huf' && (
+                            <div className="space-y-1">
+                              <Label className="text-xs">Karta Name</Label>
+                              <Input value={newMemberKartaName} onChange={e => setNewMemberKartaName(e.target.value)}
+                                placeholder="Full name of Karta" className="h-8 text-sm" />
+                            </div>
+                          )}
+
+                          {newMemberType === 'company' && (
+                            <div className="space-y-1">
+                              <Label className="text-xs">CIN</Label>
+                              <Input value={newMemberCin} onChange={e => setNewMemberCin(e.target.value)}
+                                placeholder="Corporate Identity Number" className="h-8 text-sm" />
+                            </div>
+                          )}
+
+                          {newMemberType === 'llp' && (
+                            <div className="space-y-1">
+                              <Label className="text-xs">LLPIN</Label>
+                              <Input value={newMemberLlpin} onChange={e => setNewMemberLlpin(e.target.value)}
+                                placeholder="LLP Identification Number" className="h-8 text-sm" />
+                            </div>
+                          )}
+
+                          {newMemberType === 'nri' && (
+                            <div className="space-y-1">
+                              <Label className="text-xs">NRI Status</Label>
+                              <Select value="" onValueChange={() => {}}>
+                                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="NRO / NRE" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="NRO" className="text-xs">NRO</SelectItem>
+                                  <SelectItem value="NRE" className="text-xs">NRE</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
+                          {newMemberType === 'minor' && (
+                            <>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Guardian Name</Label>
+                                <Input placeholder="Full name of guardian" className="h-8 text-sm" />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Guardian Relationship</Label>
+                                <Select value="" onValueChange={() => {}}>
+                                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                  <SelectContent>
+                                    {['Father', 'Mother', 'Legal Guardian'].map(r => (
+                                      <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </>
+                          )}
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">{newMemberType === 'individual' || newMemberType === 'nri' || newMemberType === 'minor' ? 'Full Name' : 'Entity Name'} <span className="text-red-400">*</span></Label>
-                          <Input
-                            value={newMemberName} onChange={e => setNewMemberName(e.target.value)}
-                            placeholder={newMemberType === 'huf' ? 'e.g. Sharma HUF' : newMemberType === 'company' ? 'e.g. ABC Pvt Ltd' : 'e.g. Priya Sharma'}
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-1 col-span-2">
-                          <Label className="text-xs">Email <span className="text-gray-400">(optional)</span></Label>
-                          <Input
-                            value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)}
-                            placeholder={newMemberType === 'individual' ? 'priya@example.com' : 'info@company.com'}
-                            className="h-8 text-sm"
-                          />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={addFamilyMember} disabled={addingMember || !newMemberName.trim()}
+                            className="text-white text-xs" style={{ backgroundColor: '#1B2A4A' }}>
+                            {addingMember ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                            Save Member
+                          </Button>
+                          <Button size="sm" variant="ghost"
+                            onClick={() => { setShowAddMember(false); resetAddMemberForm(); }}
+                            className="text-xs text-gray-500">
+                            Cancel
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={addFamilyMember} disabled={addingMember || !newMemberName.trim()}
-                          className="text-white text-xs" style={{ backgroundColor: '#1B2A4A' }}>
-                          {addingMember ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
-                          Save Member
-                        </Button>
-                        <Button size="sm" variant="ghost"
-                          onClick={() => { setShowAddMember(false); setNewMemberName(''); setNewMemberEmail(''); setNewMemberType('individual'); }}
-                          className="text-xs text-gray-500">
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   <div className="space-y-3">
                     {members.map(m => (
@@ -1178,7 +1283,7 @@ function SettingsContent() {
                         member={m}
                         onSave={saveMember}
                         onDelete={handleDeleteMemberClick}
-                        canDelete={members.length > 1}
+                        canDelete={true}
                       />
                     ))}
                     {members.length === 0 && (
