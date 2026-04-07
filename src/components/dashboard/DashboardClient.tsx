@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { FamilySetupModal } from '@/components/onboarding/FamilySetupModal';
 import { NetWorthHero }        from '@/components/dashboard/NetWorthHero';
 import { StatCards }            from '@/components/dashboard/StatCards';
 import { AssetAllocationChart } from '@/components/dashboard/AssetAllocationChart';
@@ -121,13 +120,32 @@ export function DashboardClient() {
 
   if (isLoading) return <DashboardSkeleton />;
 
-  // Show onboarding modal if user has no family yet
+  // Show welcome screen if user has no family yet — redirect to Settings
   if (snapshot?.needsOnboarding) {
     return (
-      <>
-        <DashboardSkeleton />
-        <FamilySetupModal onComplete={() => load(true)} />
-      </>
+      <div className="p-6 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center" style={{ backgroundColor: '#C9A84C' }}>
+            <RefreshCw className="w-8 h-8 text-white" style={{ transform: 'rotate(0deg)' }} />
+          </div>
+          <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--wv-text)', fontFamily: 'var(--font-playfair, serif)' }}>
+            Welcome to WealthView
+          </h1>
+          <p className="text-sm mb-6" style={{ color: 'var(--wv-text-muted)' }}>
+            Get started by creating your first family and adding members. You can then track your entire family&apos;s wealth in one place.
+          </p>
+          <a
+            href="/settings?tab=family"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90"
+            style={{ backgroundColor: '#C9A84C', color: 'var(--wv-text)' }}
+          >
+            Get Started
+          </a>
+          <p className="text-[11px] mt-4" style={{ color: 'var(--wv-text-muted)' }}>
+            You can also go to Settings to create families and members.
+          </p>
+        </div>
+      </div>
     );
   }
 

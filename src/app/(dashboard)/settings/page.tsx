@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, User, Bell, Shield, Users, Eye, EyeOff, Loader2, Building2, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { Settings, User, Bell, Shield, Users, Eye, EyeOff, Loader2, Building2, ChevronDown, ChevronUp, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -24,6 +24,11 @@ interface UserRow {
   pan?: string | null;
   primary_mobile?: string | null;
   primary_email?: string | null;
+  date_of_birth?: string | null;
+  relationship?: string | null;
+  karta_name?: string | null;
+  cin?: string | null;
+  llpin?: string | null;
 }
 
 const MEMBER_TYPES = [
@@ -47,8 +52,6 @@ interface FamilyRow {
   currency_default: string;
 }
 
-
-
 interface BrokerRow {
   id: string;
   name: string;
@@ -71,7 +74,7 @@ interface CmlFields {
   bank_last4: string;
   ifsc: string;
   address: string;
-  depository: string; // 'CDSL' | 'NSDL'
+  depository: string;
 }
 
 const BLANK_CML: CmlFields = {
@@ -98,7 +101,7 @@ const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 
 function maskPan(pan: string): string {
   if (!pan || pan.length < 4) return pan;
-  return 'X'.repeat(pan.length - 4) + pan.slice(-4);
+  return pan.slice(0, 4) + '***' + pan.slice(-3);
 }
 
 // ─── Member Card ──────────────────────────────────────────────────────────────
@@ -106,17 +109,31 @@ function maskPan(pan: string): string {
 function MemberCard({
   member,
   onSave,
+  onDelete,
+  canDelete,
 }: {
   member: UserRow;
   onSave: (id: string, data: Partial<UserRow>) => Promise<void>;
+  onDelete: (member: UserRow) => void;
+  canDelete: boolean;
 }) {
+  const [editing, setEditing] = useState(false);
   const [name, setName] = useState(member.name ?? '');
   const [pan, setPan] = useState(member.pan ?? '');
   const [mobile, setMobile] = useState(member.primary_mobile ?? '');
   const [email, setEmail] = useState(member.primary_email ?? '');
+  const [dob, setDob] = useState(member.date_of_birth ?? '');
+  const [relationship, setRelationship] = useState(member.relationship ?? '');
+  const [kartaName, setKartaName] = useState(member.karta_name ?? '');
+  const [cin, setCin] = useState(member.cin ?? '');
+  const [llpin, setLlpin] = useState(member.llpin ?? '');
   const [panVisible, setPanVisible] = useState(false);
   const [panError, setPanError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
+  const memberType = member.member_type || 'individual';
+  const isIndividual = memberType === 'individual' || memberType === 'nri' || memberType === 'minor';
 
   function handlePanChange(val: string) {
     const upper = val.toUpperCase().slice(0, 10);
@@ -133,24 +150,137 @@ function MemberCard({
   async function handleSave() {
     if (pan && !PAN_REGEX.test(pan)) { setPanError('Invalid PAN format'); return; }
     setSaving(true);
-    await onSave(member.id, { name, pan: pan || null, primary_mobile: mobile || null, primary_email: email || null });
+    await onSave(member.id, {
+      name,
+      pan: pan || null,
+      primary_mobile: mobile || null,
+      primary_email: email || null,
+      date_of_birth: dob || null,
+      relationship: relationship || null,
+      karta_name: kartaName || null,
+      cin: cin || null,
+      llpin: llpin || null,
+    });
     setSaving(false);
+    setEditing(false);
   }
 
+  // ── Display mode ──
+  if (!editing) {
+    return (
+      <div
+        className="border rounded-lg p-4 relative group transition-colors"
+        style={{ borderColor: 'var(--wv-border)' }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {/* Delete button (top-right, on hover) */}
+        {canDelete && hovered && (
+          <button
+            onClick={() => onDelete(member)}
+            className="absolute top-2 right-2 p-1.5 rounded-lg transition-colors"
+            style={{ backgroundColor: 'rgba(220,38,38,0.08)' }}
+            title="Delete member"
+          >
+            <Trash2 className="w-3.5 h-3.5" style={{ color: '#DC2626' }} />
+          </button>
+        )}
+
+        <div className="flex items-start gap-3">
+          {/* Avatar */}
+          <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold text-white flex-shrink-0"
+            style={{ backgroundColor: '#1B2A4A' }}>
+            {(name || member.email).charAt(0).toUpperCase()}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            {/* Name + badges */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>{name}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                style={{ backgroundColor: 'rgba(201,168,76,0.12)', color: '#C9A84C' }}>
+                {MEMBER_TYPE_LABEL[memberType] ?? 'Individual'}
+              </span>
+            </div>
+
+            {/* Detail fields */}
+            <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1">
+              {pan && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-medium" style={{ color: 'var(--wv-text-muted)' }}>PAN:</span>
+                  <span className="text-xs font-mono" style={{ color: 'var(--wv-text-secondary)' }}>{maskPan(pan)}</span>
+                </div>
+              )}
+              {mobile && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-medium" style={{ color: 'var(--wv-text-muted)' }}>Mobile:</span>
+                  <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{mobile}</span>
+                </div>
+              )}
+              {email && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-medium" style={{ color: 'var(--wv-text-muted)' }}>Email:</span>
+                  <span className="text-xs truncate" style={{ color: 'var(--wv-text-secondary)' }}>{email}</span>
+                </div>
+              )}
+              {isIndividual && dob && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-medium" style={{ color: 'var(--wv-text-muted)' }}>DOB:</span>
+                  <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{dob}</span>
+                </div>
+              )}
+              {relationship && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-medium" style={{ color: 'var(--wv-text-muted)' }}>Relation:</span>
+                  <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{relationship}</span>
+                </div>
+              )}
+              {memberType === 'huf' && kartaName && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-medium" style={{ color: 'var(--wv-text-muted)' }}>Karta:</span>
+                  <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{kartaName}</span>
+                </div>
+              )}
+              {memberType === 'company' && cin && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-medium" style={{ color: 'var(--wv-text-muted)' }}>CIN:</span>
+                  <span className="text-xs font-mono" style={{ color: 'var(--wv-text-secondary)' }}>{cin}</span>
+                </div>
+              )}
+              {memberType === 'llp' && llpin && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-medium" style={{ color: 'var(--wv-text-muted)' }}>LLPIN:</span>
+                  <span className="text-xs font-mono" style={{ color: 'var(--wv-text-secondary)' }}>{llpin}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Edit button */}
+            <button
+              onClick={() => setEditing(true)}
+              className="mt-2 text-[10px] font-semibold underline-offset-2 hover:underline"
+              style={{ color: '#C9A84C' }}
+            >
+              Edit
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Edit mode ──
   return (
-    <div className="border border-gray-100 rounded-lg p-4 space-y-3">
+    <div className="border rounded-lg p-4 space-y-3" style={{ borderColor: '#C9A84C', backgroundColor: '#FDFBF5' }}>
       <div className="flex items-center gap-2 mb-1">
         <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold text-white"
           style={{ backgroundColor: '#1B2A4A' }}>
           {(name || member.email).charAt(0).toUpperCase()}
         </div>
-        <span className="text-xs text-gray-400 capitalize">{member.role}</span>
-        {member.member_type && member.member_type !== 'individual' && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-            style={{ backgroundColor: 'rgba(201,168,76,0.12)', color: '#C9A84C' }}>
-            {MEMBER_TYPE_LABEL[member.member_type] ?? member.member_type}
-          </span>
-        )}
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+          style={{ backgroundColor: 'rgba(201,168,76,0.12)', color: '#C9A84C' }}>
+          {MEMBER_TYPE_LABEL[memberType] ?? 'Individual'}
+        </span>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
@@ -187,17 +317,125 @@ function MemberCard({
           </div>
           {panError && <p className="text-xs text-red-500">{panError}</p>}
         </div>
+        {isIndividual && (
+          <>
+            <div className="space-y-1">
+              <Label className="text-xs">Date of Birth</Label>
+              <Input type="date" value={dob} onChange={e => setDob(e.target.value)} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Relationship</Label>
+              <Input value={relationship} onChange={e => setRelationship(e.target.value)} className="h-8 text-sm" placeholder="e.g. Self, Spouse, Son" />
+            </div>
+          </>
+        )}
+        {memberType === 'huf' && (
+          <div className="space-y-1">
+            <Label className="text-xs">Karta Name</Label>
+            <Input value={kartaName} onChange={e => setKartaName(e.target.value)} className="h-8 text-sm" placeholder="Full name of Karta" />
+          </div>
+        )}
+        {memberType === 'company' && (
+          <div className="space-y-1">
+            <Label className="text-xs">CIN</Label>
+            <Input value={cin} onChange={e => setCin(e.target.value)} className="h-8 text-sm" placeholder="Corporate Identity Number" />
+          </div>
+        )}
+        {memberType === 'llp' && (
+          <div className="space-y-1">
+            <Label className="text-xs">LLPIN</Label>
+            <Input value={llpin} onChange={e => setLlpin(e.target.value)} className="h-8 text-sm" placeholder="LLP Identification Number" />
+          </div>
+        )}
       </div>
-      <Button
-        size="sm"
-        onClick={handleSave}
-        disabled={saving || !!panError}
-        className="text-white text-xs"
-        style={{ backgroundColor: '#1B2A4A' }}
-      >
-        {saving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
-        Save Member
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={saving || !!panError}
+          className="text-white text-xs"
+          style={{ backgroundColor: '#1B2A4A' }}
+        >
+          {saving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+          Save Member
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setEditing(false)}
+          className="text-xs text-gray-500"
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Delete Confirmation Modal ────────────────────────────────────────────────
+
+function DeleteMemberModal({
+  member,
+  holdingsCount,
+  onConfirm,
+  onCancel,
+  deleting,
+}: {
+  member: UserRow;
+  holdingsCount: number;
+  onConfirm: () => void;
+  onCancel: () => void;
+  deleting: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(27,42,74,0.6)', backdropFilter: 'blur(4px)' }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(220,38,38,0.1)' }}>
+            <AlertTriangle className="w-5 h-5" style={{ color: '#DC2626' }} />
+          </div>
+          <div>
+            <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>Delete {member.name}?</p>
+            <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>This cannot be undone.</p>
+          </div>
+        </div>
+
+        <p className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
+          This will remove all their holdings, transactions, portfolios, and data permanently.
+        </p>
+
+        {holdingsCount > 0 && (
+          <div className="p-3 rounded-lg flex items-center gap-2" style={{ backgroundColor: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.15)' }}>
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: '#DC2626' }} />
+            <p className="text-xs font-medium" style={{ color: '#DC2626' }}>
+              This member has {holdingsCount} active holding{holdingsCount !== 1 ? 's' : ''}. All data will be lost.
+            </p>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <Button
+            onClick={onConfirm}
+            disabled={deleting}
+            size="sm"
+            className="flex-1 text-white text-xs"
+            style={{ backgroundColor: '#DC2626' }}
+          >
+            {deleting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Trash2 className="w-3 h-3 mr-1" />}
+            Delete Permanently
+          </Button>
+          <Button
+            onClick={onCancel}
+            disabled={deleting}
+            size="sm"
+            variant="outline"
+            className="text-xs"
+          >
+            Cancel
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -229,13 +467,16 @@ function SettingsContent() {
   const [familyCurrency, setFamilyCurrency] = useState('INR');
   const [familySaving, setFamilySaving] = useState(false);
   const [members, setMembers] = useState<UserRow[]>([]);
-  // extraMembers removed — all members are in the users table
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [newMemberRole, setNewMemberRole] = useState('member');
   const [newMemberType, setNewMemberType] = useState('individual');
   const [addingMember, setAddingMember] = useState(false);
+
+  // Delete member
+  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+  const [deleteHoldingsCount, setDeleteHoldingsCount] = useState(0);
+  const [deletingMember, setDeletingMember] = useState(false);
 
   // Multi-Family
   const [allFamilies, setAllFamilies] = useState<{id: string; name: string; created_by: string}[]>([]);
@@ -243,6 +484,10 @@ function SettingsContent() {
   const [showCreateFamily, setShowCreateFamily] = useState(false);
   const [newFamilyName, setNewFamilyName] = useState('');
   const [creatingFamily, setCreatingFamily] = useState(false);
+
+  // Delete family
+  const [showDeleteFamily, setShowDeleteFamily] = useState(false);
+  const [deletingFamily, setDeletingFamily] = useState(false);
 
   // Distributors/Brokers
   const [brokers, setBrokers] = useState<BrokerRow[]>([]);
@@ -261,7 +506,6 @@ function SettingsContent() {
   }
 
   useEffect(() => {
-    // Read ?tab= from URL to auto-switch to the right tab
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get('tab');
     if (tabParam) setDefaultTab(tabParam);
@@ -275,14 +519,9 @@ function SettingsContent() {
       setUserId(user.id);
       setAuthEmail(user.email ?? '');
 
-      // Load current user row
       let userData: UserRow | null = null;
       try {
-        const { data } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+        const { data } = await supabase.from('users').select('*').eq('id', user.id).single();
         userData = data as UserRow | null;
       } catch { userData = null; }
 
@@ -293,103 +532,64 @@ function SettingsContent() {
         setProfileEmail(userData.primary_email ?? '');
         setFamilyId(userData.family_id ?? null);
 
-        // Load family
         if (userData.family_id) {
           try {
-            const { data: familyData } = await supabase
-              .from('families')
-              .select('*')
-              .eq('id', userData.family_id)
-              .single();
+            const { data: familyData } = await supabase.from('families').select('*').eq('id', userData.family_id).single();
             if (familyData) {
               setFamilyName((familyData as FamilyRow).name ?? '');
               setFamilyCurrency((familyData as FamilyRow).currency_default ?? 'INR');
             }
           } catch { /* ignore */ }
 
-          // Load all family members (auth users + extra members)
           try {
-            const { data: membersData } = await supabase
-              .from('users')
-              .select('*')
-              .eq('family_id', userData.family_id);
-            if (membersData) setMembers(membersData as UserRow[]);
+            const { data: membersData } = await supabase.from('users').select('*').eq('family_id', userData.family_id);
+            // Filter out the auth user — they manage their info in Profile tab
+            if (membersData) setMembers((membersData as UserRow[]).filter(m => m.id !== user.id));
           } catch { /* ignore */ }
 
-          // Extra members are now also in the users table — no separate fetch needed
-          // The members query above already loads all family users
-
-          // Load brokers
           try {
             const { data: brokersData } = await supabase
-              .from('brokers')
-              .select('id, name, platform_type, logo_color, metadata')
-              .eq('family_id', userData.family_id)
-              .eq('is_active', true)
-              .order('name');
+              .from('brokers').select('id, name, platform_type, logo_color, metadata')
+              .eq('family_id', userData.family_id).eq('is_active', true).order('name');
             if (brokersData) {
               const rows = brokersData as BrokerRow[];
               setBrokers(rows);
-              // Initialize CML state from existing metadata
               const cmlMap: Record<string, CmlFields> = {};
               rows.forEach(b => {
                 const m = (b.metadata ?? {}) as Record<string, string>;
                 cmlMap[b.id] = {
-                  dp_id:           m.dp_id ?? '',
-                  client_id:       m.client_id ?? '',
-                  bo_id:           m.bo_id ?? '',
-                  trading_account: m.trading_account ?? '',
-                  first_holder:    m.first_holder ?? '',
-                  second_holder:   m.second_holder ?? '',
-                  nominee:         m.nominee ?? '',
-                  mobile:          m.mobile ?? '',
-                  email:           m.email ?? '',
-                  bank_name:       m.bank_name ?? '',
-                  bank_last4:      m.bank_last4 ?? '',
-                  ifsc:            m.ifsc ?? '',
-                  address:         m.address ?? '',
-                  depository:      m.depository ?? 'CDSL',
+                  dp_id: m.dp_id ?? '', client_id: m.client_id ?? '', bo_id: m.bo_id ?? '',
+                  trading_account: m.trading_account ?? '', first_holder: m.first_holder ?? '',
+                  second_holder: m.second_holder ?? '', nominee: m.nominee ?? '',
+                  mobile: m.mobile ?? '', email: m.email ?? '', bank_name: m.bank_name ?? '',
+                  bank_last4: m.bank_last4 ?? '', ifsc: m.ifsc ?? '', address: m.address ?? '',
+                  depository: m.depository ?? 'CDSL',
                 };
               });
               setBrokerCml(cmlMap);
             }
-          } catch { /* ignore — metadata column may not exist yet */ }
-        }
-
-        // Load all families (via family_memberships or created_by)
-        const famList: {id: string; name: string; created_by: string}[] = [];
-
-        if (userData.family_id) {
-          try {
-            const { data: primaryFamily } = await supabase
-              .from('families')
-              .select('id, name, created_by')
-              .eq('id', userData.family_id)
-              .single();
-            if (primaryFamily) famList.push(primaryFamily as {id: string; name: string; created_by: string});
           } catch { /* ignore */ }
         }
 
-        // Add families from memberships (table may not exist yet)
+        const famList: {id: string; name: string; created_by: string}[] = [];
+        if (userData.family_id) {
+          try {
+            const { data: primaryFamily } = await supabase.from('families').select('id, name, created_by').eq('id', userData.family_id).single();
+            if (primaryFamily) famList.push(primaryFamily as {id: string; name: string; created_by: string});
+          } catch { /* ignore */ }
+        }
         try {
-          const { data: membershipFamilies } = await supabase
-            .from('family_memberships')
-            .select('family_id, role, families(id, name, created_by)')
-            .eq('auth_user_id', user.id);
-
+          const { data: membershipFamilies } = await supabase.from('family_memberships').select('family_id, role, families(id, name, created_by)').eq('auth_user_id', user.id);
           if (membershipFamilies) {
             for (const m of membershipFamilies) {
               const f = (m as Record<string, unknown>).families as {id: string; name: string; created_by: string} | null;
-              if (f && !famList.find(x => x.id === f.id)) {
-                famList.push(f);
-              }
+              if (f && !famList.find(x => x.id === f.id)) famList.push(f);
             }
           }
         } catch { /* family_memberships table may not exist yet */ }
 
         setAllFamilies(famList);
         if (famList.length > 0 && !selectedFamilyTab) {
-          // Use URL param family_id if provided, otherwise first family
           const targetFam = urlFamilyId && famList.find(f => f.id === urlFamilyId) ? urlFamilyId : famList[0].id;
           setSelectedFamilyTab(targetFam);
         }
@@ -403,13 +603,9 @@ function SettingsContent() {
   function handleProfilePanChange(val: string) {
     const upper = val.toUpperCase().slice(0, 10);
     setProfilePan(upper);
-    if (upper.length > 0 && upper.length < 10) {
-      setPanError('PAN must be 10 characters');
-    } else if (upper.length === 10 && !PAN_REGEX.test(upper)) {
-      setPanError('Invalid PAN format (e.g. ABCDE1234F)');
-    } else {
-      setPanError('');
-    }
+    if (upper.length > 0 && upper.length < 10) setPanError('PAN must be 10 characters');
+    else if (upper.length === 10 && !PAN_REGEX.test(upper)) setPanError('Invalid PAN format (e.g. ABCDE1234F)');
+    else setPanError('');
   }
 
   async function saveProfile() {
@@ -418,12 +614,7 @@ function SettingsContent() {
     setProfileSaving(true);
     const { error } = await supabase
       .from('users')
-      .update({
-        name: profileName,
-        pan: profilePan || null,
-        primary_mobile: profileMobile || null,
-        primary_email: profileEmail || null,
-      })
+      .update({ name: profileName, pan: profilePan || null, primary_mobile: profileMobile || null, primary_email: profileEmail || null })
       .eq('id', userId);
     setProfileSaving(false);
     if (error) showToast('error', error.message);
@@ -433,10 +624,7 @@ function SettingsContent() {
   async function saveFamily() {
     if (!familyId) return;
     setFamilySaving(true);
-    const { error } = await supabase
-      .from('families')
-      .update({ name: familyName, currency_default: familyCurrency })
-      .eq('id', familyId);
+    const { error } = await supabase.from('families').update({ name: familyName, currency_default: familyCurrency }).eq('id', familyId);
     setFamilySaving(false);
     if (error) showToast('error', error.message);
     else showToast('success', 'Family settings saved');
@@ -449,27 +637,27 @@ function SettingsContent() {
     if (!user) { setCreatingFamily(false); return; }
 
     const { data: newFamily, error } = await supabase
-      .from('families')
-      .insert({ name: newFamilyName.trim(), created_by: user.id })
-      .select('id, name, created_by')
-      .single();
+      .from('families').insert({ name: newFamilyName.trim(), created_by: user.id })
+      .select('id, name, created_by').single();
 
     if (error) {
       showToast('error', error.message);
     } else if (newFamily) {
-      // Try to create membership record (table may not exist yet)
       try {
-        await supabase.from('family_memberships').insert({
-          auth_user_id: user.id,
-          family_id: (newFamily as {id: string}).id,
-          role: 'admin',
-        });
+        await supabase.from('family_memberships').insert({ auth_user_id: user.id, family_id: (newFamily as {id: string}).id, role: 'admin' });
       } catch { /* table may not exist yet */ }
 
-      const fam = newFamily as {id: string; name: string; created_by: string};
+      // If user has no family_id yet, set this as primary
+      if (!familyId) {
+        await supabase.from('users').update({ family_id: (newFamily as {id: string}).id, role: 'admin' }).eq('id', user.id);
+        setFamilyId((newFamily as {id: string}).id);
+      }
 
+      const fam = newFamily as {id: string; name: string; created_by: string};
       setAllFamilies(prev => [...prev, fam]);
       setSelectedFamilyTab(fam.id);
+      setFamilyName(fam.name);
+      setFamilyCurrency('INR');
       setNewFamilyName('');
       setShowCreateFamily(false);
       showToast('success', `Family "${fam.name}" created successfully`);
@@ -480,20 +668,32 @@ function SettingsContent() {
   async function saveMember(id: string, data: Partial<UserRow>) {
     const { error } = await supabase
       .from('users')
-      .update({ name: data.name, pan: data.pan, primary_mobile: data.primary_mobile, primary_email: data.primary_email })
+      .update({
+        name: data.name, pan: data.pan, primary_mobile: data.primary_mobile,
+        primary_email: data.primary_email, date_of_birth: data.date_of_birth,
+        relationship: data.relationship, karta_name: data.karta_name,
+        cin: data.cin, llpin: data.llpin,
+      })
       .eq('id', id);
     if (error) showToast('error', error.message);
-    else showToast('success', 'Member saved');
+    else {
+      // Refresh member list (exclude auth user)
+      const targetFamily = selectedFamilyTab || familyId;
+      if (targetFamily) {
+        const { data: refreshed } = await supabase.from('users').select('*').eq('family_id', targetFamily);
+        if (refreshed) setMembers((refreshed as UserRow[]).filter(m => m.id !== userId));
+      }
+      showToast('success', 'Member saved');
+    }
   }
 
   async function addFamilyMember() {
     const targetFamily = selectedFamilyTab || familyId;
     if (!targetFamily || !newMemberName.trim()) return;
-    if (addingMember) return; // prevent double-click
+    if (addingMember) return;
     setAddingMember(true);
     const email = newMemberEmail.trim() || `${newMemberName.trim().toLowerCase().replace(/\s+/g, '.')}@family.local`;
 
-    // Check if email already exists in this family
     const existing = members.find(m => m.email === email || m.primary_email === email);
     if (existing) {
       showToast('error', `A member with email "${email}" already exists in this family.`);
@@ -505,51 +705,121 @@ function SettingsContent() {
       target_family_id: targetFamily,
       member_name: newMemberName.trim(),
       member_email: email,
-      member_role: newMemberRole,
+      member_role: 'member',
     });
     setAddingMember(false);
     if (error) {
-      // Friendly message for duplicate key
       const msg = error.message.includes('duplicate key') || error.message.includes('unique constraint')
         ? 'A member with this email already exists.'
         : error.message;
       showToast('error', msg);
     } else if (newId) {
-      // Update member_type (the RPC doesn't support it yet, so update separately)
       if (newMemberType !== 'individual') {
         await supabase.from('users').update({ member_type: newMemberType }).eq('id', newId);
       }
       const { data: refreshed } = await supabase.from('users').select('*').eq('family_id', targetFamily);
-      if (refreshed) setMembers(refreshed as UserRow[]);
+      if (refreshed) setMembers((refreshed as UserRow[]).filter(m => m.id !== userId));
       setNewMemberName('');
       setNewMemberEmail('');
-      setNewMemberRole('member');
       setNewMemberType('individual');
       setShowAddMember(false);
       showToast('success', 'Family member added');
     }
   }
 
-  async function _deleteFamilyMember(id: string) {
-    const { error } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', id);
-    if (error) showToast('error', error.message);
-    else {
-      setMembers(prev => prev.filter(m => m.id !== id));
-      showToast('success', 'Family member removed');
+  async function handleDeleteMemberClick(member: UserRow) {
+    // Check if this is the last member
+    if (members.length <= 1) {
+      showToast('error', 'Cannot delete the only member in a family');
+      return;
     }
+
+    // Check for active holdings
+    const { data: portfolios } = await supabase.from('portfolios').select('id').eq('user_id', member.id);
+    let holdingsCount = 0;
+    if (portfolios && portfolios.length > 0) {
+      const portIds = portfolios.map(p => p.id);
+      const { count } = await supabase.from('holdings').select('id', { count: 'exact', head: true }).in('portfolio_id', portIds);
+      holdingsCount = count ?? 0;
+    }
+
+    setDeleteHoldingsCount(holdingsCount);
+    setDeleteTarget(member);
+  }
+
+  async function confirmDeleteMember() {
+    if (!deleteTarget) return;
+    setDeletingMember(true);
+
+    try {
+      const res = await fetch('/api/family/delete-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: deleteTarget.id }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        showToast('error', data.error || 'Failed to delete member');
+      } else {
+        setMembers(prev => prev.filter(m => m.id !== deleteTarget.id));
+        showToast('success', `${deleteTarget.name} has been removed`);
+      }
+    } catch (err) {
+      showToast('error', 'Failed to delete member: ' + (err as Error).message);
+    }
+
+    setDeletingMember(false);
+    setDeleteTarget(null);
+  }
+
+  async function confirmDeleteFamily() {
+    const targetFam = selectedFamilyTab || familyId;
+    if (!targetFam) return;
+    setDeletingFamily(true);
+
+    try {
+      const res = await fetch('/api/family/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ familyId: targetFam }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        showToast('error', data.error || 'Failed to delete family');
+      } else {
+        // Remove from families list
+        setAllFamilies(prev => prev.filter(f => f.id !== targetFam));
+        setMembers([]);
+        setBrokers([]);
+        setShowDeleteFamily(false);
+
+        // Switch to another family or show empty state
+        const remaining = allFamilies.filter(f => f.id !== targetFam);
+        if (remaining.length > 0) {
+          setSelectedFamilyTab(remaining[0].id);
+          setFamilyId(remaining[0].id);
+          setFamilyName(remaining[0].name);
+        } else {
+          setSelectedFamilyTab('');
+          setFamilyId(null);
+          setFamilyName('');
+        }
+        showToast('success', `Family "${data.deletedFamily}" deleted`);
+      }
+    } catch (err) {
+      showToast('error', 'Failed to delete family: ' + (err as Error).message);
+    }
+
+    setDeletingFamily(false);
   }
 
   async function saveBrokerCml(brokerId: string) {
     const cml = brokerCml[brokerId];
     if (!cml) return;
     setBrokerSaving(s => ({ ...s, [brokerId]: true }));
-    const { error } = await supabase
-      .from('brokers')
-      .update({ metadata: cml as unknown as Record<string, unknown> })
-      .eq('id', brokerId);
+    const { error } = await supabase.from('brokers').update({ metadata: cml as unknown as Record<string, unknown> }).eq('id', brokerId);
     setBrokerSaving(s => ({ ...s, [brokerId]: false }));
     if (error) showToast('error', error.message);
     else showToast('success', 'Distributor details saved');
@@ -570,6 +840,9 @@ function SettingsContent() {
     );
   }
 
+  // ── No families yet: show welcome / create family prompt ──
+  const noFamilies = allFamilies.length === 0 && !familyId;
+
   return (
     <div className="p-6 max-w-3xl mx-auto relative">
       {/* Toast Banner */}
@@ -583,6 +856,17 @@ function SettingsContent() {
         </div>
       )}
 
+      {/* Delete modal */}
+      {deleteTarget && (
+        <DeleteMemberModal
+          member={deleteTarget}
+          holdingsCount={deleteHoldingsCount}
+          onConfirm={confirmDeleteMember}
+          onCancel={() => { setDeleteTarget(null); setDeletingMember(false); }}
+          deleting={deletingMember}
+        />
+      )}
+
       <div className="flex items-center gap-3 mb-6">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#1B2A4A' }}>
           <Settings className="w-5 h-5" style={{ color: '#C9A84C' }} />
@@ -593,7 +877,7 @@ function SettingsContent() {
         </div>
       </div>
 
-      <Tabs defaultValue={defaultTab} key={defaultTab}>
+      <Tabs defaultValue={noFamilies ? 'family' : defaultTab} key={noFamilies ? 'family' : defaultTab}>
         <TabsList className="mb-6">
           <TabsTrigger value="profile" className="gap-2">
             <User className="w-3.5 h-3.5" />Profile
@@ -642,23 +926,15 @@ function SettingsContent() {
                     className="pr-8 font-mono"
                     placeholder="ABCDE1234F"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setPanVisible(v => !v)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
+                  <button type="button" onClick={() => setPanVisible(v => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                     {panVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
                 {panError && <p className="text-xs text-red-500">{panError}</p>}
               </div>
             </div>
-            <Button
-              onClick={saveProfile}
-              disabled={profileSaving || !!panError}
-              style={{ backgroundColor: '#1B2A4A' }}
-              className="text-white"
-            >
+            <Button onClick={saveProfile} disabled={profileSaving || !!panError} style={{ backgroundColor: '#1B2A4A' }} className="text-white">
               {profileSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Save Changes
             </Button>
@@ -668,202 +944,250 @@ function SettingsContent() {
         {/* ─── Family Tab ──────────────────────────────────────────── */}
         <TabsContent value="family">
           <div className="space-y-4">
-            {/* Family selector */}
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
-              {allFamilies.map(f => (
-                <button key={f.id}
-                  onClick={() => {
-                    setSelectedFamilyTab(f.id);
-                    // Reload members for this family
-                    supabase.from('users').select('*').eq('family_id', f.id).then(({ data }) => {
-                      if (data) setMembers(data as UserRow[]);
-                    });
-                    // Reload family settings for this family
-                    supabase.from('families').select('*').eq('id', f.id).single().then(({ data }) => {
-                      if (data) {
-                        setFamilyName((data as FamilyRow).name ?? '');
-                        setFamilyCurrency((data as FamilyRow).currency_default ?? 'INR');
-                        setFamilyId(f.id);
-                      }
-                    });
-                  }}
-                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all border"
-                  style={{
-                    backgroundColor: selectedFamilyTab === f.id ? '#1B2A4A' : 'white',
-                    color: selectedFamilyTab === f.id ? 'white' : '#374151',
-                    borderColor: selectedFamilyTab === f.id ? '#1B2A4A' : '#E5E7EB',
-                  }}>
-                  {f.name}
-                </button>
-              ))}
-              {!showCreateFamily ? (
-                <button
+            {/* No families prompt */}
+            {noFamilies && !showCreateFamily && (
+              <Card className="p-8 border-0 shadow-sm text-center space-y-4">
+                <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center" style={{ backgroundColor: 'rgba(201,168,76,0.1)' }}>
+                  <Users className="w-8 h-8" style={{ color: '#C9A84C' }} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold" style={{ color: 'var(--wv-text)' }}>No families yet</h2>
+                  <p className="text-sm mt-1" style={{ color: 'var(--wv-text-muted)' }}>Create your first family to start tracking wealth.</p>
+                </div>
+                <Button
                   onClick={() => setShowCreateFamily(true)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium border transition-all flex items-center gap-1.5"
-                  style={{ borderColor: '#C9A84C', color: '#C9A84C' }}>
-                  <Plus className="w-3.5 h-3.5" />New Family
-                </button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <input
+                  className="text-white"
+                  style={{ backgroundColor: '#C9A84C' }}
+                >
+                  <Plus className="w-4 h-4 mr-2" />Create Family
+                </Button>
+              </Card>
+            )}
+
+            {/* Create family inline form (for no-family state or additional families) */}
+            {showCreateFamily && noFamilies && (
+              <Card className="p-6 border-0 shadow-sm space-y-4">
+                <h2 className="font-semibold text-gray-900">Create Your Family</h2>
+                <Separator />
+                <div className="space-y-1.5">
+                  <Label>Family Name</Label>
+                  <Input
                     value={newFamilyName}
                     onChange={e => setNewFamilyName(e.target.value)}
-                    placeholder="Family name..."
-                    className="h-9 px-3 text-sm border rounded-lg"
-                    style={{ borderColor: '#E5E7EB' }}
+                    placeholder="e.g. Desai Family, The Sharmas"
                     onKeyDown={e => { if (e.key === 'Enter') createFamily(); }}
                     autoFocus
                   />
-                  <button onClick={createFamily} disabled={creatingFamily}
-                    className="px-3 py-1.5 rounded-lg text-sm font-medium text-white"
-                    style={{ backgroundColor: '#1B2A4A' }}>
-                    {creatingFamily ? 'Creating...' : 'Create'}
-                  </button>
-                  <button onClick={() => { setShowCreateFamily(false); setNewFamilyName(''); }}
-                    className="text-gray-400 hover:text-gray-600 text-sm">
-                    Cancel
-                  </button>
                 </div>
-              )}
-            </div>
+                <div className="flex gap-2">
+                  <Button onClick={createFamily} disabled={creatingFamily || !newFamilyName.trim()}
+                    className="text-white" style={{ backgroundColor: '#1B2A4A' }}>
+                    {creatingFamily ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    Create Family
+                  </Button>
+                  <Button variant="ghost" onClick={() => { setShowCreateFamily(false); setNewFamilyName(''); }}>Cancel</Button>
+                </div>
+              </Card>
+            )}
 
-            <Card className="p-6 border-0 shadow-sm space-y-5">
-              <h2 className="font-semibold text-gray-900">Family Settings</h2>
-              <Separator />
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label>Family Name</Label>
-                  <Input value={familyName} onChange={e => setFamilyName(e.target.value)} />
+            {/* Family selector (when families exist) */}
+            {!noFamilies && (
+              <>
+                <div className="flex items-center gap-2 mb-4 flex-wrap">
+                  {allFamilies.map(f => (
+                    <button key={f.id}
+                      onClick={() => {
+                        setSelectedFamilyTab(f.id);
+                        supabase.from('users').select('*').eq('family_id', f.id).then(({ data }) => {
+                          if (data) setMembers((data as UserRow[]).filter(m => m.id !== userId));
+                        });
+                        supabase.from('families').select('*').eq('id', f.id).single().then(({ data }) => {
+                          if (data) {
+                            setFamilyName((data as FamilyRow).name ?? '');
+                            setFamilyCurrency((data as FamilyRow).currency_default ?? 'INR');
+                            setFamilyId(f.id);
+                          }
+                        });
+                      }}
+                      className="px-4 py-2 rounded-lg text-sm font-medium transition-all border"
+                      style={{
+                        backgroundColor: selectedFamilyTab === f.id ? '#1B2A4A' : 'white',
+                        color: selectedFamilyTab === f.id ? 'white' : '#374151',
+                        borderColor: selectedFamilyTab === f.id ? '#1B2A4A' : '#E5E7EB',
+                      }}>
+                      {f.name}
+                    </button>
+                  ))}
+                  {!showCreateFamily ? (
+                    <button
+                      onClick={() => setShowCreateFamily(true)}
+                      className="px-4 py-2 rounded-lg text-sm font-medium border transition-all flex items-center gap-1.5"
+                      style={{ borderColor: '#C9A84C', color: '#C9A84C' }}>
+                      <Plus className="w-3.5 h-3.5" />New Family
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <input value={newFamilyName} onChange={e => setNewFamilyName(e.target.value)}
+                        placeholder="Family name..." className="h-9 px-3 text-sm border rounded-lg" style={{ borderColor: '#E5E7EB' }}
+                        onKeyDown={e => { if (e.key === 'Enter') createFamily(); }} autoFocus />
+                      <button onClick={createFamily} disabled={creatingFamily}
+                        className="px-3 py-1.5 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: '#1B2A4A' }}>
+                        {creatingFamily ? 'Creating...' : 'Create'}
+                      </button>
+                      <button onClick={() => { setShowCreateFamily(false); setNewFamilyName(''); }}
+                        className="text-gray-400 hover:text-gray-600 text-sm">Cancel</button>
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Default Currency</Label>
-                  <Select value={familyCurrency} onValueChange={setFamilyCurrency}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="INR">INR — Indian Rupee</SelectItem>
-                      <SelectItem value="USD">USD — US Dollar</SelectItem>
-                      <SelectItem value="EUR">EUR — Euro</SelectItem>
-                      <SelectItem value="GBP">GBP — British Pound</SelectItem>
-                      <SelectItem value="SGD">SGD — Singapore Dollar</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <Button
-                onClick={saveFamily}
-                disabled={familySaving}
-                style={{ backgroundColor: '#1B2A4A' }}
-                className="text-white"
-              >
-                {familySaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Update Family
-              </Button>
-            </Card>
 
-            <Card className="p-6 border-0 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-semibold text-gray-900">Family Members</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {members.length} member{members.length !== 1 ? 's' : ''} in this family
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowAddMember(v => !v)}
-                  className="text-xs gap-1.5"
-                  style={{ borderColor: '#C9A84C', color: '#C9A84C' }}
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add Member
-                </Button>
-              </div>
-              <Separator />
-
-              {/* Add Member inline form */}
-              {showAddMember && (
-                <div className="border rounded-lg p-4 space-y-3" style={{ borderColor: '#C9A84C', backgroundColor: '#FDFBF5' }}>
-                  <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>New Family Member</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Member Type</Label>
-                      <Select value={newMemberType} onValueChange={setNewMemberType}>
-                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <Card className="p-6 border-0 shadow-sm space-y-5">
+                  <h2 className="font-semibold text-gray-900">Family Settings</h2>
+                  <Separator />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label>Family Name</Label>
+                      <Input value={familyName} onChange={e => setFamilyName(e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Default Currency</Label>
+                      <Select value={familyCurrency} onValueChange={setFamilyCurrency}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {MEMBER_TYPES.map(t => (
-                            <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">{newMemberType === 'individual' || newMemberType === 'nri' || newMemberType === 'minor' ? 'Full Name' : 'Entity Name'} <span className="text-red-400">*</span></Label>
-                      <Input
-                        value={newMemberName}
-                        onChange={e => setNewMemberName(e.target.value)}
-                        placeholder={newMemberType === 'huf' ? 'e.g. Sharma HUF' : newMemberType === 'company' ? 'e.g. ABC Pvt Ltd' : 'e.g. Priya Sharma'}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Email</Label>
-                      <Input
-                        value={newMemberEmail}
-                        onChange={e => setNewMemberEmail(e.target.value)}
-                        placeholder={newMemberType === 'individual' ? 'priya@example.com' : 'info@company.com'}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Role</Label>
-                      <Select value={newMemberRole} onValueChange={setNewMemberRole}>
-                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">Owner</SelectItem>
-                          <SelectItem value="member">Member</SelectItem>
-                          <SelectItem value="advisor">Advisor</SelectItem>
-                          <SelectItem value="guest">Guest</SelectItem>
+                          <SelectItem value="INR">INR — Indian Rupee</SelectItem>
+                          <SelectItem value="USD">USD — US Dollar</SelectItem>
+                          <SelectItem value="EUR">EUR — Euro</SelectItem>
+                          <SelectItem value="GBP">GBP — British Pound</SelectItem>
+                          <SelectItem value="SGD">SGD — Singapore Dollar</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={addFamilyMember}
-                      disabled={addingMember || !newMemberName.trim()}
-                      className="text-white text-xs"
-                      style={{ backgroundColor: '#1B2A4A' }}
-                    >
-                      {addingMember ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
-                      Save Member
+                  <div className="flex items-center gap-3">
+                    <Button onClick={saveFamily} disabled={familySaving} style={{ backgroundColor: '#1B2A4A' }} className="text-white">
+                      {familySaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                      Update Family
                     </Button>
                     <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => { setShowAddMember(false); setNewMemberName(''); setNewMemberEmail(''); setNewMemberRole('member'); setNewMemberType('individual'); }}
-                      className="text-xs text-gray-500"
+                      variant="outline"
+                      onClick={() => setShowDeleteFamily(true)}
+                      className="text-xs gap-1.5"
+                      style={{ borderColor: 'rgba(220,38,38,0.3)', color: '#DC2626' }}
                     >
-                      Cancel
+                      <Trash2 className="w-3.5 h-3.5" />Delete Family
                     </Button>
                   </div>
-                </div>
-              )}
+                </Card>
 
-              <div className="space-y-3">
-                {/* Auth-linked members (from users table) */}
-                {members.map(m => (
-                  <MemberCard key={m.id} member={m} onSave={saveMember} />
-                ))}
-
-                {members.length === 0 && (
-                  <p className="text-sm text-gray-400 text-center py-4">No family members yet. Click &ldquo;Add Member&rdquo; to get started.</p>
+                {/* Delete Family Confirmation */}
+                {showDeleteFamily && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    style={{ backgroundColor: 'rgba(27,42,74,0.6)', backdropFilter: 'blur(4px)' }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(220,38,38,0.1)' }}>
+                          <AlertTriangle className="w-5 h-5" style={{ color: '#DC2626' }} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>Delete {familyName}?</p>
+                          <p className="text-xs" style={{ color: 'var(--wv-text-muted)' }}>This cannot be undone.</p>
+                        </div>
+                      </div>
+                      <p className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
+                        This will permanently delete all members, portfolios, distributors, holdings, and transactions under this family.
+                      </p>
+                      <div className="flex gap-2">
+                        <Button onClick={confirmDeleteFamily} disabled={deletingFamily} size="sm" className="flex-1 text-white text-xs" style={{ backgroundColor: '#DC2626' }}>
+                          {deletingFamily ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Trash2 className="w-3 h-3 mr-1" />}
+                          Delete Permanently
+                        </Button>
+                        <Button onClick={() => setShowDeleteFamily(false)} disabled={deletingFamily} size="sm" variant="outline" className="text-xs">
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 )}
-              </div>
-            </Card>
+
+                <Card className="p-6 border-0 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="font-semibold text-gray-900">Family Members</h2>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {members.length} member{members.length !== 1 ? 's' : ''} in this family
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => setShowAddMember(v => !v)}
+                      className="text-xs gap-1.5" style={{ borderColor: '#C9A84C', color: '#C9A84C' }}>
+                      <Plus className="w-3.5 h-3.5" />Add Member
+                    </Button>
+                  </div>
+                  <Separator />
+
+                  {/* Add Member inline form — NO role dropdown */}
+                  {showAddMember && (
+                    <div className="border rounded-lg p-4 space-y-3" style={{ borderColor: '#C9A84C', backgroundColor: '#FDFBF5' }}>
+                      <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>New Family Member</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Member Type</Label>
+                          <Select value={newMemberType} onValueChange={setNewMemberType}>
+                            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {MEMBER_TYPES.map(t => (
+                                <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">{newMemberType === 'individual' || newMemberType === 'nri' || newMemberType === 'minor' ? 'Full Name' : 'Entity Name'} <span className="text-red-400">*</span></Label>
+                          <Input
+                            value={newMemberName} onChange={e => setNewMemberName(e.target.value)}
+                            placeholder={newMemberType === 'huf' ? 'e.g. Sharma HUF' : newMemberType === 'company' ? 'e.g. ABC Pvt Ltd' : 'e.g. Priya Sharma'}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1 col-span-2">
+                          <Label className="text-xs">Email <span className="text-gray-400">(optional)</span></Label>
+                          <Input
+                            value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)}
+                            placeholder={newMemberType === 'individual' ? 'priya@example.com' : 'info@company.com'}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={addFamilyMember} disabled={addingMember || !newMemberName.trim()}
+                          className="text-white text-xs" style={{ backgroundColor: '#1B2A4A' }}>
+                          {addingMember ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                          Save Member
+                        </Button>
+                        <Button size="sm" variant="ghost"
+                          onClick={() => { setShowAddMember(false); setNewMemberName(''); setNewMemberEmail(''); setNewMemberType('individual'); }}
+                          className="text-xs text-gray-500">
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    {members.map(m => (
+                      <MemberCard
+                        key={m.id}
+                        member={m}
+                        onSave={saveMember}
+                        onDelete={handleDeleteMemberClick}
+                        canDelete={members.length > 1}
+                      />
+                    ))}
+                    {members.length === 0 && (
+                      <p className="text-sm text-gray-400 text-center py-4">No family members yet. Click &ldquo;Add Member&rdquo; to get started.</p>
+                    )}
+                  </div>
+                </Card>
+              </>
+            )}
           </div>
         </TabsContent>
 
@@ -874,7 +1198,7 @@ function SettingsContent() {
               <div>
                 <h2 className="font-semibold text-gray-900">Distributor / Broker CML Details</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Store your Client Master List (CML) data per broker/distributor. These details auto-fill when adding stock transactions.
+                  Store your Client Master List (CML) data per broker/distributor.
                 </p>
               </div>
               <Separator />
@@ -888,11 +1212,8 @@ function SettingsContent() {
                     const isSaving = brokerSaving[broker.id] ?? false;
                     return (
                       <div key={broker.id} className="border rounded-xl overflow-hidden" style={{ borderColor: 'var(--wv-border)' }}>
-                        {/* Header */}
-                        <button
-                          className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
-                          onClick={() => setExpandedBroker(isExpanded ? null : broker.id)}
-                        >
+                        <button className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                          onClick={() => setExpandedBroker(isExpanded ? null : broker.id)}>
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                               style={{ backgroundColor: broker.logo_color || '#1B2A4A' }}>
@@ -903,28 +1224,22 @@ function SettingsContent() {
                               <p className="text-xs text-gray-400 capitalize">{broker.platform_type.replace(/_/g, ' ')}</p>
                             </div>
                           </div>
-                          {isExpanded
-                            ? <ChevronUp className="w-4 h-4 text-gray-400" />
-                            : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                          {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                         </button>
-
-                        {/* CML Fields */}
                         {isExpanded && (
                           <div className="px-4 pb-4 space-y-4 border-t" style={{ borderColor: '#F0EDE6' }}>
-                            {/* Demat / DP Info */}
                             <div className="mt-4">
                               <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--wv-text-muted)' }}>Demat Account</p>
                               <div className="grid grid-cols-2 gap-3">
                                 {[
-                                  { key: 'dp_id' as keyof CmlFields, label: 'DP ID (Depository Participant ID)', ph: 'e.g. IN301549' },
-                                  { key: 'client_id' as keyof CmlFields, label: 'Client ID / Demat Account No.', ph: 'e.g. 12345678' },
-                                  { key: 'bo_id' as keyof CmlFields, label: 'BO ID (Beneficiary Owner ID)', ph: '16-digit BO ID' },
-                                  { key: 'trading_account' as keyof CmlFields, label: 'Trading Account Number', ph: 'Trading account no.' },
+                                  { key: 'dp_id' as keyof CmlFields, label: 'DP ID', ph: 'e.g. IN301549' },
+                                  { key: 'client_id' as keyof CmlFields, label: 'Client ID / Demat No.', ph: 'e.g. 12345678' },
+                                  { key: 'bo_id' as keyof CmlFields, label: 'BO ID', ph: '16-digit BO ID' },
+                                  { key: 'trading_account' as keyof CmlFields, label: 'Trading Account', ph: 'Trading account no.' },
                                 ].map(f => (
                                   <div key={f.key} className="space-y-1">
                                     <Label className="text-xs">{f.label}</Label>
-                                    <Input value={cml[f.key]} onChange={e => updateCml(broker.id, f.key, e.target.value)}
-                                      placeholder={f.ph} className="h-8 text-xs" />
+                                    <Input value={cml[f.key]} onChange={e => updateCml(broker.id, f.key, e.target.value)} placeholder={f.ph} className="h-8 text-xs" />
                                   </div>
                                 ))}
                                 <div className="space-y-1">
@@ -932,10 +1247,8 @@ function SettingsContent() {
                                   <div className="flex gap-3 mt-1">
                                     {['CDSL', 'NSDL'].map(dep => (
                                       <label key={dep} className="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="radio" name={`dep_${broker.id}`} value={dep}
-                                          checked={cml.depository === dep}
-                                          onChange={() => updateCml(broker.id, 'depository', dep)}
-                                          className="w-3.5 h-3.5" />
+                                        <input type="radio" name={`dep_${broker.id}`} value={dep} checked={cml.depository === dep}
+                                          onChange={() => updateCml(broker.id, 'depository', dep)} className="w-3.5 h-3.5" />
                                         <span className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{dep}</span>
                                       </label>
                                     ))}
@@ -943,28 +1256,23 @@ function SettingsContent() {
                                 </div>
                               </div>
                             </div>
-
-                            {/* Holder Info */}
                             <div>
                               <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--wv-text-muted)' }}>Holder Details</p>
                               <div className="grid grid-cols-2 gap-3">
                                 {[
-                                  { key: 'first_holder' as keyof CmlFields, label: 'First Holder Name', ph: 'Full name' },
-                                  { key: 'second_holder' as keyof CmlFields, label: 'Second Holder Name', ph: 'Full name (optional)' },
-                                  { key: 'nominee' as keyof CmlFields, label: 'Nominee Name', ph: 'Full name' },
-                                  { key: 'mobile' as keyof CmlFields, label: 'Mobile Number', ph: '9XXXXXXXXX' },
+                                  { key: 'first_holder' as keyof CmlFields, label: 'First Holder', ph: 'Full name' },
+                                  { key: 'second_holder' as keyof CmlFields, label: 'Second Holder', ph: 'optional' },
+                                  { key: 'nominee' as keyof CmlFields, label: 'Nominee', ph: 'Full name' },
+                                  { key: 'mobile' as keyof CmlFields, label: 'Mobile', ph: '9XXXXXXXXX' },
                                   { key: 'email' as keyof CmlFields, label: 'Email', ph: 'email@example.com' },
                                 ].map(f => (
                                   <div key={f.key} className="space-y-1">
                                     <Label className="text-xs">{f.label}</Label>
-                                    <Input value={cml[f.key]} onChange={e => updateCml(broker.id, f.key, e.target.value)}
-                                      placeholder={f.ph} className="h-8 text-xs" />
+                                    <Input value={cml[f.key]} onChange={e => updateCml(broker.id, f.key, e.target.value)} placeholder={f.ph} className="h-8 text-xs" />
                                   </div>
                                 ))}
                               </div>
                             </div>
-
-                            {/* Bank Info */}
                             <div>
                               <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--wv-text-muted)' }}>Bank Details</p>
                               <div className="grid grid-cols-2 gap-3">
@@ -978,23 +1286,20 @@ function SettingsContent() {
                                   </Select>
                                 </div>
                                 {[
-                                  { key: 'bank_last4' as keyof CmlFields, label: 'Last 4 Digits of A/C', ph: '1234' },
+                                  { key: 'bank_last4' as keyof CmlFields, label: 'Last 4 Digits', ph: '1234' },
                                   { key: 'ifsc' as keyof CmlFields, label: 'IFSC Code', ph: 'SBIN0001234' },
                                 ].map(f => (
                                   <div key={f.key} className="space-y-1">
                                     <Label className="text-xs">{f.label}</Label>
-                                    <Input value={cml[f.key]} onChange={e => updateCml(broker.id, f.key, e.target.value)}
-                                      placeholder={f.ph} className="h-8 text-xs" />
+                                    <Input value={cml[f.key]} onChange={e => updateCml(broker.id, f.key, e.target.value)} placeholder={f.ph} className="h-8 text-xs" />
                                   </div>
                                 ))}
                                 <div className="space-y-1 col-span-2">
                                   <Label className="text-xs">Correspondence Address</Label>
-                                  <Input value={cml.address} onChange={e => updateCml(broker.id, 'address', e.target.value)}
-                                    placeholder="Full address" className="h-8 text-xs" />
+                                  <Input value={cml.address} onChange={e => updateCml(broker.id, 'address', e.target.value)} placeholder="Full address" className="h-8 text-xs" />
                                 </div>
                               </div>
                             </div>
-
                             <Button onClick={() => saveBrokerCml(broker.id)} disabled={isSaving}
                               size="sm" className="text-white text-xs" style={{ backgroundColor: '#1B2A4A' }}>
                               {isSaving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
@@ -1034,22 +1339,11 @@ function SettingsContent() {
             <h2 className="font-semibold text-gray-900">Security</h2>
             <Separator />
             <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label>Current Password</Label>
-                <Input type="password" placeholder="••••••••" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>New Password</Label>
-                <Input type="password" placeholder="••••••••" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Confirm New Password</Label>
-                <Input type="password" placeholder="••••••••" />
-              </div>
+              <div className="space-y-1.5"><Label>Current Password</Label><Input type="password" placeholder="••••••••" /></div>
+              <div className="space-y-1.5"><Label>New Password</Label><Input type="password" placeholder="••••••••" /></div>
+              <div className="space-y-1.5"><Label>Confirm New Password</Label><Input type="password" placeholder="••••••••" /></div>
             </div>
-            <Button style={{ backgroundColor: '#1B2A4A' }} className="text-white">
-              Update Password
-            </Button>
+            <Button style={{ backgroundColor: '#1B2A4A' }} className="text-white">Update Password</Button>
           </Card>
         </TabsContent>
       </Tabs>

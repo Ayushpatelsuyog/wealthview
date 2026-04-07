@@ -9,13 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Globe, TrendingUp, TrendingDown, Upload, Link as LinkIcon, Check, ChevronDown,
-  Loader2, AlertCircle, X, User, Building2, Search,
+  Loader2, AlertCircle, X, User, Search,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
 import { holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
 import { BrokerSelector } from '@/components/forms/BrokerSelector';
 import { PortfolioSelector } from '@/components/forms/PortfolioSelector';
+import { IBImportWizard } from '@/components/forms/IBImportWizard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -2095,34 +2096,31 @@ function GlobalStocksFormContent() {
 
         {/* ── Tab 2: CSV Import ───────────────────────────────────────────────── */}
         <TabsContent value="import">
-          <div className="wv-card p-5">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--wv-text-muted)' }}>
-              CSV Import
+          {/* Supported formats */}
+          <div className="wv-card p-4 mb-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--wv-text-muted)' }}>
+              Supported Formats
             </p>
-            <div className="grid grid-cols-2 gap-3 mb-5">
-              {['Vested CSV Export', 'IBKR Activity Statement', 'Charles Schwab CSV', 'INDmoney Export', 'Groww US Stocks CSV', 'Custom CSV'].map(fmt => (
-                <div key={fmt} className="p-3 rounded-xl border flex items-center gap-2" style={{ borderColor: 'var(--wv-border)' }}>
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#C9A84C' }} />
-                  <span className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>{fmt}</span>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { name: 'IBKR Activity Statement', active: true },
+                { name: 'Vested CSV Export', active: false },
+                { name: 'Charles Schwab CSV', active: false },
+                { name: 'INDmoney Export', active: false },
+                { name: 'Groww US Stocks CSV', active: false },
+                { name: 'Custom CSV', active: false },
+              ].map(fmt => (
+                <div key={fmt.name} className="p-2 rounded-lg border flex items-center gap-2" style={{ borderColor: fmt.active ? 'rgba(5,150,105,0.3)' : 'var(--wv-border)', backgroundColor: fmt.active ? 'rgba(5,150,105,0.04)' : 'transparent' }}>
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: fmt.active ? '#059669' : '#C9A84C' }} />
+                  <span className="text-[11px]" style={{ color: fmt.active ? '#059669' : 'var(--wv-text-muted)' }}>{fmt.name}</span>
+                  {!fmt.active && <span className="text-[9px] ml-auto px-1 py-0.5 rounded" style={{ backgroundColor: 'rgba(201,168,76,0.1)', color: '#C9A84C' }}>Soon</span>}
                 </div>
               ))}
             </div>
-            <div className="p-4 rounded-xl border flex flex-col items-center gap-2 mb-4"
-              style={{ borderColor: 'rgba(201,168,76,0.3)', backgroundColor: 'rgba(201,168,76,0.04)' }}>
-              <Building2 className="w-8 h-8" style={{ color: '#C9A84C' }} />
-              <p className="text-sm font-semibold" style={{ color: '#C9A84C' }}>Coming Soon</p>
-              <p className="text-xs text-center" style={{ color: 'var(--wv-text-muted)' }}>
-                Support for Vested CSV, IBKR Activity Statement, Schwab CSV.<br />
-                Upload your broker export and we&apos;ll auto-map all your transactions.
-              </p>
-            </div>
-            <label className="flex flex-col items-center justify-center w-full h-32 rounded-xl border-2 border-dashed cursor-not-allowed opacity-50"
-              style={{ borderColor: 'var(--wv-border)' }}>
-              <Upload className="w-7 h-7 mb-2" style={{ color: 'var(--wv-text-muted)' }} />
-              <p className="text-sm font-medium" style={{ color: 'var(--wv-text-secondary)' }}>Upload statement</p>
-              <p className="text-xs mt-1" style={{ color: 'var(--wv-text-muted)' }}>.xlsx, .csv, .pdf</p>
-            </label>
           </div>
+
+          {/* IB Import Wizard */}
+          <IBImportWizard initialFamilyId={familyId} initialMemberId={member} />
         </TabsContent>
 
         {/* ── Tab 3: Broker Sync ─────────────────────────────────────────────── */}
