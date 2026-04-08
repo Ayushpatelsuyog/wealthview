@@ -798,9 +798,14 @@ function GlobalStocksFormContent() {
     if (!selectedStock) errs.stock    = 'Select a stock';
     if (!portfolioName) errs.portfolio = 'Select or create a portfolio';
 
-    if (txnType === 'buy' || txnType === 'sell' || txnType === 'rights') {
+    if (txnType === 'buy' || txnType === 'sell') {
       if (!quantity || qty <= 0) errs.quantity = 'Enter a valid quantity';
       if (!price    || px  <= 0) errs.price    = 'Enter a valid price';
+      if (!fxRateValue || fx <= 0) errs.fxRate = 'Enter a valid FX rate';
+      if (!date) errs.date = 'Enter a date';
+    }
+    if (txnType === 'rights') {
+      if (!quantity || qty <= 0) errs.quantity = 'Enter a valid quantity';
       if (!fxRateValue || fx <= 0) errs.fxRate = 'Enter a valid FX rate';
       if (!date) errs.date = 'Enter a date';
     }
@@ -877,7 +882,7 @@ function GlobalStocksFormContent() {
         sector:          (sectorOverride && sectorOverride !== '__other__') ? sectorOverride : selectedStock!.sector,
         transactionType: txnType,
         quantity:        txnType === 'bonus' ? bonusQty : qty,
-        price:           txnType === 'bonus' ? 0 : px,
+        price:           txnType === 'bonus' ? 0 : txnType === 'rights' ? (parseFloat(rightsPrice) || 0) : px,
         date,
         fxRate:          fx,
         valueLocal:      valueLocal,
