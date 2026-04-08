@@ -469,6 +469,7 @@ export default function GlobalStocksPortfolioPage() {
 
     const activeRows = rows.filter(r => Number(r.quantity) > 0);
     const pastRows = rows.filter(r => Number(r.quantity) <= 0);
+
     setHoldings(activeRows);
     setPastHoldings(pastRows);
     setLoading(false);

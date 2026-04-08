@@ -94,15 +94,47 @@ export function calcGlobalStockInvestedINR(
       soldRemaining -= consumed;
     }
 
-    // Sum remaining lots
+    // Sum remaining lots (fees excluded — invested = share cost only)
     for (const lot of lots) {
       if (lot.qty <= 0) continue;
-      const feePerShare = lot.origQty > 0 ? lot.fees / lot.origQty : 0;
-      const tLocal = lot.qty * lot.price + lot.qty * feePerShare;
+      const tLocal = lot.qty * lot.price;
       investedLocal += tLocal;
       investedINR += tLocal * lot.fxRate;
     }
   }
 
   return { investedLocal, investedINR };
+}
+
+/**
+ * Debug helper: compare simple (qty × avg × snapshotFx) vs FIFO calc.
+ * Call from browser console or add to a useEffect for diagnosis.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function debugInvestedCalc(holding: any) {
+  const qty = Number(holding.quantity ?? 0);
+  const avgPx = Number(holding.avg_buy_price ?? 0);
+  const snapshotFx = Number(holding.metadata?.fx_rate ?? 1);
+  const simpleINR = qty * avgPx * snapshotFx;
+  const { investedINR: fancyINR } = calcGlobalStockInvestedINR(holding);
+
+  return {
+    symbol: holding.symbol,
+    simple: Math.round(simpleINR),
+    fancy: Math.round(fancyINR),
+    diff: Math.round(fancyINR - simpleINR),
+    snapshotFx,
+    qty,
+    avgPrice: avgPx,
+    txnCount: (holding.transactions ?? []).length,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    txns: (holding.transactions ?? []).map((t: any) => ({
+      date: t.date,
+      type: t.type,
+      qty: Number(t.quantity),
+      price: Number(t.price),
+      fx: Number(t.metadata?.fx_rate ?? 0),
+      notes: String(t.notes ?? '').substring(0, 50),
+    })),
+  };
 }
