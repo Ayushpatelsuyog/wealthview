@@ -91,7 +91,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     const [holdingsRes, manualRes, insuranceRes, membersRes] = await Promise.all([
       supabase
         .from('holdings')
-        .select('id, portfolio_id, asset_type, symbol, name, quantity, avg_buy_price, metadata, portfolio:portfolios(id, user_id), transactions(id, type, quantity, price, date, fees)'),
+        .select('id, portfolio_id, asset_type, symbol, name, quantity, avg_buy_price, metadata, portfolio:portfolios(id, user_id), transactions(id, type, quantity, price, date, fees, notes, metadata)'),
       supabase
         .from('manual_assets')
         .select('id, portfolio_id, asset_type, name, current_value, metadata, portfolio:portfolios(id, user_id)'),
