@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { ensureUserProfile } from '@/lib/supabase/ensure-user';
 import { calculateXIRR } from '@/lib/utils/calculations';
+import { calcGlobalStockInvestedINR } from '@/lib/utils/global-stock-calc';
 import type { DashboardSnapshot, DashboardMember, DashboardCashFlow } from '@/lib/types/dashboard';
 
 const MEMBER_COLORS = ['#1B2A4A', '#2E8B8B', '#C9A84C', '#059669', '#7C3AED', '#DC2626'];
@@ -174,31 +175,10 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       const avgBuy = Number(h.avg_buy_price);
       let invested = qty * avgBuy;
 
-      // For global stocks: avg_buy_price is in local currency — convert to INR
-      // Use weighted average FX from buy transactions for accuracy (matches portfolio page FIFO calc)
+      // For global stocks: use shared FIFO/weighted-avg calc (same as portfolio page)
       if (h.asset_type === 'global_stock') {
-        const meta = (h.metadata ?? {}) as Row;
-        const metaFx = Number(meta.fx_rate ?? 0);
-        const txns_: Row[] = h.transactions ?? [];
-        const buys_ = txns_.filter((t: Row) => (t.type === 'buy' || t.type === 'sip') && Number(t.quantity) > 0);
-
-        if (buys_.length > 0) {
-          // Weighted average FX from actual buy transactions
-          let totalBuyCostLocal = 0;
-          let totalBuyCostINR = 0;
-          for (const bt of buys_) {
-            const btQty = Number(bt.quantity);
-            const btPx = Number(bt.price);
-            const btMeta = (bt.metadata ?? {}) as Row;
-            const btFx = Number(btMeta.fx_rate ?? meta.fx_rate ?? 1);
-            totalBuyCostLocal += btQty * btPx;
-            totalBuyCostINR += btQty * btPx * btFx;
-          }
-          const avgFx = totalBuyCostLocal > 0 ? totalBuyCostINR / totalBuyCostLocal : (metaFx || 1);
-          invested = (qty * avgBuy) * avgFx;
-        } else if (metaFx > 0) {
-          invested = invested * metaFx;
-        }
+        const { investedINR: gsInvINR } = calcGlobalStockInvestedINR(h);
+        invested = gsInvINR;
       }
 
       // Use invested as current value — live prices will update this on client
