@@ -47,7 +47,7 @@ export function calcGlobalStockInvestedINR(
     if (t.type !== 'buy' && t.type !== 'sip') return false;
     const n = (t.notes ?? '').toLowerCase();
     return !n.includes('split') && !n.includes('bonus');
-  }).sort((a, b) => String(a).localeCompare(String(b))); // date sort handled by caller if needed
+  }).sort((a, b) => String(a.date ?? '').localeCompare(String(b.date ?? ''))); // FIFO: oldest first
 
   const sellTxns = allTxns.filter(t => t.type === 'sell');
   const totalSold = sellTxns.reduce((sum, t) => sum + Number(t.quantity), 0);

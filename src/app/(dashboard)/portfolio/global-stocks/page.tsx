@@ -446,8 +446,9 @@ export default function GlobalStocksPortfolioPage() {
       const rate       = rates[cur] ?? null;
       const ownerId    = h.portfolios?.user_id ?? '';
 
-      // Compute invested using shared FIFO/weighted-avg calc (same as dashboard)
-      const { investedLocal, investedINR } = calcGlobalStockInvestedINR(h, rate);
+      // Compute invested using shared calc — use holding's metadata.fx_rate as fallback
+      // (NOT current live rate — invested should reflect historical FX at time of purchase)
+      const { investedLocal, investedINR } = calcGlobalStockInvestedINR(h);
 
       return {
         ...h,
