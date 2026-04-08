@@ -174,11 +174,31 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       const avgBuy = Number(h.avg_buy_price);
       let invested = qty * avgBuy;
 
-      // For global stocks: avg_buy_price is in local currency — multiply by FX rate for INR
+      // For global stocks: avg_buy_price is in local currency — convert to INR
+      // Use weighted average FX from buy transactions for accuracy (matches portfolio page FIFO calc)
       if (h.asset_type === 'global_stock') {
         const meta = (h.metadata ?? {}) as Row;
-        const fxRate = Number(meta.fx_rate ?? 0);
-        if (fxRate > 0) invested = invested * fxRate;
+        const metaFx = Number(meta.fx_rate ?? 0);
+        const txns_: Row[] = h.transactions ?? [];
+        const buys_ = txns_.filter((t: Row) => (t.type === 'buy' || t.type === 'sip') && Number(t.quantity) > 0);
+
+        if (buys_.length > 0) {
+          // Weighted average FX from actual buy transactions
+          let totalBuyCostLocal = 0;
+          let totalBuyCostINR = 0;
+          for (const bt of buys_) {
+            const btQty = Number(bt.quantity);
+            const btPx = Number(bt.price);
+            const btMeta = (bt.metadata ?? {}) as Row;
+            const btFx = Number(btMeta.fx_rate ?? meta.fx_rate ?? 1);
+            totalBuyCostLocal += btQty * btPx;
+            totalBuyCostINR += btQty * btPx * btFx;
+          }
+          const avgFx = totalBuyCostLocal > 0 ? totalBuyCostINR / totalBuyCostLocal : (metaFx || 1);
+          invested = (qty * avgBuy) * avgFx;
+        } else if (metaFx > 0) {
+          invested = invested * metaFx;
+        }
       }
 
       // Use invested as current value — live prices will update this on client

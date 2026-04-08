@@ -720,7 +720,7 @@ export default function GlobalStocksPortfolioPage() {
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(h);
     }
-    return Array.from(map.entries()).map(([symbol, rows]) => ({
+    const groups = Array.from(map.entries()).map(([symbol, rows]) => ({
       symbol,
       name: rows[0].name,
       country: rows[0].country,
@@ -739,7 +739,40 @@ export default function GlobalStocksPortfolioPage() {
       priceUnavailable: rows.every(r => r.priceUnavailable),
       fxRate: rows[0].fxRate,
     }));
-  }, [filtered]);
+
+    // Sort groups by aggregated values (not by individual holding order)
+    const dir = sortDir === 'asc' ? 1 : -1;
+    groups.sort((a, b) => {
+      switch (sortKey) {
+        case 'name':     return dir * a.name.localeCompare(b.name);
+        case 'invested': return dir * (a.totalInvestedINR - b.totalInvestedINR);
+        case 'value':    return dir * ((a.totalCurrentValueINR ?? a.totalInvestedINR) - (b.totalCurrentValueINR ?? b.totalInvestedINR));
+        case 'dayPnl': {
+          const aDayPnl = a.holdings.reduce((s, r) => s + (r.dayChange ?? 0) * Number(r.quantity) * (r.fxRate ?? 1), 0);
+          const bDayPnl = b.holdings.reduce((s, r) => s + (r.dayChange ?? 0) * Number(r.quantity) * (r.fxRate ?? 1), 0);
+          return dir * (aDayPnl - bDayPnl);
+        }
+        case 'pnl': {
+          const aPnl = a.holdings.reduce((s, r) => s + (r.gainLoss ?? 0), 0);
+          const bPnl = b.holdings.reduce((s, r) => s + (r.gainLoss ?? 0), 0);
+          return dir * (aPnl - bPnl);
+        }
+        case 'pnlPct': {
+          const aPct = a.totalInvestedINR > 0 ? ((a.totalCurrentValueINR ?? a.totalInvestedINR) - a.totalInvestedINR) / a.totalInvestedINR * 100 : 0;
+          const bPct = b.totalInvestedINR > 0 ? ((b.totalCurrentValueINR ?? b.totalInvestedINR) - b.totalInvestedINR) / b.totalInvestedINR * 100 : 0;
+          return dir * (aPct - bPct);
+        }
+        case 'xirr': {
+          const aXirr = a.holdings.reduce((s, r) => s + (r.xirr ?? -Infinity), 0) / a.holdings.length;
+          const bXirr = b.holdings.reduce((s, r) => s + (r.xirr ?? -Infinity), 0) / b.holdings.length;
+          return dir * (aXirr - bXirr);
+        }
+        default: return 0;
+      }
+    });
+
+    return groups;
+  }, [filtered, sortKey, sortDir]);
 
 
   const uniqueStockCount = groupedFiltered.length;
