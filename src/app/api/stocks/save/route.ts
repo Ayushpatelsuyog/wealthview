@@ -273,6 +273,8 @@ export async function POST(req: NextRequest) {
       break;
     case 'split':
       txnType  = 'buy';
+      txnQty   = 0;  // informational — holding already updated directly
+      txnPrice = 0;
       txnNotes = `Stock Split — Ratio: ${splitRatio ?? ''}`;
       txnFees  = 0;
       break;

@@ -298,10 +298,14 @@ export async function POST(req: NextRequest) {
       txnPrice = 0;
       if (!txnNotes) txnNotes = `Bonus Issue — Ratio: ${bonusRatio ?? ''} | FX: ${fxRateNum}`;
       break;
-    case 'split':
+    case 'split': {
       txnType  = 'buy';
-      if (!txnNotes) txnNotes = `Stock Split — Ratio: ${splitRatio ?? ''} | FX: ${fxRateNum}`;
+      txnQty   = 0;  // informational — holding already updated directly
+      txnPrice = 0;
+      const sf = bodySplitFactor ?? 1;
+      if (!txnNotes) txnNotes = `Stock Split — Ratio: ${splitRatio ?? ''} | Factor: ${sf} | FX: ${fxRateNum}`;
       break;
+    }
     case 'rights':
       txnType  = 'buy';
       if (!txnNotes) txnNotes = `Rights Issue — Ratio: ${rightsRatio ?? ''} | Price: ${currency} ${px.toFixed(2)} | FX: ${fxRateNum}`;
