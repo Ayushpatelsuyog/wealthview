@@ -55,24 +55,27 @@ export function calcGlobalStockInvestedINR(
   let investedLocal = 0;
   let investedINR = 0;
 
-  // Case 1: Splits/bonuses exist or no buy txns → use holding's adjusted avg_buy_price
+  // Case 1: Splits/bonuses exist or no buy txns → use holding's adjusted avg_buy_price + total fees
   if (hasSplitOrBonus || buyTxns.length === 0) {
     investedLocal = qty * avgBuy;
+    // Add total fees from buy transactions
+    const totalFeesLocal = buyTxns.reduce((s, t) => s + (Number(t.fees) || 0), 0);
+    investedLocal += totalFeesLocal;
 
     if (buyTxns.length > 0) {
-      // Weighted average FX from buy transactions
-      const totalBuyCost = buyTxns.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
+      // Weighted average FX from buy transactions (cost+fees)
+      const totalBuyCost = buyTxns.reduce((s, t) => s + Number(t.quantity) * Number(t.price) + (Number(t.fees) || 0), 0);
       const totalBuyINR = buyTxns.reduce((s, t) => {
         const txFx = Number((t.metadata as Record<string, unknown>)?.fx_rate ?? defaultFx);
-        return s + Number(t.quantity) * Number(t.price) * txFx;
+        return s + (Number(t.quantity) * Number(t.price) + (Number(t.fees) || 0)) * txFx;
       }, 0);
       const avgFx = totalBuyCost > 0 ? totalBuyINR / totalBuyCost : defaultFx;
-      investedINR = investedLocal * avgFx;
+      investedINR = (qty * avgBuy) * avgFx + totalFeesLocal * avgFx;
     } else {
       investedINR = investedLocal * defaultFx;
     }
   }
-  // Case 2: No splits, has buy transactions → FIFO
+  // Case 2: No splits, has buy transactions → FIFO (includes fees)
   else if (buyTxns.length > 0) {
     const lots = buyTxns.map(t => {
       const q = Number(t.quantity);
@@ -94,10 +97,11 @@ export function calcGlobalStockInvestedINR(
       soldRemaining -= consumed;
     }
 
-    // Sum remaining lots (fees excluded — invested = share cost only)
+    // Sum remaining lots (includes proportional fees)
     for (const lot of lots) {
       if (lot.qty <= 0) continue;
-      const tLocal = lot.qty * lot.price;
+      const feePerShare = lot.origQty > 0 ? lot.fees / lot.origQty : 0;
+      const tLocal = lot.qty * lot.price + lot.qty * feePerShare;
       investedLocal += tLocal;
       investedINR += tLocal * lot.fxRate;
     }

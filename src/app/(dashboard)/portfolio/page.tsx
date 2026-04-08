@@ -83,10 +83,19 @@ function buildRows(holdings: RawHolding[], filterUserId: string | null, navMap: 
     const qty = h.quantity ?? 0;
     let invested = qty * (h.avg_buy_price ?? 0);
 
-    // For global stocks: use shared FIFO/weighted-avg calc (same as dashboard and portfolio page)
+    // Add buy transaction fees to invested amount
+    const txns = h.transactions ?? [];
+    const buyFees = txns
+      .filter(t => (t.type === 'buy' || t.type === 'sip') && Number(t.quantity) > 0)
+      .reduce((s, t) => s + (Number(t.fees) || 0), 0);
+
+    // For global stocks: use shared FIFO/weighted-avg calc (includes fees + per-txn FX)
     if (h.asset_type === 'global_stock') {
       const { investedINR } = calcGlobalStockInvestedINR(h);
       invested = investedINR;
+    } else {
+      // For Indian stocks and others: add fees to invested
+      invested += buyFees;
     }
 
     // For MF: use live NAV; for Indian Stocks: use live price; otherwise fall back to invested

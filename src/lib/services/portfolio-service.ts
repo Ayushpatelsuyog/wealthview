@@ -175,7 +175,16 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       const avgBuy = Number(h.avg_buy_price);
       let invested = qty * avgBuy;
 
-      // For global stocks: use shared FIFO/weighted-avg calc (same as portfolio page)
+      // Add buy transaction fees to invested amount
+      const txnsAll: Row[] = h.transactions ?? [];
+      const buyTxnsAll = txnsAll.filter((t: Row) => (t.type === 'buy' || t.type === 'sip') && Number(t.quantity) > 0);
+      if (h.asset_type !== 'global_stock') {
+        // For Indian stocks and others: add total fees from buy transactions
+        const totalBuyFees = buyTxnsAll.reduce((s: number, t: Row) => s + (Number(t.fees) || 0), 0);
+        invested += totalBuyFees;
+      }
+
+      // For global stocks: use shared FIFO/weighted-avg calc (includes fees + per-txn FX)
       if (h.asset_type === 'global_stock') {
         const { investedINR: gsInvINR } = calcGlobalStockInvestedINR(h);
         invested = gsInvINR;

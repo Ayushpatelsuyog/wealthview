@@ -348,8 +348,10 @@ export default function IndianStocksPortfolioPage() {
       const totalSold = sellTxns.reduce((sum, t) => sum + Number(t.quantity), 0);
       let invested: number;
       if (hasSplitOrBonus || buyTxns.length === 0) {
-        // After splits/bonuses, FIFO on raw txns is unreliable — use holding's adjusted values
+        // After splits/bonuses, FIFO on raw txns is unreliable — use holding's adjusted values + total fees
         invested = Number(h.quantity) * Number(h.avg_buy_price);
+        const totalFees = buyTxns.reduce((s, t) => s + (Number(t.fees) || 0), 0);
+        invested += totalFees;
       } else if (buyTxns.length > 0) {
         const lots = buyTxns.map(t => {
           const q = Number(t.quantity);
