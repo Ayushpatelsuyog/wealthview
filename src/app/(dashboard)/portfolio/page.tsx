@@ -9,6 +9,7 @@ import { navCacheGet, navCacheSet, navCacheClearAll } from '@/lib/utils/nav-cach
 import { stockPriceCacheGet, stockPriceCacheSet, stockPriceCacheClearAll } from '@/lib/utils/stock-price-cache';
 import { holdingsCacheGet, holdingsCacheSet, holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
 import { FamilyMemberSelector } from '@/components/shared/FamilyMemberSelector';
+import { calcGlobalStockInvestedINR } from '@/lib/utils/global-stock-calc';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ interface RawHolding {
   avg_buy_price: number;
   metadata: Record<string, unknown>;
   portfolios: { user_id: string } | null;
+  transactions?: { id: string; type: string; quantity: number; price: number; date: string; fees: number; notes?: string; metadata?: Record<string, unknown> }[];
 }
 
 interface AssetClassConfig {
@@ -81,12 +83,10 @@ function buildRows(holdings: RawHolding[], filterUserId: string | null, navMap: 
     const qty = h.quantity ?? 0;
     let invested = qty * (h.avg_buy_price ?? 0);
 
-    // For global stocks: avg_buy_price is in LOCAL currency — multiply by FX rate for INR
+    // For global stocks: use shared FIFO/weighted-avg calc (same as dashboard and portfolio page)
     if (h.asset_type === 'global_stock') {
-      const fxRate = Number((h.metadata as Record<string, unknown>)?.fx_rate ?? 0);
-      if (fxRate > 0) {
-        invested = invested * fxRate;
-      }
+      const { investedINR } = calcGlobalStockInvestedINR(h);
+      invested = investedINR;
     }
 
     // For MF: use live NAV; for Indian Stocks: use live price; otherwise fall back to invested
@@ -169,7 +169,7 @@ export default function PortfolioPage() {
       try {
         const { data: holdingsData, error: hErr } = await supabase
           .from('holdings')
-          .select('asset_type, symbol, quantity, avg_buy_price, metadata, portfolios(user_id)');
+          .select('asset_type, symbol, quantity, avg_buy_price, metadata, portfolios(user_id), transactions(id, type, quantity, price, date, fees, notes, metadata)');
         if (hErr && !holdingsData) {
           setError('Failed to load portfolio data');
         } else if (holdingsData) {
