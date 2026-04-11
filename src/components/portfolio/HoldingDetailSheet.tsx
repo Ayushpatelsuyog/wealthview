@@ -354,8 +354,30 @@ function RedemptionForm({
 
       {err && <p className="text-[11px]" style={{ color: '#DC2626' }}>{err}</p>}
 
-      {/* Three fields: Units · NAV · Amount */}
+      {/* Redemption Date FIRST — triggers NAV auto-fetch */}
+      <div className="space-y-1">
+        <Label className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Redemption Date *</Label>
+        <Input value={sellDate} onChange={e => setSellDate(e.target.value)}
+          type="date" className="h-8 text-xs" max={new Date().toISOString().split('T')[0]} />
+        <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>NAV auto-fetches when date changes</p>
+      </div>
+
+      {/* Three fields: NAV · Units · Amount */}
       <div className="grid grid-cols-3 gap-2">
+
+        {/* Sell NAV */}
+        <div className="space-y-1">
+          <Label className="text-[10px] flex items-center gap-1" style={{ color: 'var(--wv-text-secondary)' }}>
+            Sell NAV (₹)
+            {navFetching && <Loader2 className="w-2.5 h-2.5 animate-spin" style={{ color: 'var(--wv-text-muted)' }} />}
+          </Label>
+          <Input value={sellNav} onChange={e => handleNavChange(e.target.value)}
+            type="number" step="0.0001"
+            className="h-8 text-xs" />
+          {navHint && !navFetching && (
+            <p className="text-[10px]" style={{ color: '#059669' }}>{navHint}</p>
+          )}
+        </div>
 
         {/* Units */}
         <div className="space-y-1">
@@ -382,20 +404,6 @@ function RedemptionForm({
           )}
         </div>
 
-        {/* Sell NAV */}
-        <div className="space-y-1">
-          <Label className="text-[10px] flex items-center gap-1" style={{ color: 'var(--wv-text-secondary)' }}>
-            Sell NAV (₹)
-            {navFetching && <Loader2 className="w-2.5 h-2.5 animate-spin" style={{ color: 'var(--wv-text-muted)' }} />}
-          </Label>
-          <Input value={sellNav} onChange={e => handleNavChange(e.target.value)}
-            type="number" step="0.0001"
-            className="h-8 text-xs" />
-          {navHint && !navFetching && (
-            <p className="text-[10px]" style={{ color: '#059669' }}>{navHint}</p>
-          )}
-        </div>
-
         {/* Amount */}
         <div className="space-y-1">
           <Label className="text-[10px] flex items-center gap-1" style={{ color: 'var(--wv-text-secondary)' }}>
@@ -415,18 +423,11 @@ function RedemptionForm({
         </div>
       </div>
 
-      {/* Date + Reason */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Redemption Date</Label>
-          <Input value={sellDate} onChange={e => setSellDate(e.target.value)}
-            type="date" className="h-8 text-xs" max={new Date().toISOString().split('T')[0]} />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Reason (optional)</Label>
-          <Input value={reason} onChange={e => setReason(e.target.value)}
-            placeholder="e.g. Goal completion" className="h-8 text-xs" />
-        </div>
+      {/* Reason */}
+      <div className="space-y-1">
+        <Label className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>Reason (optional)</Label>
+        <Input value={reason} onChange={e => setReason(e.target.value)}
+          placeholder="e.g. Goal completion" className="h-8 text-xs" />
       </div>
 
       {/* Charges & P&L breakdown */}
