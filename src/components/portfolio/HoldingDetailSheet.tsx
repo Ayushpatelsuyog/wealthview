@@ -1326,8 +1326,8 @@ export function HoldingDetailSheet({
                     <table className="w-full" style={{ fontSize: 11 }}>
                       <thead>
                         <tr style={{ backgroundColor: 'var(--wv-surface-2)', borderBottom: '1px solid var(--wv-border)' }}>
-                          {['Date', 'Type', 'Amount (₹)', 'NAV (₹)', 'Units', 'Stamp Duty', 'Running Units'].map(col => (
-                            <th key={col} className="px-3 py-2 text-left font-semibold whitespace-nowrap"
+                          {['Date', 'Type', 'Amount (₹)', 'NAV (₹)', 'Units', 'Stamp Duty', 'Running Units', ''].map(col => (
+                            <th key={col || 'actions'} className="px-3 py-2 text-left font-semibold whitespace-nowrap"
                               style={{ color: 'var(--wv-text-secondary)' }}>{col}</th>
                           ))}
                         </tr>
@@ -1338,8 +1338,9 @@ export function HoldingDetailSheet({
                           const isBuy  = cfg.sign > 0;
                           const amount = Number(t.quantity) * Number(t.price);
                           const label  = txnLabel(t);
+                          const isDeleting = deletingTxnId === t.id;
                           return (
-                            <tr key={t.id} style={{ borderBottom: '1px solid #F7F5F0' }}>
+                            <tr key={t.id} className="group" style={{ borderBottom: '1px solid #F7F5F0' }}>
                               <td className="px-3 py-2 whitespace-nowrap" style={{ color: 'var(--wv-text-secondary)' }}>
                                 {fmtDate(t.date)}
                               </td>
@@ -1373,6 +1374,41 @@ export function HoldingDetailSheet({
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap font-semibold" style={{ color: 'var(--wv-text)' }}>
                                 {(runningMap[t.id] ?? 0).toFixed(4)}
+                              </td>
+                              <td className="px-2 py-2 whitespace-nowrap">
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-blue-50 transition-all"
+                                    onClick={() => {
+                                      if (t.type === 'buy' || t.type === 'sip') {
+                                        if (h.portfolios) {
+                                          sessionStorage.setItem('wv_prefill_family', (h.portfolios as unknown as { family_id?: string }).family_id ?? '');
+                                          sessionStorage.setItem('wv_prefill_member', (h.portfolios as unknown as { user_id?: string }).user_id ?? '');
+                                          sessionStorage.setItem('wv_prefill_active', 'true');
+                                        }
+                                        onClose();
+                                        router.push(`/add-assets/mutual-funds?edit_transaction=${t.id}`);
+                                      } else if (t.type === 'sell' || t.type === 'dividend') {
+                                        setView('edit-transactions');
+                                        setEditingTxn(t);
+                                      }
+                                    }}
+                                    title="Edit transaction">
+                                    <Pencil className="w-3 h-3" style={{ color: '#3B82F6' }} />
+                                  </button>
+                                  <button
+                                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 transition-all"
+                                    disabled={isDeleting}
+                                    onClick={() => {
+                                      if (!confirm(`Delete this ${label} transaction from ${fmtDate(t.date)}? The holding's quantity and average NAV will be recalculated.`)) return;
+                                      handleDeleteTransaction(t.id);
+                                    }}
+                                    title="Delete transaction">
+                                    {isDeleting
+                                      ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#DC2626' }} />
+                                      : <Trash2 className="w-3 h-3" style={{ color: '#DC2626' }} />}
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
