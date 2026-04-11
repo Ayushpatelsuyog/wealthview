@@ -1129,9 +1129,9 @@ export default function MutualFundsPage() {
   }
 
   // ── Lump-sum calculations ──────────────────────────────────────────────────
-  // Stamp duty (0.005%) applied only for purchase dates on/after 2020-07-01; NFO uses fixed NAV=10
+  // Stamp duty (0.005%) applied for purchase dates on/after 2020-07-01 — applies to BOTH regular and NFO purchases
   const STAMP_DUTY_CUTOFF = '2020-07-01';
-  const applyStampDuty = !isNFO && !!purchaseDate && purchaseDate >= STAMP_DUTY_CUTOFF;
+  const applyStampDuty = !!purchaseDate && purchaseDate >= STAMP_DUTY_CUTOFF;
   const stampDutyAmt   = amount ? parseFloat((parseFloat(amount) * 0.00005).toFixed(2)) : 0;
   const effectiveAmount = amount
     ? parseFloat(amount) - (applyStampDuty ? stampDutyAmt : 0)
