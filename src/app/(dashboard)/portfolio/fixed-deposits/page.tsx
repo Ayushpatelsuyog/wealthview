@@ -322,6 +322,18 @@ export default function FixedDepositsPage() {
               </table>
             </div>
 
+            {/* Total footer */}
+            {filtered.length > 0 && (
+              <div className="hidden md:flex px-5 py-3 items-center justify-between" style={{ borderTop: '2px solid var(--wv-border)', backgroundColor: 'var(--wv-surface-2)' }}>
+                <span className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{filtered.length} FD{filtered.length === 1 ? '' : 's'} · Total</span>
+                <div className="flex items-center gap-6 text-xs">
+                  <span style={{ color: 'var(--wv-text-secondary)' }}>Principal: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalPrincipal)}</strong></span>
+                  <span style={{ color: 'var(--wv-text-secondary)' }}>Current: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalCurrentValue)}</strong></span>
+                  <span style={{ color: '#059669' }}>Interest: <strong>+{formatLargeINR(totalInterest)}</strong></span>
+                </div>
+              </div>
+            )}
+
             {/* Mobile card layout */}
             <div className="md:hidden divide-y" style={{ borderColor: 'var(--wv-border)' }}>
               {filtered.map((fd) => {

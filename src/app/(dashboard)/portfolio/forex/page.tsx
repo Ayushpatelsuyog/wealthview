@@ -438,6 +438,21 @@ export default function ForexPortfolioPage() {
               </table>
             </div>
 
+            {/* Total footer */}
+            {filtered.length > 0 && (() => {
+              const totalGainLossPct = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
+              return (
+                <div className="hidden md:flex px-5 py-3 items-center justify-between" style={{ borderTop: '2px solid var(--wv-border)', backgroundColor: 'var(--wv-surface-2)' }}>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{filtered.length} holding{filtered.length === 1 ? '' : 's'} · Total</span>
+                  <div className="flex items-center gap-6 text-xs">
+                    <span style={{ color: 'var(--wv-text-secondary)' }}>Invested: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalInvested)}</strong></span>
+                    <span style={{ color: 'var(--wv-text-secondary)' }}>Current: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalCurrentValue)}</strong></span>
+                    <span style={{ color: totalPnl >= 0 ? '#059669' : '#DC2626' }}>P&L: <strong>{totalPnl >= 0 ? '+' : ''}{formatLargeINR(totalPnl)} ({totalGainLossPct >= 0 ? '+' : ''}{totalGainLossPct.toFixed(2)}%)</strong></span>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Mobile card layout */}
             <div className="md:hidden divide-y" style={{ borderColor: 'var(--wv-border)' }}>
               {filtered.map(row => (

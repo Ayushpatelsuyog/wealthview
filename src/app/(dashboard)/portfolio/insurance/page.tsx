@@ -496,6 +496,24 @@ export default function InsurancePortfolioPage() {
               </table>
             </div>
 
+            {/* Total footer */}
+            {filtered.length > 0 && (() => {
+              const totalAnnualPremium = filtered.reduce((s, p) => {
+                const freq = (p.premium_frequency || 'yearly').toLowerCase();
+                const mult = freq === 'monthly' ? 12 : freq === 'quarterly' ? 4 : freq === 'half_yearly' || freq === 'half-yearly' ? 2 : 1;
+                return s + (Number(p.premium) || 0) * mult;
+              }, 0);
+              return (
+                <div className="hidden md:flex px-5 py-3 items-center justify-between" style={{ borderTop: '2px solid var(--wv-border)', backgroundColor: 'var(--wv-surface-2)' }}>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{filtered.length} polic{filtered.length === 1 ? 'y' : 'ies'} · Total</span>
+                  <div className="flex items-center gap-6 text-xs">
+                    <span style={{ color: 'var(--wv-text-secondary)' }}>Coverage: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalCoverage)}</strong></span>
+                    <span style={{ color: 'var(--wv-text-secondary)' }}>Annual Premium: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalAnnualPremium)}</strong></span>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Mobile card layout */}
             <div className="md:hidden divide-y" style={{ borderColor: 'var(--wv-border)' }}>
               {filtered.map((policy) => {

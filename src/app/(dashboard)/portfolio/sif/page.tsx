@@ -874,6 +874,21 @@ export default function SifPortfolioPage() {
                 </tbody>
               </table>
             </div>
+            {/* Total footer */}
+            {filteredHoldings.length > 0 && (() => {
+              const totalGainLoss = totalCurrentValue - totalInvested;
+              const totalGainLossPct = totalInvested > 0 ? (totalGainLoss / totalInvested) * 100 : 0;
+              return (
+                <div className="px-5 py-3 flex items-center justify-between" style={{ borderTop: '2px solid var(--wv-border)', backgroundColor: 'var(--wv-surface-2)' }}>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{filteredHoldings.length} holding{filteredHoldings.length === 1 ? '' : 's'} · Total</span>
+                  <div className="flex items-center gap-6 text-xs">
+                    <span style={{ color: 'var(--wv-text-secondary)' }}>Invested: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalInvested)}</strong></span>
+                    <span style={{ color: 'var(--wv-text-secondary)' }}>Current: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalCurrentValue)}</strong></span>
+                    <span style={{ color: totalGainLoss >= 0 ? '#059669' : '#DC2626' }}>P&L: <strong>{totalGainLoss >= 0 ? '+' : ''}{formatLargeINR(totalGainLoss)} ({totalGainLossPct >= 0 ? '+' : ''}{totalGainLossPct.toFixed(2)}%)</strong></span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </>
       )}

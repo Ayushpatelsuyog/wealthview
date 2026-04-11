@@ -486,6 +486,24 @@ export default function RealEstatePortfolioPage() {
               </table>
             </div>
 
+            {/* Total footer */}
+            {filtered.length > 0 && (() => {
+              const totalInvestedRE = filtered.reduce((s, a) => s + (a.purchasePrice || 0), 0);
+              const totalAppr = totalPortfolioValue - totalInvestedRE;
+              const totalApprPct = totalInvestedRE > 0 ? (totalAppr / totalInvestedRE) * 100 : 0;
+              return (
+                <div className="hidden md:flex px-5 py-3 items-center justify-between" style={{ borderTop: '2px solid var(--wv-border)', backgroundColor: 'var(--wv-surface-2)' }}>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{totalProperties} propert{totalProperties === 1 ? 'y' : 'ies'} · Total</span>
+                  <div className="flex items-center gap-6 text-xs">
+                    <span style={{ color: 'var(--wv-text-secondary)' }}>Purchase: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalInvestedRE)}</strong></span>
+                    <span style={{ color: 'var(--wv-text-secondary)' }}>Current: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalPortfolioValue)}</strong></span>
+                    <span style={{ color: 'var(--wv-text-secondary)' }}>Rental: <strong style={{ color: '#059669' }}>+{formatLargeINR(totalRentalIncome)}/mo</strong></span>
+                    <span style={{ color: totalAppr >= 0 ? '#059669' : '#DC2626' }}>Appreciation: <strong>{totalAppr >= 0 ? '+' : ''}{formatLargeINR(totalAppr)} ({totalApprPct >= 0 ? '+' : ''}{totalApprPct.toFixed(1)}%)</strong></span>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Mobile card layout */}
             <div className="md:hidden divide-y" style={{ borderColor: 'var(--wv-border)' }}>
               {filtered.map(row => (

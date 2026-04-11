@@ -384,6 +384,17 @@ export default function SavingsAccountsPortfolioPage() {
               </tbody>
             </table>
           </div>
+          {/* Total footer */}
+          {rows.length > 0 && (
+            <div className="px-5 py-3 flex items-center justify-between" style={{ borderTop: '2px solid var(--wv-border)', backgroundColor: 'var(--wv-surface-2)' }}>
+              <span className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{rows.length} account{rows.length === 1 ? '' : 's'} · Total</span>
+              <div className="flex items-center gap-6 text-xs">
+                <span style={{ color: 'var(--wv-text-secondary)' }}>Balance: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(summary.totalBalance)}</strong></span>
+                <span style={{ color: '#059669' }}>Emergency Fund: <strong>{formatLargeINR(summary.emergencyTotal)}</strong></span>
+                <span style={{ color: 'var(--wv-text-secondary)' }}>Avg Rate: <strong style={{ color: 'var(--wv-text)' }}>{summary.avgRate.toFixed(2)}%</strong></span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
