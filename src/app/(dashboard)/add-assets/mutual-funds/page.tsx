@@ -1132,15 +1132,36 @@ export default function MutualFundsPage() {
   // Stamp duty (0.005%) applied for purchase dates on/after 2020-07-01 — applies to BOTH regular and NFO purchases
   const STAMP_DUTY_CUTOFF = '2020-07-01';
   const applyStampDuty = !!purchaseDate && purchaseDate >= STAMP_DUTY_CUTOFF;
-  const stampDutyAmt   = amount ? parseFloat((parseFloat(amount) * 0.00005).toFixed(2)) : 0;
+  const stampDutyAmt   = amount && applyStampDuty ? parseFloat((parseFloat(amount) * 0.00005).toFixed(2)) : 0;
   const effectiveAmount = amount
-    ? parseFloat(amount) - (applyStampDuty ? stampDutyAmt : 0)
+    ? parseFloat(amount) - stampDutyAmt
     : 0;
   const nfoNav  = '10.0000';
   const activeNav = isNFO ? nfoNav : nav;
   const units   = amount && activeNav
     ? (effectiveAmount / parseFloat(activeNav)).toFixed(4)
     : '';
+
+  // Debug logging for stamp duty calc
+  useEffect(() => {
+    console.log('=== MF ADD CALC ===', {
+      isNFO, purchaseDate, amount, nav, nfoNav, activeNav,
+      applyStampDuty, stampDutyAmt, effectiveAmount, units,
+      cutoff: STAMP_DUTY_CUTOFF,
+      dateComparison: purchaseDate ? `'${purchaseDate}' >= '${STAMP_DUTY_CUTOFF}' = ${purchaseDate >= STAMP_DUTY_CUTOFF}` : 'no date',
+    });
+  }, [isNFO, purchaseDate, amount, nav, applyStampDuty, stampDutyAmt, effectiveAmount, units, activeNav]);
+
+  // Dedicated purchaseDate change logger
+  useEffect(() => {
+    console.log('=== PURCHASE DATE CHANGED ===', {
+      newPurchaseDate: purchaseDate,
+      isNFO,
+      cutoff: STAMP_DUTY_CUTOFF,
+      comparison: purchaseDate >= STAMP_DUTY_CUTOFF,
+      computedApplyStampDuty: !!purchaseDate && purchaseDate >= STAMP_DUTY_CUTOFF,
+    });
+  }, [purchaseDate]);
   const currVal = navData && units
     ? (parseFloat(units) * navData.nav).toFixed(2)
     : '';
@@ -1406,6 +1427,7 @@ export default function MutualFundsPage() {
       holdingsCacheClearAll();
 
       if (andAnother) {
+        console.log('=== MF ADD FORM RESET (Save & Add Another) ===');
         setSavedHolder({ ...holder });
         setShowReuseHolder(true);
         setQuery(''); setSelectedFund(null); setNavData(null);
