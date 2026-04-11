@@ -11,6 +11,9 @@ export interface HoldingPrefill {
   category:      string;
   fundHouse:     string | null;
   portfolioName: string;
+  portfolioId:   string | null;
+  familyId:      string | null;
+  memberId:      string | null;
   brokerId:      string | null;
   isSIP:         boolean;
   folio:         string;
@@ -85,7 +88,7 @@ export function useHoldingPrefill(holdingId: string | null): {
         .from('holdings')
         .select(`
           id, symbol, name, quantity, avg_buy_price, metadata,
-          portfolios(id, name),
+          portfolios(id, name, user_id, family_id),
           brokers(id),
           transactions(id, type, quantity, price, date, fees, notes)
         `)
@@ -140,7 +143,7 @@ export function useHoldingPrefill(holdingId: string | null): {
       }
 
       // ── Resolve portfolio / broker ────────────────────────────────────────
-      type PortfolioRow = { id: string; name: string } | null;
+      type PortfolioRow = { id: string; name: string; user_id: string; family_id: string } | null;
       type BrokerRow    = { id: string } | null;
       const portfolioRow = data.portfolios as unknown as PortfolioRow;
       const brokerRow    = data.brokers    as unknown as BrokerRow;
@@ -151,6 +154,9 @@ export function useHoldingPrefill(holdingId: string | null): {
         category:      String(meta.category ?? ''),
         fundHouse:     meta.fund_house ? String(meta.fund_house) : null,
         portfolioName: portfolioRow?.name ?? 'Long-term Growth',
+        portfolioId:   portfolioRow?.id ?? null,
+        familyId:      portfolioRow?.family_id ?? null,
+        memberId:      portfolioRow?.user_id ?? null,
         brokerId:      brokerRow?.id ?? null,
         isSIP,
         folio:         meta.folio ? String(meta.folio) : '',

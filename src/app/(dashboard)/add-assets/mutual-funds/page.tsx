@@ -901,15 +901,24 @@ export default function MutualFundsPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Reload members when family changes ──────────────────────────────────
+  // When prefill is active, we don't reset portfolio/broker/member — those come from the holding
+  const prefillLockedRef = useRef(false);
   useEffect(() => {
     if (!selectedFamily) return;
     setFamilyId(selectedFamily);
-    setPortfolio('');
-    setBroker('');
+    const isPrefillActive = prefillLockedRef.current;
+    if (!isPrefillActive) {
+      setPortfolio('');
+      setBroker('');
+    }
     (async () => {
       const { data: fUsers } = await supabase.from('users').select('id, name, pan, primary_mobile, primary_email').eq('family_id', selectedFamily);
       setMembers(fUsers ?? []);
-      if (fUsers?.length) setMember(fUsers[0].id);
+      if (isPrefillActive && prefill?.memberId && fUsers?.find(u => u.id === prefill.memberId)) {
+        setMember(prefill.memberId);
+      } else if (!isPrefillActive && fUsers?.length) {
+        setMember(fUsers[0].id);
+      }
     })();
   }, [selectedFamily]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -931,8 +940,18 @@ export default function MutualFundsPage() {
   // ── Apply prefill when entering edit / add_to mode ─────────────────────────
   useEffect(() => {
     if (!prefill) return;
+    // Lock before setting selectedFamily so the family-change effect doesn't clobber prefill
+    prefillLockedRef.current = true;
     setSelectedFund({ schemeCode: prefill.schemeCode, schemeName: prefill.schemeName, category: detectCategory(prefill.schemeName, prefill.category) });
     setQuery(prefill.schemeName);
+    // Pre-select family/member from the holding's portfolio (database truth)
+    if (prefill.familyId) {
+      setSelectedFamily(prefill.familyId);
+      setFamilyId(prefill.familyId);
+    }
+    if (prefill.memberId) {
+      setMember(prefill.memberId);
+    }
     setPortfolio(prefill.portfolioName);
     if (prefill.brokerId) setBroker(prefill.brokerId);
     setFolio(prefill.folio);

@@ -26,7 +26,7 @@ interface RawHolding {
   quantity: number;
   avg_buy_price: number;
   metadata: Record<string, unknown>;
-  portfolios: { id: string; name: string; type: string; user_id: string } | null;
+  portfolios: { id: string; name: string; type: string; user_id: string; family_id: string } | null;
   brokers:    { id: string; name: string; platform_type: string } | null;
   transactions: Transaction[];
 }
@@ -80,9 +80,11 @@ const CAT_COLORS: Record<string, { bg: string; text: string }> = {
 function catStyle(cat: string) { return CAT_COLORS[cat] ?? { bg: 'var(--wv-border)', text: '#6B7280' }; }
 
 function ActionMenu({
-  holdingId, onDelete, onViewDetails, onAddMore, onSellRedeem,
+  holdingId, familyId, memberId, onDelete, onViewDetails, onAddMore, onSellRedeem,
 }: {
   holdingId: string;
+  familyId?: string;
+  memberId?: string;
   onDelete: (id: string) => void;
   onViewDetails: (id: string) => void;
   onAddMore: (id: string) => void;
@@ -90,11 +92,18 @@ function ActionMenu({
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+
+  function setPrefill() {
+    if (familyId) sessionStorage.setItem('wv_prefill_family', familyId);
+    if (memberId) sessionStorage.setItem('wv_prefill_member', memberId);
+    if (familyId || memberId) sessionStorage.setItem('wv_prefill_active', 'true');
+  }
+
   const actions = [
     { label: 'View details',  action: () => { onViewDetails(holdingId);  setOpen(false); } },
-    { label: 'Edit',          action: () => { router.push(`/add-assets/mutual-funds?edit=${holdingId}`); setOpen(false); } },
-    { label: 'Add units',     action: () => { onAddMore(holdingId);      setOpen(false); } },
-    { label: 'Sell / Redeem', action: () => { onSellRedeem(holdingId);   setOpen(false); } },
+    { label: 'Edit',          action: () => { setPrefill(); router.push(`/add-assets/mutual-funds?edit=${holdingId}`); setOpen(false); } },
+    { label: 'Add units',     action: () => { setPrefill(); onAddMore(holdingId);      setOpen(false); } },
+    { label: 'Sell / Redeem', action: () => { setPrefill(); onSellRedeem(holdingId);   setOpen(false); } },
     { label: 'Delete',        action: () => { onDelete(holdingId);       setOpen(false); }, danger: true },
   ];
   return (
@@ -417,7 +426,7 @@ export default function MutualFundsPortfolioPage() {
         .from('holdings')
         .select(`
           id, symbol, name, quantity, avg_buy_price, metadata,
-          portfolios(id, name, type, user_id),
+          portfolios(id, name, type, user_id, family_id),
           brokers(id, name, platform_type),
           transactions(id, date, price, quantity, type, fees, notes, metadata)
         `)
@@ -1066,7 +1075,10 @@ export default function MutualFundsPortfolioPage() {
                           </td>
                           <td className="text-[11px]" style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text-muted)', whiteSpace: 'nowrap' }}>{h.portfolios?.name ?? '—'}</td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12 }} onClick={e => e.stopPropagation()}>
-                            <ActionMenu holdingId={h.id} onDelete={deleteHolding}
+                            <ActionMenu holdingId={h.id}
+                              familyId={h.portfolios?.family_id}
+                              memberId={h.portfolios?.user_id}
+                              onDelete={deleteHolding}
                               onViewDetails={(id) => { setOpenAsRedeem(false); setDetailId(id); }}
                               onAddMore={(id) => router.push(`/add-assets/mutual-funds?add_to=${id}`)}
                               onSellRedeem={(id) => { setOpenAsRedeem(true); setDetailId(id); }} />
