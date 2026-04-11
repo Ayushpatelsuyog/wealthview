@@ -855,22 +855,35 @@ export default function MutualFundsPage() {
   // ── Load user + family ─────────────────────────────────────────────────────
   useEffect(() => {
     async function loadUser() {
+      // Detect prefill mode from URL — don't clobber family/member defaults
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const inPrefillMode = !!(urlParams?.get('add_to') || urlParams?.get('edit') || urlParams?.get('edit_transaction'));
+      console.log('=== MF ADD PAGE loadUser ===', { inPrefillMode, url: typeof window !== 'undefined' ? window.location.search : '' });
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
       const { data: profile } = await supabase
         .from('users').select('id, name, family_id').eq('id', user.id).single();
       if (!profile) return;
-      setMember(profile.id);
-      setMemberName(profile.name ?? '');
+
+      // Only set defaults when NOT in prefill mode — prefill effect handles family/member
+      if (!inPrefillMode) {
+        setMember(profile.id);
+        setMemberName(profile.name ?? '');
+      }
 
       const fid = profile.family_id;
       if (fid) {
-        setFamilyId(fid);
-        setSelectedFamily(fid);
-        const { data: familyUsers } = await supabase
-          .from('users').select('id, name, pan, primary_mobile, primary_email').eq('family_id', fid);
-        setMembers(familyUsers ?? [{ id: profile.id, name: profile.name }]);
+        if (!inPrefillMode) {
+          setFamilyId(fid);
+          setSelectedFamily(fid);
+          // Only load members for the profile family when NOT in prefill mode
+          // (in prefill mode, the prefill effect loads members for the holding's family)
+          const { data: familyUsers } = await supabase
+            .from('users').select('id, name, pan, primary_mobile, primary_email').eq('family_id', fid);
+          setMembers(familyUsers ?? [{ id: profile.id, name: profile.name }]);
+        }
 
         // Load families the user has access to
         try {
@@ -907,6 +920,7 @@ export default function MutualFundsPage() {
     if (!selectedFamily) return;
     setFamilyId(selectedFamily);
     const isPrefillActive = prefillLockedRef.current;
+    console.log('=== MF FAMILY CHANGE EFFECT ===', { selectedFamily, isPrefillActive, prefillMemberId: prefill?.memberId });
     if (!isPrefillActive) {
       setPortfolio('');
       setBroker('');
@@ -915,8 +929,10 @@ export default function MutualFundsPage() {
       const { data: fUsers } = await supabase.from('users').select('id, name, pan, primary_mobile, primary_email').eq('family_id', selectedFamily);
       setMembers(fUsers ?? []);
       if (isPrefillActive && prefill?.memberId && fUsers?.find(u => u.id === prefill.memberId)) {
+        console.log('  → applying prefill member:', prefill.memberId);
         setMember(prefill.memberId);
       } else if (!isPrefillActive && fUsers?.length) {
+        console.log('  → applying first member:', fUsers[0].id);
         setMember(fUsers[0].id);
       }
     })();
@@ -927,6 +943,16 @@ export default function MutualFundsPage() {
     const m = members.find((x) => x.id === member);
     if (m) setMemberName(m.name);
   }, [member, members]);
+
+  // ── UI state debug logger ───────────────────────────────────────────────
+  useEffect(() => {
+    console.log('=== MF UI STATE ===', {
+      selectedFamily, familyId, member, memberName,
+      portfolio, broker,
+      membersCount: members.length,
+      familiesCount: families.length,
+    });
+  }, [selectedFamily, familyId, member, memberName, portfolio, broker, members.length, families.length]);
 
   // ── Close dropdown ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -940,6 +966,11 @@ export default function MutualFundsPage() {
   // ── Apply prefill when entering edit / add_to mode ─────────────────────────
   useEffect(() => {
     if (!prefill) return;
+    console.log('=== MF ADD PAGE PREFILL APPLIED ===', {
+      familyId: prefill.familyId, memberId: prefill.memberId,
+      portfolioName: prefill.portfolioName, brokerId: prefill.brokerId,
+      schemeCode: prefill.schemeCode, schemeName: prefill.schemeName,
+    });
     // Lock before setting selectedFamily so the family-change effect doesn't clobber prefill
     prefillLockedRef.current = true;
     setSelectedFund({ schemeCode: prefill.schemeCode, schemeName: prefill.schemeName, category: detectCategory(prefill.schemeName, prefill.category) });
@@ -948,6 +979,21 @@ export default function MutualFundsPage() {
     if (prefill.familyId) {
       setSelectedFamily(prefill.familyId);
       setFamilyId(prefill.familyId);
+      // Explicitly load members for this family (may not trigger family-change effect if same family)
+      supabase.from('users').select('id, name, pan, primary_mobile, primary_email').eq('family_id', prefill.familyId).then(({ data }) => {
+        if (data) {
+          setMembers(data);
+          if (prefill.memberId && data.find(u => u.id === prefill.memberId)) {
+            setMember(prefill.memberId);
+          }
+        }
+      });
+      // Ensure this family is in the families list
+      supabase.from('families').select('id, name').eq('id', prefill.familyId).single().then(({ data: fam }) => {
+        if (fam) {
+          setFamilies(prev => prev.find(f => f.id === fam.id) ? prev : [...prev, fam]);
+        }
+      });
     }
     if (prefill.memberId) {
       setMember(prefill.memberId);
@@ -957,7 +1003,11 @@ export default function MutualFundsPage() {
     setFolio(prefill.folio);
     setIsSIP(forceSipMode || prefill.isSIP);
     setHolder(prefill.holder);
-    if (prefill.isSIP) {
+
+    // Only pre-fill transaction details in EDIT mode, not ADD_TO mode
+    // add_to = user adding a new transaction to existing holding → leave fields blank
+    const isAddToMode = mode === 'add_to';
+    if (prefill.isSIP && !isAddToMode) {
       setSipBlocks(prefill.sipGroups.length > 0
         ? prefill.sipGroups.map((g) => ({
             ...newSipBlock(),
@@ -973,11 +1023,12 @@ export default function MutualFundsPage() {
             manualAvgNav:       g.manualAvgNav,
           }))
         : [newSipBlock()]);
-    } else {
+    } else if (!prefill.isSIP && !isAddToMode) {
       setAmount(prefill.investedAmount.toFixed(2));
       setNav(prefill.purchaseNav.toFixed(4));
       setPurchaseDate(prefill.purchaseDate);
     }
+    // In add_to mode: leave amount/nav/purchaseDate/sipBlocks as defaults (empty)
     setIsNavLoading(true);
     fetch(`/api/mf/nav?scheme_code=${prefill.schemeCode}`)
       .then((r) => r.ok ? r.json() : null)

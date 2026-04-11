@@ -94,6 +94,7 @@ function ActionMenu({
   const router = useRouter();
 
   function setPrefill() {
+    console.log('=== MF PORTFOLIO ActionMenu setPrefill ===', { holdingId, familyId, memberId });
     if (familyId) sessionStorage.setItem('wv_prefill_family', familyId);
     if (memberId) sessionStorage.setItem('wv_prefill_member', memberId);
     if (familyId || memberId) sessionStorage.setItem('wv_prefill_active', 'true');
