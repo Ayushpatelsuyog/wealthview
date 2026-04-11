@@ -14,7 +14,6 @@ import { calculateXIRR } from '@/lib/utils/calculations';
 import { navCacheGet, navCacheSet, navCacheClearAll } from '@/lib/utils/nav-cache';
 import { holdingsCacheGet, holdingsCacheSet, holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
 import { FamilyMemberSelector } from '@/components/shared/FamilyMemberSelector';
-import { calcMFRealizedPnL } from '@/lib/utils/mf-calc';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,14 +39,13 @@ interface HoldingRow extends RawHolding {
   currentValue:  number | null;
   gainLoss:      number | null;       // unrealized P&L on remaining units
   gainLossPct:   number | null;
-  realizedPnl:   number;               // realized P&L from sold units (FIFO)
   xirr:          number | null;
   memberName:    string;
   dayChange:     number | null;    // NAV change from previous day
   dayChangePct:  number | null;    // NAV change percentage
 }
 
-type SortKey = 'value' | 'pnlPct' | 'xirr' | 'name' | 'recent' | 'invested' | 'dayPnl' | 'pnl' | 'realized';
+type SortKey = 'value' | 'pnlPct' | 'xirr' | 'name' | 'recent' | 'invested' | 'dayPnl' | 'pnl';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -452,13 +450,11 @@ export default function MutualFundsPortfolioPage() {
     const rows: HoldingRow[] = (data as unknown as RawHolding[]).map((h) => {
       const invested = Number(h.quantity) * Number(h.avg_buy_price);
       const ownerId = h.portfolios?.user_id ?? '';
-      const { realized } = calcMFRealizedPnL(h.transactions);
       return {
         ...h,
         currentNav: null, navDate: null, navLoading: true,
         investedValue: invested,
         currentValue: null, gainLoss: null, gainLossPct: null, xirr: null,
-        realizedPnl: realized,
         dayChange: null, dayChangePct: null,
         memberName: names[ownerId] ?? '',
       };
@@ -596,7 +592,6 @@ export default function MutualFundsPortfolioPage() {
         case 'dayPnl':   return dir * (((a.dayChange ?? 0) * Number(a.quantity)) - ((b.dayChange ?? 0) * Number(b.quantity)));
         case 'pnl':      return dir * ((a.gainLoss ?? 0) - (b.gainLoss ?? 0));
         case 'pnlPct':   return dir * ((a.gainLossPct ?? 0) - (b.gainLossPct ?? 0));
-        case 'realized': return dir * (a.realizedPnl - b.realizedPnl);
         case 'xirr':     return dir * ((a.xirr ?? -Infinity) - (b.xirr ?? -Infinity));
         case 'recent':   return 0;
         default:         return 0;
@@ -995,21 +990,20 @@ export default function MutualFundsPortfolioPage() {
           <div className="wv-card overflow-hidden">
             <div className="overflow-x-auto">
               {/* min-width forces horizontal scroll rather than column overflow */}
-              <table className="text-xs" style={{ tableLayout: 'fixed', width: '100%', minWidth: 1040 }}>
+              <table className="text-xs" style={{ tableLayout: 'fixed', width: '100%', minWidth: 960 }}>
                 <colgroup>
-                  <col style={{ width: '22%' }} /> {/* Fund — widest, wraps */}
-                  <col style={{ width: '7%'  }} /> {/* Broker — wraps to 2 lines */}
+                  <col style={{ width: '24%' }} /> {/* Fund — widest, wraps */}
+                  <col style={{ width: '8%'  }} /> {/* Broker — wraps to 2 lines */}
                   <col style={{ width: '6%'  }} /> {/* Units */}
-                  <col style={{ width: '6%'  }} /> {/* Avg NAV */}
-                  <col style={{ width: '7%'  }} /> {/* Invested */}
-                  <col style={{ width: '6%'  }} /> {/* Current NAV */}
-                  <col style={{ width: '7%'  }} /> {/* Current Value */}
-                  <col style={{ width: '5%'  }} /> {/* Day P&L */}
+                  <col style={{ width: '7%'  }} /> {/* Avg NAV */}
+                  <col style={{ width: '8%'  }} /> {/* Invested */}
+                  <col style={{ width: '7%'  }} /> {/* Current NAV */}
+                  <col style={{ width: '8%'  }} /> {/* Current Value */}
+                  <col style={{ width: '6%'  }} /> {/* Day P&L */}
                   <col style={{ width: '7%'  }} /> {/* Unrealized */}
-                  <col style={{ width: '7%'  }} /> {/* Realized */}
                   <col style={{ width: '5%'  }} /> {/* P&L % */}
                   <col style={{ width: '5%'  }} /> {/* XIRR */}
-                  <col style={{ width: '7%'  }} /> {/* Portfolio */}
+                  <col style={{ width: '6%'  }} /> {/* Portfolio */}
                   <col style={{ width: '3%'  }} /> {/* Actions */}
                 </colgroup>
                 <thead>
@@ -1039,7 +1033,7 @@ export default function MutualFundsPortfolioPage() {
                         </th>
                       );
                       return <>
-                        {headerTh('Fund', 'left', 'fund', 'name')}
+                        {headerTh('Fund', 'left', 'fund')}
                         {headerTh('Distributor', 'left', 'dist')}
                         {headerTh('Units', 'right', 'units')}
                         {headerTh('Avg NAV', 'right', 'avgnav')}
@@ -1048,7 +1042,6 @@ export default function MutualFundsPortfolioPage() {
                         {headerTh('Current Value', 'right', 'val', 'value')}
                         {headerTh('Day', 'right', 'day', 'dayPnl')}
                         {headerTh('Unrealized', 'right', 'pnl', 'pnl')}
-                        {headerTh('Realized', 'right', 'realized', 'realized')}
                         {headerTh('P&L %', 'right', 'pnlpct', 'pnlPct')}
                         {headerTh('XIRR', 'right', 'xirr', 'xirr')}
                         {headerTh('Portfolio', 'left', 'port')}
@@ -1059,7 +1052,7 @@ export default function MutualFundsPortfolioPage() {
                 </thead>
                 <tbody>
                   {groupedFiltered.length === 0 ? (
-                    <tr><td colSpan={14} className="px-4 py-8 text-center text-xs" style={{ color: 'var(--wv-text-muted)' }}>No funds match the current filters</td></tr>
+                    <tr><td colSpan={13} className="px-4 py-8 text-center text-xs" style={{ color: 'var(--wv-text-muted)' }}>No funds match the current filters</td></tr>
                   ) : groupedFiltered.map((group) => {
                     const renderFundRow = (h: HoldingRow, extraStyle?: React.CSSProperties) => {
                       const rowBg = h.gainLoss != null
@@ -1099,9 +1092,6 @@ export default function MutualFundsPortfolioPage() {
                           </td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
                             {h.gainLoss != null ? <span className="font-semibold" style={{ color: h.gainLoss >= 0 ? '#059669' : '#DC2626' }}>{h.gainLoss >= 0 ? '+' : ''}{formatLargeINR(h.gainLoss)}</span> : '—'}
-                          </td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
-                            {h.realizedPnl !== 0 ? <span className="font-semibold" style={{ color: h.realizedPnl >= 0 ? '#059669' : '#DC2626' }}>{h.realizedPnl >= 0 ? '+' : ''}{formatLargeINR(h.realizedPnl)}</span> : <span style={{ color: 'var(--wv-text-muted)' }}>—</span>}
                           </td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
                             {h.gainLossPct != null ? <span className="font-semibold" style={{ color: h.gainLossPct >= 0 ? '#059669' : '#DC2626' }}>{h.gainLossPct >= 0 ? '+' : ''}{h.gainLossPct.toFixed(2)}%</span> : '—'}
@@ -1170,14 +1160,6 @@ export default function MutualFundsPortfolioPage() {
                           })()}
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
                             {tGain != null ? <span className="font-semibold" style={{ color: tGain >= 0 ? '#059669' : '#DC2626' }}>{tGain >= 0 ? '+' : ''}{formatLargeINR(tGain)}</span> : '—'}
-                          </td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
-                            {(() => {
-                              const tRealized = group.holdings.reduce((s, h) => s + h.realizedPnl, 0);
-                              return tRealized !== 0
-                                ? <span className="font-semibold" style={{ color: tRealized >= 0 ? '#059669' : '#DC2626' }}>{tRealized >= 0 ? '+' : ''}{formatLargeINR(tRealized)}</span>
-                                : <span style={{ color: 'var(--wv-text-muted)' }}>—</span>;
-                            })()}
                           </td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
                             {tGainPct != null ? <span className="font-semibold" style={{ color: tGainPct >= 0 ? '#059669' : '#DC2626' }}>{tGainPct >= 0 ? '+' : ''}{tGainPct.toFixed(2)}%</span> : '—'}

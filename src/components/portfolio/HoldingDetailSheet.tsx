@@ -13,6 +13,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
+import { calcMFRealizedPnL } from '@/lib/utils/mf-calc';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -940,6 +941,12 @@ export function HoldingDetailSheet({
 
   const hasHolderData = !!(meta.first_holder || meta.mobile || meta.email || meta.bank_name || meta.bank_last4 || meta.pan);
 
+  // ── Realized P&L (FIFO matching of sells against buys) ─────────────────────
+  const { realized: realizedPnl, realizedCostBasis, realizedProceeds } = calcMFRealizedPnL(h.transactions);
+  const realizedPct = realizedCostBasis > 0 ? (realizedPnl / realizedCostBasis) * 100 : 0;
+  const soldUnits = (h.transactions ?? []).filter(t => t.type === 'sell' || t.type === 'redeem').reduce((s, t) => s + Number(t.quantity || 0), 0);
+  const hasRealized = soldUnits > 0;
+
   return (
     <Sheet open={open} onOpenChange={v => { if (!v) onClose(); }}>
       <SheetContent
@@ -1058,6 +1065,38 @@ export function HoldingDetailSheet({
                 </div>
               ))}
             </div>
+
+            {/* Realized P&L (only if units have been sold/redeemed) */}
+            {hasRealized && (
+              <div className="mt-3 rounded-xl p-4" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--wv-text-muted)' }}>
+                  Realized P&L
+                  <span className="normal-case font-normal ml-1">({soldUnits.toFixed(4)} units sold)</span>
+                </p>
+                <div className="grid grid-cols-4 gap-3">
+                  <div>
+                    <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Sale Proceeds</p>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(realizedProceeds)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Cost of Sold</p>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(realizedCostBasis)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Realized P&L</p>
+                    <p className="text-xs font-bold" style={{ color: realizedPnl >= 0 ? '#059669' : '#DC2626' }}>
+                      {realizedPnl >= 0 ? '+' : ''}{formatLargeINR(realizedPnl)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Return %</p>
+                    <p className="text-xs font-bold" style={{ color: realizedPct >= 0 ? '#059669' : '#DC2626' }}>
+                      {realizedPct >= 0 ? '+' : ''}{realizedPct.toFixed(2)}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── SIP Summary Cards ── */}
