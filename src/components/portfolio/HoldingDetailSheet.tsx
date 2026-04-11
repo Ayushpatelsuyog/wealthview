@@ -657,6 +657,13 @@ export function HoldingDetailSheet({
   // NFO toggle (transaction-level)
   const [nfoTogglingId, setNfoTogglingId] = useState<string | null>(null);
 
+  // Re-link scheme dialog
+  const [showRelink, setShowRelink] = useState(false);
+  const [relinkQuery, setRelinkQuery] = useState('');
+  const [relinkResults, setRelinkResults] = useState<Array<{ schemeCode: number; schemeName: string; category: string; latestNav?: number; latestDate?: string; daysSinceUpdate?: number; isStale?: boolean }>>([]);
+  const [relinkSearching, setRelinkSearching] = useState(false);
+  const [relinking, setRelinking] = useState(false);
+
   useEffect(() => {
     if (!open) {
       setView('detail'); setTxnDeleteConfirmId(null); setTxnDeleteError('');
@@ -1097,6 +1104,52 @@ export function HoldingDetailSheet({
                 </div>
               </div>
             )}
+
+            {/* Scheme Info — shows stale NAV warning + Re-link button */}
+            {(() => {
+              const navDateStr = h.navDate || '';
+              let staleDays = 0;
+              if (navDateStr) {
+                // navDate is in "DD-MMM-YYYY" or ISO; try parsing
+                const parsed = new Date(navDateStr);
+                if (!isNaN(parsed.getTime())) {
+                  staleDays = Math.floor((Date.now() - parsed.getTime()) / (24 * 3600 * 1000));
+                }
+              }
+              const isStale = staleDays > 30;
+              const isVeryStale = staleDays > 180;
+              return (
+                <div className="mt-3 rounded-xl p-3 flex items-center justify-between" style={{
+                  backgroundColor: isVeryStale ? 'rgba(220,38,38,0.06)' : isStale ? 'rgba(217,119,6,0.06)' : 'var(--wv-surface-2)',
+                  border: `1px solid ${isVeryStale ? 'rgba(220,38,38,0.25)' : isStale ? 'rgba(217,119,6,0.25)' : 'var(--wv-border)'}`,
+                }}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>
+                      Scheme Info
+                      {isStale && <span className="ml-1 normal-case" style={{ color: isVeryStale ? '#DC2626' : '#D97706' }}>⚠️ {isVeryStale ? 'Very stale' : 'Stale'} NAV</span>}
+                    </p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--wv-text)' }}>
+                      AMFI Code: <strong>{h.symbol}</strong>
+                      {navDateStr && <> · Last NAV: {navDateStr}{staleDays > 0 && ` (${staleDays}d ago)`}</>}
+                    </p>
+                    {isStale && (
+                      <p className="text-[10px] mt-1" style={{ color: isVeryStale ? '#DC2626' : '#D97706' }}>
+                        This scheme may be inactive or renamed. Click &ldquo;Re-link&rdquo; to pick the active scheme.
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => { setShowRelink(true); setRelinkQuery(h.name.split(' - ')[0] || h.name); }}
+                    className="flex-shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ml-3"
+                    style={{
+                      backgroundColor: isStale ? '#D97706' : 'rgba(27,42,74,0.08)',
+                      color: isStale ? 'white' : '#1B2A4A',
+                    }}>
+                    Re-link Scheme
+                  </button>
+                </div>
+              );
+            })()}
           </div>
 
           {/* ── SIP Summary Cards ── */}
@@ -1730,6 +1783,81 @@ export function HoldingDetailSheet({
             </>
           )}
         </div>
+
+        {/* Re-link Scheme Dialog */}
+        {showRelink && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(27,42,74,0.6)', backdropFilter: 'blur(4px)' }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-5 space-y-3 max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>Re-link Scheme</p>
+                <button onClick={() => setShowRelink(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+              <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
+                <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>Current</p>
+                <p className="text-xs font-semibold mt-0.5" style={{ color: 'var(--wv-text)' }}>{h.name}</p>
+                <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>AMFI {h.symbol}{h.navDate && ` · Last NAV: ${h.navDate}`}</p>
+              </div>
+              <div>
+                <Label className="text-xs">Search for active scheme</Label>
+                <Input
+                  value={relinkQuery}
+                  onChange={async (e) => {
+                    const q = e.target.value;
+                    setRelinkQuery(q);
+                    if (q.length < 2) { setRelinkResults([]); return; }
+                    setRelinkSearching(true);
+                    try {
+                      const res = await fetch(`/api/mf/search?q=${encodeURIComponent(q)}`);
+                      const data = await res.json();
+                      setRelinkResults(data.results ?? []);
+                    } finally { setRelinkSearching(false); }
+                  }}
+                  placeholder="e.g. Kotak Multi Asset"
+                  className="h-9 text-xs mt-1"
+                  autoFocus
+                />
+              </div>
+              {relinkSearching && <p className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>Searching...</p>}
+              {relinkResults.length > 0 && (
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {relinkResults.map(r => {
+                    const isStale = r.isStale || (r.daysSinceUpdate != null && r.daysSinceUpdate > 90);
+                    const isVeryStale = r.daysSinceUpdate != null && r.daysSinceUpdate > 365;
+                    return (
+                      <button key={r.schemeCode}
+                        disabled={relinking || isVeryStale}
+                        onClick={async () => {
+                          setRelinking(true);
+                          try {
+                            const res = await fetch('/api/mf/relink-scheme', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ holdingId: h.id, newSchemeCode: String(r.schemeCode), newSchemeName: r.schemeName }),
+                            });
+                            const data = await res.json();
+                            if (!res.ok) { alert(data.error || 'Failed to re-link'); return; }
+                            setShowRelink(false);
+                            onHoldingChanged();
+                            onClose();
+                          } finally { setRelinking(false); }
+                        }}
+                        className="w-full text-left p-2.5 rounded-lg border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ borderColor: 'var(--wv-border)' }}>
+                        <p className="text-xs font-medium" style={{ color: 'var(--wv-text)' }}>{r.schemeName}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>
+                          AMFI {r.schemeCode}
+                          {r.latestNav != null && <> · NAV ₹{r.latestNav.toFixed(4)}</>}
+                          {r.latestDate && <> · <span style={{ color: isVeryStale ? '#DC2626' : isStale ? '#D97706' : '#059669' }}>{r.latestDate}{r.daysSinceUpdate != null && r.daysSinceUpdate > 30 ? ` (${r.daysSinceUpdate}d ago)` : ''}</span></>}
+                          {isVeryStale && <span className="ml-1" style={{ color: '#DC2626' }}>(Inactive)</span>}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );

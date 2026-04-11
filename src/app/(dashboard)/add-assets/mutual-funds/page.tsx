@@ -27,7 +27,7 @@ import { useHoldingPrefill } from '@/hooks/use-holding-prefill';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface SearchResult { schemeCode: number; schemeName: string; category: string }
+interface SearchResult { schemeCode: number; schemeName: string; category: string; latestNav?: number; latestDate?: string; daysSinceUpdate?: number; isStale?: boolean }
 interface NavData      { nav: number; navDate: string; fundName: string; fundHouse: string; category: string }
 interface FamilyMember { id: string; name: string; pan?: string; primary_mobile?: string; primary_email?: string }
 interface Toast        { type: 'success' | 'error'; message: string }
@@ -1766,18 +1766,31 @@ export default function MutualFundsPage() {
               </div>
 
               {showDrop && searchResults.length > 0 && (
-                <div className="absolute top-full mt-1 left-0 right-0 rounded-xl border overflow-hidden bg-white"
+                <div className="absolute top-full mt-1 left-0 right-0 rounded-xl border overflow-hidden bg-white max-h-96 overflow-y-auto"
                   style={{ borderColor: 'var(--wv-border)', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
                   {searchResults.map((f) => {
                     const cc = getCatStyle(f.category);
+                    const days = f.daysSinceUpdate;
+                    const isStale = f.isStale || (days != null && days > 90);
+                    const isVeryStale = days != null && days > 365;
+                    const dateColor = isVeryStale ? '#DC2626' : isStale ? '#D97706' : '#059669';
+                    const yearLabel = f.latestDate ? f.latestDate.split('-').slice(1).join('/') + '/' + f.latestDate.split('-')[2] : '';
                     return (
                       <button key={f.schemeCode}
                         className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 text-left border-b last:border-0 transition-colors"
-                        style={{ borderColor: '#F0EDE6' }}
+                        style={{ borderColor: '#F0EDE6', opacity: isVeryStale ? 0.6 : 1 }}
                         onMouseDown={(e) => { e.preventDefault(); selectFund(f); }}>
                         <div className="min-w-0 flex-1 mr-3">
-                          <p className="text-xs font-medium truncate" style={{ color: 'var(--wv-text)' }}>{f.schemeName}</p>
-                          <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>AMFI {f.schemeCode}</p>
+                          <p className="text-xs font-medium truncate" style={{ color: 'var(--wv-text)' }}>
+                            {f.schemeName}
+                            {isVeryStale && <span className="ml-1 text-[10px]" style={{ color: '#DC2626' }}>(Inactive — {f.latestDate?.split('-')[2]})</span>}
+                          </p>
+                          <p className="text-[10px] mt-0.5" style={{ color: 'var(--wv-text-muted)' }}>
+                            AMFI {f.schemeCode}
+                            {f.latestNav != null && (
+                              <> · NAV ₹{f.latestNav.toFixed(4)} · <span style={{ color: dateColor }}>as of {yearLabel || f.latestDate}{days != null && days > 30 ? ` (${days}d ago)` : ''}</span></>
+                            )}
+                          </p>
                         </div>
                         <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
                           style={{ backgroundColor: cc.bg, color: cc.text }}>{f.category}</span>

@@ -33,8 +33,81 @@ function searchList(list: MFScheme[], lower: string, words: string[]): MFScheme[
     .map(f => ({ f, s: matchScore(f.schemeName, lower, words) }))
     .filter(x => x.s > 0)
     .sort((a, b) => b.s - a.s)
-    .slice(0, 10)
+    .slice(0, 20)  // fetch more candidates so we can filter out stale ones
     .map(x => x.f);
+}
+
+// ── NAV date cache ─────────────────────────────────────────────────────────
+interface NavInfo { nav: number; date: string; daysSinceUpdate: number }
+const navInfoCache = new Map<number, { info: NavInfo; fetchedAt: number }>();
+const NAV_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+
+function parseDdMmYyyy(s: string): Date | null {
+  const m = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!m) return null;
+  return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+}
+
+async function fetchNavInfo(schemeCode: number): Promise<NavInfo | null> {
+  const cached = navInfoCache.get(schemeCode);
+  if (cached && Date.now() - cached.fetchedAt < NAV_CACHE_TTL) return cached.info;
+  try {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 4_000);
+    const res = await fetch(`https://api.mfapi.in/mf/${schemeCode}/latest`, { signal: controller.signal });
+    clearTimeout(tid);
+    if (!res.ok) return null;
+    const json = await res.json();
+    const latest = json?.data?.[0];
+    if (!latest) return null;
+    const nav = Number(latest.nav);
+    const date = String(latest.date);
+    const parsed = parseDdMmYyyy(date);
+    if (!parsed) return null;
+    const daysSinceUpdate = Math.floor((Date.now() - parsed.getTime()) / (24 * 3600 * 1000));
+    const info: NavInfo = { nav, date, daysSinceUpdate };
+    navInfoCache.set(schemeCode, { info, fetchedAt: Date.now() });
+    return info;
+  } catch {
+    return null;
+  }
+}
+
+type EnrichedScheme = {
+  schemeCode: number;
+  schemeName: string;
+  category: string;
+  latestNav?: number;
+  latestDate?: string;
+  daysSinceUpdate?: number;
+  isStale?: boolean;
+};
+
+async function enrichAndSort(
+  schemes: { schemeCode: number; schemeName: string; category: string }[],
+): Promise<EnrichedScheme[]> {
+  const enriched: EnrichedScheme[] = await Promise.all(schemes.map(async (s): Promise<EnrichedScheme> => {
+    const info = await fetchNavInfo(s.schemeCode);
+    if (!info) return { ...s };
+    return {
+      ...s,
+      latestNav: info.nav,
+      latestDate: info.date,
+      daysSinceUpdate: info.daysSinceUpdate,
+      isStale: info.daysSinceUpdate > 90,
+    };
+  }));
+  // Active first, then by recency
+  enriched.sort((a, b) => {
+    const aStale = a.isStale ?? true;
+    const bStale = b.isStale ?? true;
+    if (aStale !== bStale) return aStale ? 1 : -1;
+    return (a.daysSinceUpdate ?? 99999) - (b.daysSinceUpdate ?? 99999);
+  });
+  // Drop schemes that are extremely stale (>365 days) from the top 10
+  const fresh = enriched.filter(s => (s.daysSinceUpdate ?? 0) <= 365);
+  const result = fresh.length >= 3 ? fresh : enriched;
+  return result.slice(0, 10);
 }
 
 // ── Module-level persistent cache ──────────────────────────────────────────────
@@ -106,9 +179,10 @@ export async function GET(req: NextRequest) {
 
   // ── 1. If AMFI list already in memory, search immediately ─────────────────
   if (amfiList.length > 0) {
-    const results = searchList(amfiList, lower, words)
+    const candidates = searchList(amfiList, lower, words)
       .map(f => ({ schemeCode: f.schemeCode, schemeName: f.schemeName, category: deriveCategory(f.schemeName) }));
-    console.log(`[MF Search] AMFI (${amfiList.length} schemes): "${q}" → ${results.length} results`);
+    const results = await enrichAndSort(candidates);
+    console.log(`[MF Search] AMFI (${amfiList.length} schemes): "${q}" → ${results.length} results (enriched)`);
     return NextResponse.json({ results });
   }
 
@@ -121,9 +195,10 @@ export async function GET(req: NextRequest) {
   } catch { /* fall through */ }
 
   if (amfiList.length > 0) {
-    const results = searchList(amfiList, lower, words)
+    const candidates = searchList(amfiList, lower, words)
       .map(f => ({ schemeCode: f.schemeCode, schemeName: f.schemeName, category: deriveCategory(f.schemeName) }));
-    console.log(`[MF Search] AMFI (after wait): "${q}" → ${results.length} results`);
+    const results = await enrichAndSort(candidates);
+    console.log(`[MF Search] AMFI (after wait): "${q}" → ${results.length} results (enriched)`);
     return NextResponse.json({ results });
   }
 
@@ -136,12 +211,13 @@ export async function GET(req: NextRequest) {
     if (res.ok) {
       const data: unknown = await res.json();
       if (Array.isArray(data) && data.length > 0) {
-        const results = (data as MFScheme[]).slice(0, 10).map(f => ({
+        const candidates = (data as MFScheme[]).slice(0, 20).map(f => ({
           schemeCode: f.schemeCode,
           schemeName: f.schemeName,
           category: deriveCategory(f.schemeName),
         }));
-        console.log(`[MF Search] mfapi search endpoint: "${q}" → ${results.length} results`);
+        const results = await enrichAndSort(candidates);
+        console.log(`[MF Search] mfapi search endpoint: "${q}" → ${results.length} results (enriched)`);
         return NextResponse.json({ results });
       }
     }
