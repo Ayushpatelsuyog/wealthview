@@ -1139,7 +1139,7 @@ export default function MutualFundsPage() {
   const nfoNav  = '10.0000';
   const activeNav = isNFO ? nfoNav : nav;
   const autoUnits = amount && activeNav
-    ? (effectiveAmount / parseFloat(activeNav)).toFixed(3)
+    ? String(Math.round((effectiveAmount / parseFloat(activeNav)) * 1000) / 1000)
     : '';
   const [unitsManual, setUnitsManual] = useState(false);
   const [unitsOverride, setUnitsOverride] = useState('');
