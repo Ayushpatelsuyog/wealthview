@@ -83,6 +83,11 @@ export async function PUT(req: NextRequest) {
       if (txnErr) return NextResponse.json({ error: txnErr.message }, { status: 500 });
     }
   } else {
+    // Apply stamp duty (0.005%) for purchases on/after 2020-07-01
+    const STAMP_DUTY_CUTOFF = '2020-07-01';
+    const applyStampDuty = purchaseDate >= STAMP_DUTY_CUTOFF;
+    const stampDutyAmt = applyStampDuty ? parseFloat((Number(investedAmount) * 0.00005).toFixed(2)) : 0;
+
     const { error: txnErr } = await supabase
       .from('transactions')
       .insert({
@@ -91,7 +96,7 @@ export async function PUT(req: NextRequest) {
         quantity:   units,
         price:      purchaseNav,
         date:       purchaseDate,
-        fees:       0,
+        fees:       stampDutyAmt,
         notes:      folio ? `Folio: ${folio}` : (isSIP ? 'SIP purchase' : 'Lump sum purchase'),
       });
     if (txnErr) return NextResponse.json({ error: txnErr.message }, { status: 500 });
