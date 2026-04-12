@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { randomUUID } from 'crypto';
+import { STT_RATE_EQUITY_MF, isEquityOrientedForSTT } from '@/lib/utils/mf-stt';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -197,6 +198,12 @@ export async function POST(req: NextRequest) {
     // ── Generate STP link ID ──
     const stpLinkId = randomUUID();
 
+    // ── STT on source sell (equity funds only) ──
+    const sourceMeta = (sourceHolding.metadata ?? {}) as Record<string, unknown>;
+    const sourceCategory = String(sourceMeta.category ?? '');
+    const sourceIsEquity = isEquityOrientedForSTT(sourceCategory);
+    const sourceStpStt = sourceIsEquity ? Math.round(amountNum * STT_RATE_EQUITY_MF * 100) / 100 : 0;
+
     // ── Create SELL transaction on source ──
     const { data: sellTxn, error: sellErr } = await supabase.from('transactions').insert({
       holding_id: sourceHoldingId,
@@ -204,7 +211,7 @@ export async function POST(req: NextRequest) {
       quantity: sourceUnits,
       price: sourceNav,
       date,
-      fees: 0,
+      fees: sourceStpStt,
       notes: `STP out to ${destSchemeName} (₹${amountNum.toFixed(0)})`,
       metadata: {
         stp_link_id: stpLinkId,
@@ -212,6 +219,8 @@ export async function POST(req: NextRequest) {
         stp_counterpart_holding_id: destHoldingId,
         stp_counterpart_scheme_name: destSchemeName,
         amount: amountNum,
+        stt: sourceStpStt,
+        is_equity_fund: sourceIsEquity,
       },
     }).select('id').single();
 

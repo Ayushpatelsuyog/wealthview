@@ -8,9 +8,14 @@ function deriveCategory(name: string): string {
   if (n.includes('elss') || n.includes('tax saver') || n.includes('tax saving')) return 'ELSS';
   if (n.includes('liquid') || n.includes('overnight') || n.includes('money market')) return 'Liquid';
   if (n.includes('gilt') || n.includes('g-sec') || n.includes('gsec')) return 'Gilt';
+  // International FoFs — must check BEFORE Index/ETF and Equity (default)
+  if (n.includes('world') || n.includes('global') || n.includes('international') || n.includes('us ') || n.includes('u.s.') ||
+      n.includes('nasdaq') || n.includes('s&p 500') || n.includes('s&p500') || n.includes('china') || n.includes('emerging market') ||
+      n.includes('european') || n.includes('japan') || n.includes('asia') || n.includes('feeder') || n.includes('overseas')) return 'International';
   if (n.includes('index') || n.includes('nifty') || n.includes('sensex') || n.includes(' etf')) return 'Index/ETF';
   if (n.includes('debt') || n.includes(' bond') || n.includes('corporate bond') || n.includes('credit risk') || n.includes('banking and psu') || n.includes('banking & psu') || n.includes('income fund')) return 'Debt';
   if (n.includes('hybrid') || n.includes('balanced') || n.includes('multi asset') || n.includes('arbitrage') || n.includes('aggressive hybrid')) return 'Hybrid';
+  if (n.includes('gold') || n.includes('silver') || n.includes('commodity')) return 'Commodity';
   return 'Equity';
 }
 

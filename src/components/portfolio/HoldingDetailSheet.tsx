@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
 import { fmtUnits } from '@/lib/utils/format-units';
+import { STT_RATE_EQUITY_MF, isEquityOrientedForSTT } from '@/lib/utils/mf-stt';
 import { calcMFRealizedPnL } from '@/lib/utils/mf-calc';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -190,11 +191,12 @@ function calcPnL(
 }
 
 function RedemptionForm({
-  holdingId, symbol, maxUnits, currentNav, buyTxns, editingTxn, onSuccess, onCancel,
+  holdingId, symbol, maxUnits, currentNav, buyTxns, editingTxn, category, onSuccess, onCancel,
 }: {
   holdingId: string; symbol: string; maxUnits: number; currentNav: number | null;
   buyTxns: Transaction[];
   editingTxn?: Transaction | null;
+  category?: string;
   onSuccess: () => void; onCancel: () => void;
 }) {
   const supabase = createClient();
@@ -296,7 +298,8 @@ function RedemptionForm({
   const u = parseFloat(units) || 0;
   const n = parseFloat(sellNav) || 0;
   const redeemValue  = u * n;
-  const stt          = redeemValue * 0.001;
+  const isEquityFund = isEquityOrientedForSTT(category);
+  const stt          = isEquityFund ? Math.round(redeemValue * STT_RATE_EQUITY_MF * 100) / 100 : 0;
   const exitLoad     = u > 0 && n > 0 && sellDate ? calcExitLoad(u, sellDate, buyTxns) : 0;
   const pnl          = u > 0 && n > 0 && sellDate ? calcPnL(u, n, sellDate, buyTxns) : null;
   const netProceeds  = redeemValue - stt - exitLoad;
@@ -325,6 +328,11 @@ function RedemptionForm({
       holding_id: holdingId, type: 'sell', quantity: u, price: n, date: sellDate,
       fees: parseFloat((stt + exitLoad).toFixed(2)),
       notes: reason || null,
+      metadata: {
+        stt: Math.round(stt * 100) / 100,
+        exit_load: Math.round(exitLoad * 100) / 100,
+        is_equity_fund: isEquityFund,
+      },
     });
     if (error) { setErr(error.message); setSaving(false); return; }
     const { data: hld } = await supabase.from('holdings').select('quantity').eq('id', holdingId).single();
@@ -441,10 +449,17 @@ function RedemptionForm({
             <span style={{ color: 'var(--wv-text-secondary)' }}>Gross redemption value</span>
             <span className="font-semibold" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(redeemValue)}</span>
           </div>
-          <div className="flex justify-between text-[11px]">
-            <span style={{ color: 'var(--wv-text-secondary)' }}>STT (0.001%)</span>
-            <span style={{ color: '#DC2626' }}>−₹{stt.toFixed(2)}</span>
-          </div>
+          {isEquityFund ? (
+            <div className="flex justify-between text-[11px]">
+              <span style={{ color: 'var(--wv-text-secondary)' }}>STT (0.001%)</span>
+              <span style={{ color: '#DC2626' }}>−₹{stt.toFixed(2)}</span>
+            </div>
+          ) : (
+            <div className="flex justify-between text-[11px]">
+              <span style={{ color: 'var(--wv-text-muted)' }}>STT: Not applicable (non-equity fund)</span>
+              <span style={{ color: 'var(--wv-text-muted)' }}>₹0.00</span>
+            </div>
+          )}
           {exitLoad > 0 && (
             <div className="flex justify-between text-[11px]">
               <span style={{ color: 'var(--wv-text-secondary)' }}>Exit load (1% on units &lt;1yr)</span>
@@ -1600,6 +1615,7 @@ export function HoldingDetailSheet({
               <RedemptionForm
                 holdingId={h.id} symbol={h.symbol} maxUnits={Number(h.quantity)} currentNav={h.currentNav}
                 buyTxns={h.transactions.filter(t => t.type === 'buy' || t.type === 'sip')}
+                category={String((h.metadata as Record<string, unknown>)?.category ?? '')}
                 onSuccess={() => { setShowRedeem(false); setRedeemDone(true); onHoldingChanged(); }}
                 onCancel={() => setShowRedeem(false)}
               />
@@ -1654,6 +1670,7 @@ export function HoldingDetailSheet({
                     currentNav={h.currentNav}
                     buyTxns={h.transactions.filter(t => t.type === 'buy' || t.type === 'sip')}
                     editingTxn={editingTxn}
+                    category={String((h.metadata as Record<string, unknown>)?.category ?? '')}
                     onSuccess={() => { setEditingTxn(null); onHoldingChanged(); }}
                     onCancel={() => setEditingTxn(null)}
                   />
