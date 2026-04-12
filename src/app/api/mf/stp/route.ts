@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
     if (!sourceNav || sourceNav <= 0) {
       return NextResponse.json({ error: 'Could not fetch source NAV for the given date' }, { status: 502 });
     }
-    const sourceUnits = amountNum / sourceNav;
+    const sourceUnits = Math.round((amountNum / sourceNav) * 1000) / 1000;
 
     if (sourceUnits > Number(sourceHolding.quantity)) {
       return NextResponse.json({
@@ -186,7 +186,13 @@ export async function POST(req: NextRequest) {
     if (!destNav || destNav <= 0) {
       return NextResponse.json({ error: 'Could not fetch destination NAV for the given date' }, { status: 502 });
     }
-    const destUnits = amountNum / destNav;
+
+    // Apply stamp duty on destination (buy) side — SEBI mandates 0.005% on MF purchases post 2020-07-01
+    const STAMP_DUTY_CUTOFF = '2020-07-01';
+    const applyStampDuty = date >= STAMP_DUTY_CUTOFF;
+    const destStampDuty = applyStampDuty ? Math.round(amountNum * 0.00005 * 100) / 100 : 0;
+    const destEffectiveAmount = amountNum - destStampDuty;
+    const destUnits = Math.round((destEffectiveAmount / destNav) * 1000) / 1000;
 
     // ── Generate STP link ID ──
     const stpLinkId = randomUUID();
@@ -220,7 +226,7 @@ export async function POST(req: NextRequest) {
       quantity: destUnits,
       price: destNav,
       date,
-      fees: 0,
+      fees: destStampDuty,
       notes: `STP in from ${sourceHolding.name} (₹${amountNum.toFixed(0)})`,
       metadata: {
         stp_link_id: stpLinkId,
