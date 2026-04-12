@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { fmtUnits } from '@/lib/utils/format-units';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -122,7 +123,7 @@ export function useHoldingPrefill(holdingId: string | null): {
         sipStatus:          s.status ?? 'active',
         sipStop:            s.stop_date ?? '',
         manualInstallments: s.installments.toString(),
-        manualTotalUnits:   s.units.toFixed(3),
+        manualTotalUnits:   fmtUnits(s.units),
         manualAvgNav:       avgNav.toFixed(4),
       }));
 
@@ -137,7 +138,7 @@ export function useHoldingPrefill(holdingId: string | null): {
           sipStatus:          'active',
           sipStop:            '',
           manualInstallments: buyTxns.length.toString(),
-          manualTotalUnits:   totalUnits.toFixed(3),
+          manualTotalUnits:   fmtUnits(totalUnits),
           manualAvgNav:       avgNav.toFixed(4),
         }];
       }

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
+import { fmtUnits } from '@/lib/utils/format-units';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -376,7 +377,7 @@ export function ImportHistory({ memberNames, onHoldingsChanged }: ImportHistoryP
                                 ) : null}
                               </td>
                               <td className="px-4 py-2.5 font-mono" style={{ color: 'var(--wv-text-secondary)' }}>
-                                {Number(h.quantity).toFixed(3)}
+                                {fmtUnits(h.quantity)}
                               </td>
                               <td className="px-4 py-2.5" style={{ color: 'var(--wv-text-secondary)' }}>
                                 ₹{Number(h.avg_buy_price).toFixed(4)}

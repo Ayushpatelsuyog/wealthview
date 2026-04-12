@@ -10,6 +10,7 @@ import {
 import { HoldingDetailSheet } from '@/components/portfolio/HoldingDetailSheet';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR, formatPercentage } from '@/lib/utils/formatters';
+import { fmtUnits } from '@/lib/utils/format-units';
 import { calculateXIRR } from '@/lib/utils/calculations';
 import { navCacheGet, navCacheSet, navCacheClearAll } from '@/lib/utils/nav-cache';
 import { holdingsCacheGet, holdingsCacheSet, holdingsCacheClearAll } from '@/lib/utils/holdings-cache';
@@ -745,7 +746,7 @@ export default function MutualFundsPortfolioPage() {
       `"${h.name}"`,
       h.brokers?.name ?? '',
       h.portfolios?.name ?? '',
-      Number(h.quantity).toFixed(3),
+      fmtUnits(h.quantity),
       Number(h.avg_buy_price).toFixed(4),
       h.investedValue.toFixed(2),
       h.currentNav?.toFixed(4) ?? '',
@@ -1076,7 +1077,7 @@ export default function MutualFundsPortfolioPage() {
                             </div>
                           </td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text-secondary)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{h.brokers?.name ?? '—'}</td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text-secondary)', whiteSpace: 'nowrap', textAlign: 'right' }}>{Number(h.quantity).toFixed(3)}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text-secondary)', whiteSpace: 'nowrap', textAlign: 'right' }}>{fmtUnits(h.quantity)}</td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text-secondary)', whiteSpace: 'nowrap', textAlign: 'right' }}>₹{Number(h.avg_buy_price).toFixed(4)}</td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text)', fontWeight: 500, whiteSpace: 'nowrap', textAlign: 'right' }}>{formatLargeINR(h.investedValue)}</td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>
@@ -1139,7 +1140,7 @@ export default function MutualFundsPortfolioPage() {
                             </div>
                           </td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12 }}><span className="font-semibold" style={{ color: '#C9A84C' }}>Consolidated</span></td>
-                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'right', color: 'var(--wv-text)' }}>{group.totalUnits.toFixed(3)}</td>
+                          <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'right', color: 'var(--wv-text)' }}>{fmtUnits(group.totalUnits)}</td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, color: 'var(--wv-text-secondary)', whiteSpace: 'nowrap', textAlign: 'right' }}>₹{wtdAvg.toFixed(4)}</td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'right', color: 'var(--wv-text)' }}>{formatLargeINR(group.totalInvested)}</td>
                           <td style={{ paddingLeft: 8, paddingRight: 8, paddingTop: 12, paddingBottom: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>

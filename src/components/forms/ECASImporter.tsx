@@ -21,6 +21,7 @@ import { Input }   from '@/components/ui/input';
 import { Label }   from '@/components/ui/label';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
+import { fmtUnits } from '@/lib/utils/format-units';
 import type { ECASTransactionType } from '@/lib/services/ecas-parser';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -528,7 +529,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
                     {fund.fundHouse && <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>{fund.fundHouse}</span>}
                     {fund.folioNumber && <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>Folio: {fund.folioNumber}</span>}
                     <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>{fund.summary.transactionCount} txns</span>
-                    <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>{fund.summary.totalUnits.toFixed(3)} units</span>
+                    <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>{fmtUnits(fund.summary.totalUnits)} units</span>
                     <span className="text-[11px] font-medium" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(fund.summary.totalInvested)} invested</span>
                   </div>
 

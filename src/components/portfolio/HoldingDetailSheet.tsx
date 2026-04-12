@@ -14,6 +14,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createClient } from '@/lib/supabase/client';
 import { formatLargeINR } from '@/lib/utils/formatters';
+import { fmtUnits } from '@/lib/utils/format-units';
 import { calcMFRealizedPnL } from '@/lib/utils/mf-calc';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -308,7 +309,7 @@ function RedemptionForm({
 
   // ── Submit ────────────────────────────────────────────────────────────────────
   async function submit() {
-    if (!u || u <= 0 || u > effectiveMaxUnits) { setErr(`Enter up to ${effectiveMaxUnits.toFixed(3)} units`); return; }
+    if (!u || u <= 0 || u > effectiveMaxUnits) { setErr(`Enter up to ${fmtUnits(effectiveMaxUnits)} units`); return; }
     if (!n || n <= 0) { setErr('Enter a valid sell NAV'); return; }
     setSaving(true); setErr('');
 
@@ -391,11 +392,11 @@ function RedemptionForm({
           </Label>
           <div className="flex gap-1">
             <Input value={units} onChange={e => handleUnitsChange(e.target.value)}
-              placeholder={`Max ${effectiveMaxUnits.toFixed(3)}`}
+              placeholder={`Max ${fmtUnits(effectiveMaxUnits)}`}
               type="number" step="0.0001"
               className="h-8 text-xs flex-1"
               style={derivedField === 'units' ? autoStyle : {}} />
-            <button type="button" onClick={() => handleUnitsChange(effectiveMaxUnits.toFixed(3))}
+            <button type="button" onClick={() => handleUnitsChange(fmtUnits(effectiveMaxUnits))}
               className="px-2 rounded text-[10px] font-medium flex-shrink-0"
               style={{ backgroundColor: 'rgba(220,38,38,0.08)', color: '#DC2626', border: '1px solid rgba(220,38,38,0.2)' }}>
               All
@@ -958,7 +959,7 @@ export function HoldingDetailSheet({
   const statTiles = [
     { label: 'Total Invested', value: formatLargeINR(h.investedValue),                color: undefined },
     { label: 'Current Value',  value: h.currentValue ? formatLargeINR(h.currentValue) : '—', color: undefined },
-    { label: 'Total Units',    value: Number(h.quantity).toFixed(3),                  color: undefined },
+    { label: 'Total Units',    value: fmtUnits(h.quantity),                  color: undefined },
     { label: 'Average NAV',    value: `₹${Number(h.avg_buy_price).toFixed(4)}`,       color: undefined },
     { label: 'P&L (₹)',
       value: h.gainLoss != null ? `${h.gainLoss >= 0 ? '+' : ''}${formatLargeINR(h.gainLoss)}` : '—',
@@ -1106,7 +1107,7 @@ export function HoldingDetailSheet({
               <div className="mt-3 rounded-xl p-4" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
                 <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--wv-text-muted)' }}>
                   Realized P&L
-                  <span className="normal-case font-normal ml-1">({soldUnits.toFixed(3)} units sold)</span>
+                  <span className="normal-case font-normal ml-1">({fmtUnits(soldUnits)} units sold)</span>
                 </p>
                 <div className="grid grid-cols-4 gap-3">
                   <div>
@@ -1348,7 +1349,7 @@ export function HoldingDetailSheet({
                         )}
                         <div>
                           <p style={{ color: 'var(--wv-text-muted)' }}>Units</p>
-                          <p className="font-semibold mt-0.5" style={{ color: 'var(--wv-text)' }}>{grpUnits.toFixed(3)}</p>
+                          <p className="font-semibold mt-0.5" style={{ color: 'var(--wv-text)' }}>{fmtUnits(grpUnits)}</p>
                         </div>
                         <div>
                           <p style={{ color: 'var(--wv-text-muted)' }}>Invested</p>
@@ -1448,13 +1449,13 @@ export function HoldingDetailSheet({
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap font-medium"
                                 style={{ color: isBuy ? '#059669' : '#DC2626' }}>
-                                {isBuy ? '+' : '−'}{Number(t.quantity).toFixed(3)}
+                                {isBuy ? '+' : '−'}{fmtUnits(t.quantity)}
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap" style={{ color: 'var(--wv-text-muted)' }}>
                                 {(() => { const sd = getTxnStampDuty(t); return sd > 0 ? `₹${sd.toFixed(2)}` : '—'; })()}
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap font-semibold" style={{ color: 'var(--wv-text)' }}>
-                                {(runningMap[t.id] ?? 0).toFixed(3)}
+                                {fmtUnits(runningMap[t.id] ?? 0)}
                               </td>
                               <td className="px-2 py-2 whitespace-nowrap">
                                 <div className="flex items-center gap-1">
@@ -1517,7 +1518,7 @@ export function HoldingDetailSheet({
                       Total invested: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalBuyAmt)}</strong>
                     </span>
                     <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
-                      Units accumulated: <strong style={{ color: 'var(--wv-text)' }}>{totalBuyUnits.toFixed(3)}</strong>
+                      Units accumulated: <strong style={{ color: 'var(--wv-text)' }}>{fmtUnits(totalBuyUnits)}</strong>
                     </span>
                     {sellTxns.length > 0 && (
                       <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
@@ -1735,7 +1736,7 @@ export function HoldingDetailSheet({
                             ₹{Number(t.price).toFixed(4)}
                           </span>
                           <span className="text-[11px] flex-shrink-0 w-16 text-right" style={{ color: 'var(--wv-text-secondary)' }}>
-                            {Number(t.quantity).toFixed(3)}
+                            {fmtUnits(t.quantity)}
                           </span>
                           <button
                             onClick={() => {
@@ -1963,7 +1964,7 @@ export function HoldingDetailSheet({
                       <SelectContent>
                         {stpSameAmcHoldings.map(s => (
                           <SelectItem key={s.id} value={s.id} className="text-xs">
-                            {s.name} · {Number(s.quantity).toFixed(3)} units
+                            {s.name} · {fmtUnits(s.quantity)} units
                           </SelectItem>
                         ))}
                       </SelectContent>
