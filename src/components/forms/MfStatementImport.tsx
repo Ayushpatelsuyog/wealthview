@@ -523,7 +523,7 @@ export function MfStatementImport({ members, defaultMemberId, portfolios: propPo
                               {Number(txn.nav) > 0 ? Number(txn.nav).toFixed(4) : '\u2014'}
                             </td>
                             <td className="px-2 py-1 text-right" style={{ color: 'var(--wv-text-secondary)' }}>
-                              {Number(txn.units) > 0 ? Number(txn.units).toFixed(4) : '\u2014'}
+                              {Number(txn.units) > 0 ? Number(txn.units).toFixed(3) : '\u2014'}
                             </td>
                           </tr>
                         );

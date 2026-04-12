@@ -256,7 +256,7 @@ function RedemptionForm({
           const u = parseFloat(units);
           const a = parseFloat(amount);
           if (u > 0) { setAmount((u * n).toFixed(2)); setDerivedField('amount'); }
-          else if (a > 0) { setUnits((a / n).toFixed(4)); setDerivedField('units'); }
+          else if (a > 0) { setUnits((a / n).toFixed(3)); setDerivedField('units'); }
         }
       })
       .catch(() => {})
@@ -277,14 +277,14 @@ function RedemptionForm({
     setNavHint(''); // user is overriding the auto-fetched value
     const n = parseFloat(val), u = parseFloat(units), a = parseFloat(amount);
     if (n > 0 && u > 0) { setAmount((u * n).toFixed(2)); setDerivedField('amount'); }
-    else if (n > 0 && a > 0) { setUnits((a / n).toFixed(4)); setDerivedField('units'); }
+    else if (n > 0 && a > 0) { setUnits((a / n).toFixed(3)); setDerivedField('units'); }
     else { setDerivedField(null); }
   }
 
   function handleAmountChange(val: string) {
     setAmount(val);
     const a = parseFloat(val), n = parseFloat(sellNav);
-    if (a > 0 && n > 0) { setUnits((a / n).toFixed(4)); setDerivedField('units'); }
+    if (a > 0 && n > 0) { setUnits((a / n).toFixed(3)); setDerivedField('units'); }
     else if (a > 0 && parseFloat(units) > 0) {
       const uv = parseFloat(units);
       setSellNav((a / uv).toFixed(4)); setNavHint(''); setDerivedField('nav');
@@ -308,7 +308,7 @@ function RedemptionForm({
 
   // ── Submit ────────────────────────────────────────────────────────────────────
   async function submit() {
-    if (!u || u <= 0 || u > effectiveMaxUnits) { setErr(`Enter up to ${effectiveMaxUnits.toFixed(4)} units`); return; }
+    if (!u || u <= 0 || u > effectiveMaxUnits) { setErr(`Enter up to ${effectiveMaxUnits.toFixed(3)} units`); return; }
     if (!n || n <= 0) { setErr('Enter a valid sell NAV'); return; }
     setSaving(true); setErr('');
 
@@ -391,11 +391,11 @@ function RedemptionForm({
           </Label>
           <div className="flex gap-1">
             <Input value={units} onChange={e => handleUnitsChange(e.target.value)}
-              placeholder={`Max ${effectiveMaxUnits.toFixed(4)}`}
+              placeholder={`Max ${effectiveMaxUnits.toFixed(3)}`}
               type="number" step="0.0001"
               className="h-8 text-xs flex-1"
               style={derivedField === 'units' ? autoStyle : {}} />
-            <button type="button" onClick={() => handleUnitsChange(effectiveMaxUnits.toFixed(4))}
+            <button type="button" onClick={() => handleUnitsChange(effectiveMaxUnits.toFixed(3))}
               className="px-2 rounded text-[10px] font-medium flex-shrink-0"
               style={{ backgroundColor: 'rgba(220,38,38,0.08)', color: '#DC2626', border: '1px solid rgba(220,38,38,0.2)' }}>
               All
@@ -539,7 +539,7 @@ function DividendForm({
       if (!n || n <= 0) { setErr('Enter NAV at reinvestment'); setSaving(false); return; }
       const { error: e1 } = await supabase.from('transactions').insert({
         holding_id: holdingId, type: 'dividend', quantity: 1, price: amt, date: divDate,
-        fees: 0, notes: `IDCW Reinvestment — ${u.toFixed(4)} units @ ₹${n.toFixed(4)}`,
+        fees: 0, notes: `IDCW Reinvestment — ${u.toFixed(3)} units @ ₹${n.toFixed(4)}`,
       });
       if (e1) { setErr(e1.message); setSaving(false); return; }
       const { data: hld } = await supabase.from('holdings').select('quantity').eq('id', holdingId).single();
@@ -945,7 +945,7 @@ export function HoldingDetailSheet({
   const statTiles = [
     { label: 'Total Invested', value: formatLargeINR(h.investedValue),                color: undefined },
     { label: 'Current Value',  value: h.currentValue ? formatLargeINR(h.currentValue) : '—', color: undefined },
-    { label: 'Total Units',    value: Number(h.quantity).toFixed(4),                  color: undefined },
+    { label: 'Total Units',    value: Number(h.quantity).toFixed(3),                  color: undefined },
     { label: 'Average NAV',    value: `₹${Number(h.avg_buy_price).toFixed(4)}`,       color: undefined },
     { label: 'P&L (₹)',
       value: h.gainLoss != null ? `${h.gainLoss >= 0 ? '+' : ''}${formatLargeINR(h.gainLoss)}` : '—',
@@ -1093,7 +1093,7 @@ export function HoldingDetailSheet({
               <div className="mt-3 rounded-xl p-4" style={{ backgroundColor: 'var(--wv-surface-2)', border: '1px solid var(--wv-border)' }}>
                 <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--wv-text-muted)' }}>
                   Realized P&L
-                  <span className="normal-case font-normal ml-1">({soldUnits.toFixed(4)} units sold)</span>
+                  <span className="normal-case font-normal ml-1">({soldUnits.toFixed(3)} units sold)</span>
                 </p>
                 <div className="grid grid-cols-4 gap-3">
                   <div>
@@ -1335,7 +1335,7 @@ export function HoldingDetailSheet({
                         )}
                         <div>
                           <p style={{ color: 'var(--wv-text-muted)' }}>Units</p>
-                          <p className="font-semibold mt-0.5" style={{ color: 'var(--wv-text)' }}>{grpUnits.toFixed(4)}</p>
+                          <p className="font-semibold mt-0.5" style={{ color: 'var(--wv-text)' }}>{grpUnits.toFixed(3)}</p>
                         </div>
                         <div>
                           <p style={{ color: 'var(--wv-text-muted)' }}>Invested</p>
@@ -1435,13 +1435,13 @@ export function HoldingDetailSheet({
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap font-medium"
                                 style={{ color: isBuy ? '#059669' : '#DC2626' }}>
-                                {isBuy ? '+' : '−'}{Number(t.quantity).toFixed(4)}
+                                {isBuy ? '+' : '−'}{Number(t.quantity).toFixed(3)}
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap" style={{ color: 'var(--wv-text-muted)' }}>
                                 {Number(t.fees) > 0 ? `₹${Number(t.fees).toFixed(2)}` : '—'}
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap font-semibold" style={{ color: 'var(--wv-text)' }}>
-                                {(runningMap[t.id] ?? 0).toFixed(4)}
+                                {(runningMap[t.id] ?? 0).toFixed(3)}
                               </td>
                               <td className="px-2 py-2 whitespace-nowrap">
                                 <div className="flex items-center gap-1">
@@ -1495,7 +1495,7 @@ export function HoldingDetailSheet({
                       Total invested: <strong style={{ color: 'var(--wv-text)' }}>{formatLargeINR(totalBuyAmt)}</strong>
                     </span>
                     <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
-                      Units accumulated: <strong style={{ color: 'var(--wv-text)' }}>{totalBuyUnits.toFixed(4)}</strong>
+                      Units accumulated: <strong style={{ color: 'var(--wv-text)' }}>{totalBuyUnits.toFixed(3)}</strong>
                     </span>
                     {sellTxns.length > 0 && (
                       <span className="text-[10px]" style={{ color: 'var(--wv-text-secondary)' }}>
@@ -1713,7 +1713,7 @@ export function HoldingDetailSheet({
                             ₹{Number(t.price).toFixed(4)}
                           </span>
                           <span className="text-[11px] flex-shrink-0 w-16 text-right" style={{ color: 'var(--wv-text-secondary)' }}>
-                            {Number(t.quantity).toFixed(4)}
+                            {Number(t.quantity).toFixed(3)}
                           </span>
                           <button
                             onClick={() => {
@@ -1941,7 +1941,7 @@ export function HoldingDetailSheet({
                       <SelectContent>
                         {stpSameAmcHoldings.map(s => (
                           <SelectItem key={s.id} value={s.id} className="text-xs">
-                            {s.name} · {Number(s.quantity).toFixed(4)} units
+                            {s.name} · {Number(s.quantity).toFixed(3)} units
                           </SelectItem>
                         ))}
                       </SelectContent>

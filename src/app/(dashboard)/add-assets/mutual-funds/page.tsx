@@ -550,7 +550,7 @@ function SipBlockCard({
             <> · Total Invested: <strong>{formatLargeINR(block.totalInvested)}</strong></>
           )}
           {block.totalUnits !== null && (
-            <> · Units: <strong>{block.totalUnits.toFixed(4)}</strong></>
+            <> · Units: <strong>{block.totalUnits.toFixed(3)}</strong></>
           )}
           {block.avgNav !== null && (
             <> · Avg NAV: <strong>₹{block.avgNav.toFixed(4)}</strong></>
@@ -600,17 +600,17 @@ function SipBlockCard({
               Total Units
               {!block.overrideUnits && block.totalUnits !== null && <AutoTag label="auto" />}
               {!block.overrideUnits && block.totalUnits !== null && (
-                <button type="button" onClick={() => update({ overrideUnits: true, manualTotalUnits: block.totalUnits?.toFixed(4) ?? '' })}
+                <button type="button" onClick={() => update({ overrideUnits: true, manualTotalUnits: block.totalUnits?.toFixed(3) ?? '' })}
                   className="ml-auto p-0.5 rounded hover:bg-gray-100 transition-colors" title="Edit manually">
                   <Pencil className="w-2.5 h-2.5" style={{ color: 'var(--wv-text-muted)' }} />
                 </button>
               )}
             </Label>
             <Input
-              value={block.overrideUnits ? block.manualTotalUnits : (block.totalUnits?.toFixed(4) ?? '')}
+              value={block.overrideUnits ? block.manualTotalUnits : (block.totalUnits?.toFixed(3) ?? '')}
               onChange={(e) => update({ manualTotalUnits: e.target.value })}
               readOnly={!block.overrideUnits}
-              placeholder={block.totalUnits != null ? `Auto: ${block.totalUnits.toFixed(4)}` : '—'}
+              placeholder={block.totalUnits != null ? `Auto: ${block.totalUnits.toFixed(3)}` : '—'}
               className="h-9 text-xs"
               style={!block.overrideUnits
                 ? { backgroundColor: block.totalUnits !== null ? 'rgba(5,150,105,0.04)' : '#F7F5F0' }
@@ -618,7 +618,7 @@ function SipBlockCard({
             />
             {block.overrideUnits && block.totalUnits !== null && (
               <div className="flex items-center justify-between">
-                <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Auto was: {block.totalUnits.toFixed(4)}</p>
+                <p className="text-[9px]" style={{ color: 'var(--wv-text-muted)' }}>Auto was: {block.totalUnits.toFixed(3)}</p>
                 <button type="button" onClick={() => update({ overrideUnits: false, manualTotalUnits: '' })}
                   className="text-[9px] flex items-center gap-0.5" style={{ color: '#C9A84C' }}>
                   <RotateCcw className="w-2 h-2" />Reset
@@ -732,7 +732,7 @@ function SipBlockCard({
                         <td className="px-3 py-1.5 text-right" style={{ color: 'var(--wv-text-secondary)' }}>
                           {r.effective_amount ? `₹${r.effective_amount.toFixed(2)}` : `₹${row.amount.toLocaleString('en-IN')}`}
                         </td>
-                        <td className="px-3 py-1.5 text-right font-medium" style={{ color: 'var(--wv-text)' }}>{row.units_purchased.toFixed(4)}</td>
+                        <td className="px-3 py-1.5 text-right font-medium" style={{ color: 'var(--wv-text)' }}>{row.units_purchased.toFixed(3)}</td>
                         <td className="px-3 py-1.5 text-right" style={{ color: 'var(--wv-text)' }}>₹{row.amount.toLocaleString('en-IN')}</td>
                       </tr>
                     );
@@ -1139,7 +1139,7 @@ export default function MutualFundsPage() {
   const nfoNav  = '10.0000';
   const activeNav = isNFO ? nfoNav : nav;
   const units   = amount && activeNav
-    ? (effectiveAmount / parseFloat(activeNav)).toFixed(4)
+    ? (effectiveAmount / parseFloat(activeNav)).toFixed(3)
     : '';
 
   // Debug logging for stamp duty calc
@@ -1646,7 +1646,7 @@ export default function MutualFundsPage() {
             </span>
             {prefill && (
               <span style={{ color: 'var(--wv-text-secondary)' }}>
-                Existing: {prefill.existingUnits.toFixed(4)} units · Invested: {formatLargeINR(prefill.investedAmount)}
+                Existing: {prefill.existingUnits.toFixed(3)} units · Invested: {formatLargeINR(prefill.investedAmount)}
               </span>
             )}
           </span>

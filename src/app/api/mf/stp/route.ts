@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
 
     if (sourceUnits > Number(sourceHolding.quantity)) {
       return NextResponse.json({
-        error: `Insufficient units in source fund. Have ${Number(sourceHolding.quantity).toFixed(4)}, need ${sourceUnits.toFixed(4)}`,
+        error: `Insufficient units in source fund. Have ${Number(sourceHolding.quantity).toFixed(3)}, need ${sourceUnits.toFixed(3)}`,
       }, { status: 400 });
     }
 

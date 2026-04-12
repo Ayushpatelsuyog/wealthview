@@ -528,7 +528,7 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
                     {fund.fundHouse && <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>{fund.fundHouse}</span>}
                     {fund.folioNumber && <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>Folio: {fund.folioNumber}</span>}
                     <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>{fund.summary.transactionCount} txns</span>
-                    <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>{fund.summary.totalUnits.toFixed(4)} units</span>
+                    <span className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>{fund.summary.totalUnits.toFixed(3)} units</span>
                     <span className="text-[11px] font-medium" style={{ color: 'var(--wv-text)' }}>{formatLargeINR(fund.summary.totalInvested)} invested</span>
                   </div>
 
@@ -637,13 +637,13 @@ export function ECASImporter({ familyId, members, portfolios: propPortfolios, me
                                 {txn.amount > 0 ? `₹${txn.amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—'}
                               </td>
                               <td className="px-3 py-1.5 whitespace-nowrap text-right" style={{ color: txn.units < 0 ? '#DC2626' : '#6B7280' }}>
-                                {txn.units >= 0 ? '+' : ''}{txn.units.toFixed(4)}
+                                {txn.units >= 0 ? '+' : ''}{txn.units.toFixed(3)}
                               </td>
                               <td className="px-3 py-1.5 whitespace-nowrap text-right" style={{ color: 'var(--wv-text-secondary)' }}>
                                 {txn.nav > 0 ? `₹${txn.nav.toFixed(4)}` : '—'}
                               </td>
                               <td className="px-3 py-1.5 whitespace-nowrap text-right" style={{ color: 'var(--wv-text-muted)' }}>
-                                {txn.unitBalance.toFixed(4)}
+                                {txn.unitBalance.toFixed(3)}
                               </td>
                             </tr>
                           );

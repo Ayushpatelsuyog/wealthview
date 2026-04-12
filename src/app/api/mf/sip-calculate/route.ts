@@ -116,7 +116,7 @@ export async function GET(req: NextRequest) {
       const applyStamp  = execDate >= STAMP_DUTY_CUTOFF;
       const stampDuty   = round(applyStamp ? sipAmount * STAMP_DUTY_RATE : 0, 2);
       const effectiveAmt = round(sipAmount - stampDuty, 4);
-      const unitsPurchased = round(effectiveAmt / nav, 4);
+      const unitsPurchased = round(effectiveAmt / nav, 3);
 
       installments.push({
         date:             execDate.toISOString().split('T')[0],
@@ -141,7 +141,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const totalUnits    = round(installments.reduce((s, i) => s + i.units_purchased, 0), 4);
+  const totalUnits    = round(installments.reduce((s, i) => s + i.units_purchased, 0), 3);
   const totalInvested = round(sipAmount * installments.length, 2);
   const totalStampDuty = round(installments.reduce((s, i) => s + i.stamp_duty, 0), 2);
   const averageNav    = round(totalInvested / totalUnits, 4);

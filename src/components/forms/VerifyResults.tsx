@@ -311,7 +311,7 @@ export function VerifyResults({ result, enteredData, autoCalculated }: VerifyRes
                         {navOk !== null ? (navOk ? ' ✅' : ' ⚠️') : ''}
                       </td>
                       <td className="px-2 py-1.5 text-right" style={{ color: 'var(--wv-text-secondary)' }}>
-                        {txnUnits > 0 ? txnUnits.toFixed(4) : '—'}
+                        {txnUnits > 0 ? txnUnits.toFixed(3) : '—'}
                         {unitsOk !== null ? (unitsOk ? ' ✅' : ' ⚠️') : ''}
                       </td>
                       <td className="px-2 py-1.5 text-right" style={{ color: 'var(--wv-text-muted)', fontSize: 10 }}>
@@ -345,7 +345,7 @@ export function VerifyResults({ result, enteredData, autoCalculated }: VerifyRes
                     <td className="px-2 py-1.5" style={{ color: 'var(--wv-text)' }}>{txn.date ?? '—'}</td>
                     <td className="px-2 py-1.5 text-right" style={{ color: 'var(--wv-text)' }}>{fmtAmt(txn)}</td>
                     <td className="px-2 py-1.5 text-right" style={{ color: 'var(--wv-text-secondary)' }}>{Number(txn.nav) > 0 ? Number(txn.nav).toFixed(4) : '—'}</td>
-                    <td className="px-2 py-1.5 text-right" style={{ color: 'var(--wv-text-secondary)' }}>{Number(txn.units) > 0 ? Number(txn.units).toFixed(4) : '—'}</td>
+                    <td className="px-2 py-1.5 text-right" style={{ color: 'var(--wv-text-secondary)' }}>{Number(txn.units) > 0 ? Number(txn.units).toFixed(3) : '—'}</td>
                   </tr>
                 ))}
               </tbody>

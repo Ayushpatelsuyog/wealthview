@@ -122,7 +122,7 @@ export function useHoldingPrefill(holdingId: string | null): {
         sipStatus:          s.status ?? 'active',
         sipStop:            s.stop_date ?? '',
         manualInstallments: s.installments.toString(),
-        manualTotalUnits:   s.units.toFixed(4),
+        manualTotalUnits:   s.units.toFixed(3),
         manualAvgNav:       avgNav.toFixed(4),
       }));
 
@@ -137,7 +137,7 @@ export function useHoldingPrefill(holdingId: string | null): {
           sipStatus:          'active',
           sipStop:            '',
           manualInstallments: buyTxns.length.toString(),
-          manualTotalUnits:   totalUnits.toFixed(4),
+          manualTotalUnits:   totalUnits.toFixed(3),
           manualAvgNav:       avgNav.toFixed(4),
         }];
       }
