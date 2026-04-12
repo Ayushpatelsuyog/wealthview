@@ -48,13 +48,13 @@ async function recalcHolding(supabase: any, holdingId: string) {
   const buys = txns.filter(t => (t.type === 'buy' || t.type === 'sip')).sort();
   const sells = txns.filter(t => t.type === 'sell');
 
+  const r3 = (n: number) => Math.round(n * 1000) / 1000;
   for (const b of buys) {
-    qty += Number(b.quantity);
+    qty += r3(Number(b.quantity));
     totalCost += Number(b.quantity) * Number(b.price);
   }
   for (const s of sells) {
-    qty -= Number(s.quantity);
-    // Reduce cost basis proportionally
+    qty -= r3(Number(s.quantity));
     totalCost -= Number(s.quantity) * Number(s.price);
   }
 

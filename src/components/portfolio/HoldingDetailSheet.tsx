@@ -717,7 +717,9 @@ export function HoldingDetailSheet({
     let cum = 0;
     txnsAsc.forEach(t => {
       const sign = TXN_CONFIG[t.type]?.sign ?? 1;
-      cum = Math.max(0, cum + sign * Number(t.quantity));
+      // Round each txn's units to 3dp before accumulating — matches what user sees per row
+      const roundedQty = Math.round(Number(t.quantity) * 1000) / 1000;
+      cum = Math.max(0, cum + sign * roundedQty);
       map[t.id] = cum;
     });
     return map;
@@ -788,7 +790,7 @@ export function HoldingDetailSheet({
   const totalBuyAmt    = buyTxns.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
   const totalSellAmt   = sellTxns.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
   const totalStampDuty = buyTxns.reduce((s, t) => s + getTxnStampDuty(t), 0);
-  const totalBuyUnits  = buyTxns.reduce((s, t) => s + Number(t.quantity), 0);
+  const totalBuyUnits  = buyTxns.reduce((s, t) => s + Math.round(Number(t.quantity) * 1000) / 1000, 0);
 
   // ── Delete holding ──────────────────────────────────────────────────────────
   async function handleDelete() {

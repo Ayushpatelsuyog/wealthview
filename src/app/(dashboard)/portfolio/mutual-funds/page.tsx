@@ -623,7 +623,7 @@ export default function MutualFundsPortfolioPage() {
       category: String(rows[0].metadata?.category ?? ''),
       holdings: rows,
       isMultiDistributor: rows.length > 1,
-      totalUnits: rows.reduce((s, r) => s + Number(r.quantity), 0),
+      totalUnits: rows.reduce((s, r) => s + Math.round(Number(r.quantity) * 1000) / 1000, 0),
       totalInvested: rows.reduce((s, r) => s + r.investedValue, 0),
       totalCurrentValue: rows.every(r => r.currentValue != null)
         ? rows.reduce((s, r) => s + (r.currentValue ?? 0), 0) : null,

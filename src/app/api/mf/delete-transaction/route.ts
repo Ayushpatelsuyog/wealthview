@@ -15,9 +15,10 @@ async function recalcHolding(supabase: any, holdingId: string): Promise<{ delete
     .eq('holding_id', holdingId)
     .eq('type', 'sell');
 
-  const totalBuyQty = (buys ?? []).reduce((s: number, t: { quantity: number }) => s + Number(t.quantity), 0);
+  const r3 = (n: number) => Math.round(n * 1000) / 1000;
+  const totalBuyQty = (buys ?? []).reduce((s: number, t: { quantity: number }) => s + r3(Number(t.quantity)), 0);
   const totalBuyAmt = (buys ?? []).reduce((s: number, t: { quantity: number; price: number }) => s + Number(t.quantity) * Number(t.price), 0);
-  const totalSellQty = (sells ?? []).reduce((s: number, t: { quantity: number }) => s + Number(t.quantity), 0);
+  const totalSellQty = (sells ?? []).reduce((s: number, t: { quantity: number }) => s + r3(Number(t.quantity)), 0);
 
   const netQty = totalBuyQty - totalSellQty;
   const avgPrice = totalBuyQty > 0 ? totalBuyAmt / totalBuyQty : 0;

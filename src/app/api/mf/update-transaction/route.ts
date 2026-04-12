@@ -42,7 +42,8 @@ export async function PUT(req: NextRequest) {
 
   if (txnsErr) return NextResponse.json({ error: txnsErr.message }, { status: 500 });
 
-  const totalQty = (allTxns ?? []).reduce((s, t) => s + Number(t.quantity), 0);
+  const r3 = (n: number) => Math.round(n * 1000) / 1000;
+  const totalQty = (allTxns ?? []).reduce((s, t) => s + r3(Number(t.quantity)), 0);
   const totalAmt = (allTxns ?? []).reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
   const avgPrice = totalQty > 0 ? totalAmt / totalQty : 0;
 
