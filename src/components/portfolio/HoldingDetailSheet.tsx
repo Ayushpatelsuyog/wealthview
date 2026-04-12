@@ -1461,6 +1461,10 @@ export function HoldingDetailSheet({
                                   <button
                                     className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-blue-50 transition-all"
                                     onClick={() => {
+                                      if ((t.metadata as Record<string, unknown> | null)?.stp_link_id) {
+                                        alert('STP transactions cannot be edited directly. Please delete and recreate if changes are needed.');
+                                        return;
+                                      }
                                       if (t.type === 'buy' || t.type === 'sip') {
                                         if (h.portfolios) {
                                           sessionStorage.setItem('wv_prefill_family', (h.portfolios as unknown as { family_id?: string }).family_id ?? '');
@@ -1481,7 +1485,12 @@ export function HoldingDetailSheet({
                                     className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 transition-all"
                                     disabled={isDeleting}
                                     onClick={() => {
-                                      if (!confirm(`Delete this ${label} transaction from ${fmtDate(t.date)}? The holding's quantity and average NAV will be recalculated.`)) return;
+                                      const isStpTxn = !!(t.metadata as Record<string, unknown> | null)?.stp_link_id;
+                                      const counterpart = String((t.metadata as Record<string, unknown> | null)?.stp_counterpart_scheme_name ?? '');
+                                      const msg = isStpTxn
+                                        ? `This is part of an STP. Deleting this will also delete the linked transaction on "${counterpart}". Both holdings will be recalculated. Continue?`
+                                        : `Delete this ${label} transaction from ${fmtDate(t.date)}? The holding's quantity and average NAV will be recalculated.`;
+                                      if (!confirm(msg)) return;
                                       handleDeleteTransaction(t.id);
                                     }}
                                     title="Delete transaction">
