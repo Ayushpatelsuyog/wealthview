@@ -1138,30 +1138,14 @@ export default function MutualFundsPage() {
     : 0;
   const nfoNav  = '10.0000';
   const activeNav = isNFO ? nfoNav : nav;
-  const units   = amount && activeNav
+  const autoUnits = amount && activeNav
     ? (effectiveAmount / parseFloat(activeNav)).toFixed(3)
     : '';
+  const [unitsManual, setUnitsManual] = useState(false);
+  const [unitsOverride, setUnitsOverride] = useState('');
+  const units = unitsManual && unitsOverride ? unitsOverride : autoUnits;
 
-  // Debug logging for stamp duty calc
-  useEffect(() => {
-    console.log('=== MF ADD CALC ===', {
-      isNFO, purchaseDate, amount, nav, nfoNav, activeNav,
-      applyStampDuty, stampDutyAmt, effectiveAmount, units,
-      cutoff: STAMP_DUTY_CUTOFF,
-      dateComparison: purchaseDate ? `'${purchaseDate}' >= '${STAMP_DUTY_CUTOFF}' = ${purchaseDate >= STAMP_DUTY_CUTOFF}` : 'no date',
-    });
-  }, [isNFO, purchaseDate, amount, nav, applyStampDuty, stampDutyAmt, effectiveAmount, units, activeNav]);
-
-  // Dedicated purchaseDate change logger
-  useEffect(() => {
-    console.log('=== PURCHASE DATE CHANGED ===', {
-      newPurchaseDate: purchaseDate,
-      isNFO,
-      cutoff: STAMP_DUTY_CUTOFF,
-      comparison: purchaseDate >= STAMP_DUTY_CUTOFF,
-      computedApplyStampDuty: !!purchaseDate && purchaseDate >= STAMP_DUTY_CUTOFF,
-    });
-  }, [purchaseDate]);
+  // (Debug logging removed — stamp duty confirmed working)
   const currVal = navData && units
     ? (parseFloat(units) * navData.nav).toFixed(2)
     : '';
@@ -1432,6 +1416,7 @@ export default function MutualFundsPage() {
         setShowReuseHolder(true);
         setQuery(''); setSelectedFund(null); setNavData(null);
         setAmount(''); setNav(''); setPurchaseDate(''); setHistNavHint(null); setIsNFO(false);
+        setUnitsManual(false); setUnitsOverride('');
         setFolio(''); setSipBlocks([newSipBlock()]); setErrors({});
         setHolder({ ...BLANK_HOLDER });
       } else {
@@ -1582,13 +1567,21 @@ export default function MutualFundsPage() {
                   <FieldError msg={errors.nav} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
+                  <Label className="text-xs flex items-center gap-1" style={{ color: 'var(--wv-text-secondary)' }}>
                     Units Allotted
-                    {applyStampDuty && <span className="ml-1 text-[10px]" style={{ color: '#059669' }}>after stamp duty</span>}
+                    {unitsManual
+                      ? <><span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold" style={{ backgroundColor: 'rgba(217,119,6,0.12)', color: '#D97706' }}>Manual</span>
+                         <button type="button" onClick={() => { setUnitsManual(false); setUnitsOverride(''); }} className="text-[9px] underline" style={{ color: '#D97706' }}>Reset</button></>
+                      : autoUnits && <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(107,114,128,0.1)', color: '#6B7280' }}>Auto</span>}
                   </Label>
-                  <Input value={units} readOnly placeholder="= (Amount − Stamp Duty) ÷ NAV" className="h-9 text-xs"
-                    style={{ backgroundColor: units ? 'rgba(5,150,105,0.04)' : undefined }} />
-                  {applyStampDuty && units && (
+                  <Input
+                    value={units}
+                    onChange={(e) => { setUnitsManual(true); setUnitsOverride(e.target.value); }}
+                    placeholder="= (Amount − Stamp Duty) ÷ NAV"
+                    className="h-9 text-xs" type="number" step="0.001"
+                    style={{ backgroundColor: unitsManual ? 'rgba(217,119,6,0.04)' : units ? 'rgba(5,150,105,0.04)' : undefined }}
+                  />
+                  {applyStampDuty && units && !unitsManual && (
                     <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                       Stamp duty ₹{stampDutyAmt.toFixed(2)} · effective ₹{effectiveAmount.toFixed(2)}
                     </p>
@@ -1974,15 +1967,29 @@ export default function MutualFundsPage() {
                   <FieldError msg={errors.nav} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs" style={{ color: 'var(--wv-text-secondary)' }}>
-                    Units Allotted (4dp)
-                    {applyStampDuty && <span className="ml-1 text-[10px]" style={{ color: '#059669' }}>after stamp duty</span>}
+                  <Label className="text-xs flex items-center gap-1" style={{ color: 'var(--wv-text-secondary)' }}>
+                    Units Allotted
+                    {unitsManual
+                      ? <><span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold" style={{ backgroundColor: 'rgba(217,119,6,0.12)', color: '#D97706' }}>Manual</span>
+                         <button type="button" onClick={() => { setUnitsManual(false); setUnitsOverride(''); }} className="text-[9px] underline" style={{ color: '#D97706' }}>Reset</button></>
+                      : autoUnits && <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(107,114,128,0.1)', color: '#6B7280' }}>Auto</span>}
+                    {!unitsManual && applyStampDuty && <span className="text-[9px]" style={{ color: '#059669' }}>after stamp duty</span>}
                   </Label>
-                  <Input value={units} readOnly placeholder="= (Amount − Stamp Duty) ÷ NAV" className="h-9 text-xs"
-                    style={{ backgroundColor: units ? 'rgba(5,150,105,0.04)' : undefined }} />
-                  {applyStampDuty && units && (
+                  <Input
+                    value={units}
+                    onChange={(e) => { setUnitsManual(true); setUnitsOverride(e.target.value); }}
+                    placeholder="= (Amount − Stamp Duty) ÷ NAV"
+                    className="h-9 text-xs" type="number" step="0.001"
+                    style={{ backgroundColor: unitsManual ? 'rgba(217,119,6,0.04)' : units ? 'rgba(5,150,105,0.04)' : undefined }}
+                  />
+                  {applyStampDuty && units && !unitsManual && (
                     <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
                       Stamp duty ₹{stampDutyAmt.toFixed(2)} deducted · effective amount ₹{effectiveAmount.toFixed(2)}
+                    </p>
+                  )}
+                  {unitsManual && autoUnits && (
+                    <p className="text-[10px]" style={{ color: '#D97706' }}>
+                      Auto would be {autoUnits} · diff {(parseFloat(unitsOverride || '0') - parseFloat(autoUnits)).toFixed(3)}
                     </p>
                   )}
                 </div>
