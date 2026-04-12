@@ -768,12 +768,25 @@ export function HoldingDetailSheet({
   const txnsVisible = txnsFiltered.slice(0, visibleCount);
   const hasMore     = txnsFiltered.length > visibleCount;
 
+  // ── Stamp duty helper — reads fees or computes from amount for historical txns ──
+  const STAMP_DUTY_CUTOFF = '2020-07-01';
+  function getTxnStampDuty(txn: { type: string; date: string; quantity: number; price: number; fees: number }) {
+    const fees = Number(txn.fees ?? 0);
+    if (fees > 0) return fees;
+    // Fallback: compute for buy txns after cutoff
+    if ((txn.type === 'buy' || txn.type === 'sip') && txn.date >= STAMP_DUTY_CUTOFF) {
+      const amt = Number(txn.quantity) * Number(txn.price);
+      return Math.round(amt * 0.00005 * 100) / 100;
+    }
+    return 0;
+  }
+
   // ── Summary stats ───────────────────────────────────────────────────────────
   const buyTxns        = h.transactions.filter(t => t.type === 'buy' || t.type === 'sip');
   const sellTxns       = h.transactions.filter(t => t.type === 'sell');
   const totalBuyAmt    = buyTxns.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
   const totalSellAmt   = sellTxns.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
-  const totalStampDuty = buyTxns.reduce((s, t) => s + Number(t.fees ?? 0), 0);
+  const totalStampDuty = buyTxns.reduce((s, t) => s + getTxnStampDuty(t), 0);
   const totalBuyUnits  = buyTxns.reduce((s, t) => s + Number(t.quantity), 0);
 
   // ── Delete holding ──────────────────────────────────────────────────────────
@@ -1438,7 +1451,7 @@ export function HoldingDetailSheet({
                                 {isBuy ? '+' : '−'}{Number(t.quantity).toFixed(3)}
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap" style={{ color: 'var(--wv-text-muted)' }}>
-                                {Number(t.fees) > 0 ? `₹${Number(t.fees).toFixed(2)}` : '—'}
+                                {(() => { const sd = getTxnStampDuty(t); return sd > 0 ? `₹${sd.toFixed(2)}` : '—'; })()}
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap font-semibold" style={{ color: 'var(--wv-text)' }}>
                                 {(runningMap[t.id] ?? 0).toFixed(3)}
