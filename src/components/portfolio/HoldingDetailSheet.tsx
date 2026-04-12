@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import {
   TrendingUp, TrendingDown, Loader2, X,
   ChevronDown, ChevronUp, BarChart3, Plus, Trash2, Edit, RefreshCw, AlertCircle, Pencil,
+  ArrowDownLeft, ArrowUpRight,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createClient } from '@/lib/supabase/client';
@@ -663,6 +664,20 @@ export function HoldingDetailSheet({
   const [relinkResults, setRelinkResults] = useState<Array<{ schemeCode: number; schemeName: string; category: string; latestNav?: number; latestDate?: string; daysSinceUpdate?: number; isStale?: boolean }>>([]);
   const [relinkSearching, setRelinkSearching] = useState(false);
   const [relinking, setRelinking] = useState(false);
+
+  // STP dialogs
+  const [stpMode, setStpMode] = useState<'from' | 'to' | null>(null);
+  const [stpDate, setStpDate] = useState('');
+  const [stpAmount, setStpAmount] = useState('');
+  const [stpSourceHoldingId, setStpSourceHoldingId] = useState(''); // for "STP From": source = other fund in portfolio
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [stpSameAmcHoldings, setStpSameAmcHoldings] = useState<any[]>([]);
+  const [stpDestQuery, setStpDestQuery] = useState('');
+  const [stpDestResults, setStpDestResults] = useState<Array<{ schemeCode: number; schemeName: string; category: string; latestNav?: number; latestDate?: string }>>([]);
+  const [stpDestSelected, setStpDestSelected] = useState<{ schemeCode: number; schemeName: string; category: string } | null>(null);
+  const [stpDestSearching, setStpDestSearching] = useState(false);
+  const [stpSaving, setStpSaving] = useState(false);
+  const [stpError, setStpError] = useState('');
 
   useEffect(() => {
     if (!open) {
@@ -1774,6 +1789,46 @@ export function HoldingDetailSheet({
                   <Edit className="w-3 h-3 mr-1" />Edit
                 </Button>
               </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline"
+                  onClick={async () => {
+                    setStpMode('from');
+                    setStpDate(new Date().toISOString().split('T')[0]);
+                    setStpAmount('');
+                    setStpSourceHoldingId('');
+                    setStpError('');
+                    // Fetch same-AMC holdings in user's portfolio (excluding current)
+                    const currentFundHouse = String((h.metadata as Record<string, unknown> | null)?.fund_house ?? '').toLowerCase();
+                    const amcKey = currentFundHouse.replace(/mutual fund|mahindra/gi, '').trim().split(/\s+/)[0];
+                    const { data } = await supabase
+                      .from('holdings')
+                      .select('id, symbol, name, quantity, metadata')
+                      .eq('asset_type', 'mutual_fund')
+                      .neq('id', h.id)
+                      .gt('quantity', 0);
+                    const sameAmc = (data ?? []).filter(x => {
+                      const fh = String((x.metadata as Record<string, unknown> | null)?.fund_house ?? '').toLowerCase();
+                      return amcKey && fh.includes(amcKey);
+                    });
+                    setStpSameAmcHoldings(sameAmc);
+                  }}
+                  className="h-9 text-[11px]" style={{ borderColor: 'rgba(37,99,235,0.3)', color: '#2563EB' }}>
+                  <ArrowDownLeft className="w-3 h-3 mr-1" />STP From
+                </Button>
+                <Button variant="outline"
+                  onClick={() => {
+                    setStpMode('to');
+                    setStpDate(new Date().toISOString().split('T')[0]);
+                    setStpAmount('');
+                    setStpDestQuery('');
+                    setStpDestResults([]);
+                    setStpDestSelected(null);
+                    setStpError('');
+                  }}
+                  className="h-9 text-[11px]" style={{ borderColor: 'rgba(124,58,237,0.3)', color: '#7C3AED' }}>
+                  <ArrowUpRight className="w-3 h-3 mr-1" />STP To
+                </Button>
+              </div>
               <Button onClick={handleDelete} disabled={deleting}
                 className="w-full h-9 text-[11px]"
                 style={{ backgroundColor: 'rgba(220,38,38,0.06)', color: '#DC2626', border: '1px solid rgba(220,38,38,0.15)' }}>
@@ -1855,6 +1910,162 @@ export function HoldingDetailSheet({
                   })}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* STP Dialog */}
+        {stpMode && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(27,42,74,0.6)', backdropFilter: 'blur(4px)' }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-5 space-y-3 max-h-[85vh] overflow-y-auto">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold" style={{ color: 'var(--wv-text)' }}>
+                  {stpMode === 'from' ? `STP Into ${h.name}` : `STP Out of ${h.name}`}
+                </p>
+                <button onClick={() => setStpMode(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+
+              {stpError && <p className="text-xs" style={{ color: '#DC2626' }}>{stpError}</p>}
+
+              {/* Source fund selector (STP From) */}
+              {stpMode === 'from' && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Source Fund (same AMC, from your portfolio)</Label>
+                  {stpSameAmcHoldings.length === 0 ? (
+                    <p className="text-[11px] p-2 rounded-lg" style={{ backgroundColor: 'rgba(217,119,6,0.06)', color: '#D97706', border: '1px solid rgba(217,119,6,0.15)' }}>
+                      No other funds from the same AMC found in your portfolio.
+                    </p>
+                  ) : (
+                    <Select value={stpSourceHoldingId} onValueChange={setStpSourceHoldingId}>
+                      <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Pick source fund" /></SelectTrigger>
+                      <SelectContent>
+                        {stpSameAmcHoldings.map(s => (
+                          <SelectItem key={s.id} value={s.id} className="text-xs">
+                            {s.name} · {Number(s.quantity).toFixed(4)} units
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              )}
+
+              {/* Destination fund search (STP To) */}
+              {stpMode === 'to' && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Destination Fund (same AMC, searches new or existing)</Label>
+                  <Input
+                    value={stpDestQuery}
+                    onChange={async (e) => {
+                      const q = e.target.value;
+                      setStpDestQuery(q);
+                      if (q.length < 2) { setStpDestResults([]); return; }
+                      setStpDestSearching(true);
+                      try {
+                        const currentFundHouse = String((h.metadata as Record<string, unknown> | null)?.fund_house ?? '');
+                        const res = await fetch(`/api/mf/search?q=${encodeURIComponent(q)}&amc=${encodeURIComponent(currentFundHouse)}`);
+                        const data = await res.json();
+                        setStpDestResults(data.results ?? []);
+                      } finally { setStpDestSearching(false); }
+                    }}
+                    placeholder="e.g. Kotak Flexi Cap"
+                    className="h-9 text-xs"
+                    autoFocus
+                  />
+                  {stpDestSelected && (
+                    <div className="p-2 rounded-lg mt-1 text-xs" style={{ backgroundColor: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.2)', color: '#059669' }}>
+                      Selected: <strong>{stpDestSelected.schemeName}</strong> (AMFI {stpDestSelected.schemeCode})
+                    </div>
+                  )}
+                  {!stpDestSelected && stpDestResults.length > 0 && (
+                    <div className="max-h-40 overflow-y-auto border rounded-lg mt-1" style={{ borderColor: 'var(--wv-border)' }}>
+                      {stpDestResults.map(r => (
+                        <button key={r.schemeCode} onClick={() => setStpDestSelected(r)}
+                          className="w-full text-left p-2 hover:bg-gray-50 border-b last:border-0" style={{ borderColor: 'var(--wv-border)' }}>
+                          <p className="text-xs font-medium">{r.schemeName}</p>
+                          <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
+                            AMFI {r.schemeCode}
+                            {r.latestNav != null && <> · NAV ₹{r.latestNav.toFixed(4)}</>}
+                            {r.latestDate && <> · {r.latestDate}</>}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {stpDestSearching && <p className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>Searching...</p>}
+                </div>
+              )}
+
+              {/* Date + Amount */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Date *</Label>
+                  <Input type="date" value={stpDate} onChange={e => setStpDate(e.target.value)}
+                    className="h-9 text-xs" max={new Date().toISOString().split('T')[0]} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Amount (₹) *</Label>
+                  <Input type="number" value={stpAmount} onChange={e => setStpAmount(e.target.value)}
+                    placeholder="50000" className="h-9 text-xs" />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Button
+                  disabled={stpSaving ||
+                    !stpDate || !stpAmount ||
+                    (stpMode === 'from' && !stpSourceHoldingId) ||
+                    (stpMode === 'to' && !stpDestSelected)}
+                  onClick={async () => {
+                    setStpSaving(true);
+                    setStpError('');
+                    try {
+                      const body: Record<string, unknown> = {
+                        date: stpDate,
+                        amount: parseFloat(stpAmount),
+                      };
+                      if (stpMode === 'from') {
+                        // Source is the other fund; destination is h
+                        body.sourceHoldingId = stpSourceHoldingId;
+                        body.destinationHoldingId = h.id;
+                      } else {
+                        // Source is h; destination is new or existing
+                        body.sourceHoldingId = h.id;
+                        body.destinationSchemeCode = String(stpDestSelected!.schemeCode);
+                        body.destinationSchemeName = stpDestSelected!.schemeName;
+                        // Pass portfolio/member/family context from h's portfolio
+                        const portfolios = (h as unknown as { portfolios?: { id: string; name: string; user_id: string; family_id?: string } }).portfolios;
+                        body.portfolioName = portfolios?.name;
+                        body.memberId = portfolios?.user_id;
+                        body.familyId = portfolios?.family_id;
+                        body.brokerId = (h as unknown as { brokers?: { id: string } }).brokers?.id;
+                        body.destinationFundHouse = (h.metadata as Record<string, unknown> | null)?.fund_house;
+                      }
+
+                      const res = await fetch('/api/mf/stp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) { setStpError(data.error || 'STP failed'); return; }
+                      setStpMode(null);
+                      onHoldingChanged();
+                      onClose();
+                    } catch (err) {
+                      setStpError(String(err));
+                    } finally {
+                      setStpSaving(false);
+                    }
+                  }}
+                  className="flex-1 h-9 text-xs font-semibold text-white"
+                  style={{ backgroundColor: '#1B2A4A' }}>
+                  {stpSaving ? <><Loader2 className="w-3 h-3 animate-spin mr-1" />Processing...</> : 'Execute STP'}
+                </Button>
+                <Button variant="outline" onClick={() => setStpMode(null)} disabled={stpSaving}
+                  className="h-9 text-xs">Cancel</Button>
+              </div>
             </div>
           </div>
         )}

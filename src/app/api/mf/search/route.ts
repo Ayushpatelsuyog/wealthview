@@ -172,17 +172,23 @@ ensureListFetched();
 
 export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get('q') ?? '').trim();
+  const amc = (req.nextUrl.searchParams.get('amc') ?? '').trim().toLowerCase();
   if (q.length < 2) return NextResponse.json({ results: [] });
 
   const lower = q.toLowerCase();
   const words = lower.split(/\s+/).filter(w => w.length >= 2);
 
+  // AMC filter: extracts first significant word of AMC name (e.g. "Kotak Mahindra Mutual Fund" → "kotak")
+  const amcKey = amc ? amc.replace(/\bmutual fund\b/gi, '').replace(/\bmahindra\b/gi, '').trim().split(/\s+/)[0] : '';
+  const matchesAmc = (name: string) => !amcKey || name.toLowerCase().includes(amcKey);
+
   // ── 1. If AMFI list already in memory, search immediately ─────────────────
   if (amfiList.length > 0) {
     const candidates = searchList(amfiList, lower, words)
+      .filter(f => matchesAmc(f.schemeName))
       .map(f => ({ schemeCode: f.schemeCode, schemeName: f.schemeName, category: deriveCategory(f.schemeName) }));
     const results = await enrichAndSort(candidates);
-    console.log(`[MF Search] AMFI (${amfiList.length} schemes): "${q}" → ${results.length} results (enriched)`);
+    console.log(`[MF Search] AMFI (${amfiList.length} schemes): "${q}" (amc=${amcKey}) → ${results.length} results (enriched)`);
     return NextResponse.json({ results });
   }
 
@@ -196,9 +202,10 @@ export async function GET(req: NextRequest) {
 
   if (amfiList.length > 0) {
     const candidates = searchList(amfiList, lower, words)
+      .filter(f => matchesAmc(f.schemeName))
       .map(f => ({ schemeCode: f.schemeCode, schemeName: f.schemeName, category: deriveCategory(f.schemeName) }));
     const results = await enrichAndSort(candidates);
-    console.log(`[MF Search] AMFI (after wait): "${q}" → ${results.length} results (enriched)`);
+    console.log(`[MF Search] AMFI (after wait): "${q}" (amc=${amcKey}) → ${results.length} results (enriched)`);
     return NextResponse.json({ results });
   }
 
