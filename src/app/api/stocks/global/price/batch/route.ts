@@ -43,11 +43,19 @@ async function fetchYahooFinancePrice(symbol: string): Promise<PriceData | null>
 
     const price = meta.regularMarketPrice;
     const currency = meta.currency || 'USD';
-    const change = meta.regularMarketChange ?? null;
-    const changePercent = meta.regularMarketChangePercent ?? null;
-    const previousClose = meta.chartPreviousClose || meta.previousClose || (change !== null ? price - change : null);
-
-    console.log(`[Yahoo Finance] ${symbol}: price=${price}, change=${change}, changePct=${changePercent}%, prevClose=${previousClose}`);
+    const previousClose = meta.chartPreviousClose || meta.previousClose;
+    
+    // Calculate change if not provided by Yahoo Finance
+    let change = meta.regularMarketChange;
+    let changePercent = meta.regularMarketChangePercent;
+    
+    if ((change === undefined || change === null) && previousClose) {
+      change = price - previousClose;
+      changePercent = previousClose > 0 ? ((change / previousClose) * 100) : 0;
+      console.log(`[Yahoo Finance] ${symbol}: Calculated change=${change}, changePct=${changePercent}% (price=${price}, prevClose=${previousClose})`);
+    } else {
+      console.log(`[Yahoo Finance] ${symbol}: price=${price}, change=${change}, changePct=${changePercent}%, prevClose=${previousClose}`);
+    }
 
     return {
       price,

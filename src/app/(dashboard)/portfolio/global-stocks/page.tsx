@@ -551,6 +551,7 @@ export default function GlobalStocksPortfolioPage() {
       }
       succeeded++;
       const updated = computeRow(h, result.price, rateMap);
+      console.log(`[Day P&L] ${h.symbol}: change=${result.change}, changePct=${result.changePct}, dayChange=${result.change ?? null}`);
       return {
         ...updated,
         dayChange: result.change ?? null,
