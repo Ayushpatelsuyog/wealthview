@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-async function fetchYahooFinancePrice(symbol: string) {
+interface PriceData {
+  price: number;
+  currency: string;
+  change?: number;
+  changePercent?: number;
+  changePct?: number;
+  previousClose?: number;
+}
+
+async function fetchYahooFinancePrice(symbol: string): Promise<PriceData | null> {
   try {
     // Yahoo Finance API endpoint
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`;
@@ -36,12 +45,15 @@ async function fetchYahooFinancePrice(symbol: string) {
     const currency = meta.currency || 'USD';
     const change = meta.regularMarketChange || 0;
     const changePercent = meta.regularMarketChangePercent || 0;
+    const previousClose = meta.chartPreviousClose || meta.previousClose || (price - change);
 
     return {
       price,
       currency,
       change,
       changePercent,
+      changePct: changePercent, // Alias for frontend compatibility
+      previousClose,
     };
   } catch (error) {
     console.error(`[Yahoo Finance] Error fetching ${symbol}:`, error);
@@ -62,7 +74,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid symbols' }, { status: 400 });
     }
 
-    const results: Record<string, { price: number; currency: string; change?: number; changePercent?: number } | null> = {};
+    const results: Record<string, PriceData | null> = {};
 
     // Check cache first unless nocache is true
     if (!nocache) {
@@ -81,6 +93,8 @@ export async function POST(req: NextRequest) {
             currency: cached.currency || 'USD',
             change: metadata?.change,
             changePercent: metadata?.changePercent,
+            changePct: metadata?.changePct,
+            previousClose: metadata?.previousClose,
           };
         }
       }
@@ -114,6 +128,8 @@ export async function POST(req: NextRequest) {
             metadata: {
               change: data.change,
               changePercent: data.changePercent,
+              changePct: data.changePct,
+              previousClose: data.previousClose,
             },
             cached_at: new Date().toISOString(),
           });
