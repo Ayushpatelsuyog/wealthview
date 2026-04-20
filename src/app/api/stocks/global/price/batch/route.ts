@@ -26,7 +26,6 @@ async function fetchYahooFinancePrice(symbol: string) {
 
     const result = data.chart.result[0];
     const meta = result.meta;
-    const quote = result.indicators?.quote?.[0];
 
     if (!meta?.regularMarketPrice) {
       console.error(`[Yahoo Finance] No price data for ${symbol}`);
@@ -76,11 +75,12 @@ export async function POST(req: NextRequest) {
 
       if (cachedPrices) {
         for (const cached of cachedPrices) {
+          const metadata = cached.metadata as Record<string, number> | null;
           results[cached.symbol] = {
             price: cached.price,
             currency: cached.currency || 'USD',
-            change: (cached.metadata as any)?.change,
-            changePercent: (cached.metadata as any)?.changePercent,
+            change: metadata?.change,
+            changePercent: metadata?.changePercent,
           };
         }
       }
