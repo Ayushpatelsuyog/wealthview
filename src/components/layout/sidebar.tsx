@@ -7,9 +7,10 @@ import {
   Bitcoin, DollarSign, FileText, Landmark, Leaf,
   UserCheck, PiggyBank, Shield, Heart,
   Wallet, Gem, Building, Settings, ChevronDown,
-  ChevronRight, LayoutDashboard, Activity, PieChart, ArrowLeft, Plus, Download,
+  ChevronRight, LayoutDashboard, Activity, PieChart, ArrowLeft, Plus, Download, LogOut,
 } from 'lucide-react';
 import { useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 // ─── Nav data ──────────────────────────────────────────────────────────────────
 
@@ -211,6 +212,13 @@ function NavRow({ item, depth = 0 }: { item: NavItem; depth?: number }) {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   const quickLinks = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -345,6 +353,35 @@ export function Sidebar() {
           <Settings style={{ width: 15, height: 15, flexShrink: 0, opacity: 0.6 }} />
           <span>Settings</span>
         </Link>
+        <button
+          onClick={handleLogout}
+          style={{
+            display:         'flex',
+            alignItems:      'center',
+            gap:             8,
+            padding:         '7px 14px',
+            color:           'rgba(255,255,255,0.40)',
+            fontSize:        12,
+            textDecoration:  'none',
+            borderLeft:      '3px solid transparent',
+            backgroundColor: 'transparent',
+            border:          'none',
+            cursor:          'pointer',
+            width:           '100%',
+            transition:      'all 0.15s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = '#ef4444';
+            e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.08)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'rgba(255,255,255,0.40)';
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          <LogOut style={{ width: 15, height: 15, flexShrink: 0, opacity: 0.6 }} />
+          <span>Logout</span>
+        </button>
         <Link
           href="/dashboard"
           style={{

@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bell, Search, Sun, Moon } from 'lucide-react';
+import { Bell, Search, Sun, Moon, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
 import { useTheme } from '@/lib/hooks/use-theme';
+import { useRouter } from 'next/navigation';
 
 interface UserProfile { name: string; role: string; familyName: string | null; initials: string }
 
@@ -16,6 +17,13 @@ function getInitials(name: string): string {
 export function Header() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const { isDark, toggle } = useTheme();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   useEffect(() => {
     const supabase = createClient();
@@ -79,6 +87,16 @@ export function Header() {
 
         <button className="relative p-1.5 rounded-lg transition-colors" style={{ color: 'var(--wv-text-secondary)' }}>
           <Bell className="w-4 h-4" />
+        </button>
+
+        {/* Logout button */}
+        <button
+          onClick={handleLogout}
+          className="relative p-1.5 rounded-lg transition-colors hover:bg-red-500/10"
+          style={{ color: 'var(--wv-text-secondary)' }}
+          title="Logout"
+        >
+          <LogOut className="w-4 h-4" />
         </button>
 
         <div className="flex items-center gap-2.5 pl-3" style={{ borderLeft: '1px solid var(--wv-border)' }}>
