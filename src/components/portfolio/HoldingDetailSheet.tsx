@@ -688,12 +688,19 @@ export function HoldingDetailSheet({
   const [stpSourceHoldingId, setStpSourceHoldingId] = useState(''); // for "STP From": source = other fund in portfolio
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [stpSameAmcHoldings, setStpSameAmcHoldings] = useState<any[]>([]);
+  const [stpDestMode, setStpDestMode] = useState<'existing' | 'new'>('existing');
   const [stpDestQuery, setStpDestQuery] = useState('');
   const [stpDestResults, setStpDestResults] = useState<Array<{ schemeCode: number; schemeName: string; category: string; latestNav?: number; latestDate?: string }>>([]);
   const [stpDestSelected, setStpDestSelected] = useState<{ schemeCode: number; schemeName: string; category: string } | null>(null);
+  const [stpDestExistingId, setStpDestExistingId] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [stpDestExistingOptions, setStpDestExistingOptions] = useState<any[]>([]);
   const [stpDestSearching, setStpDestSearching] = useState(false);
   const [stpSaving, setStpSaving] = useState(false);
   const [stpError, setStpError] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [stpPreview, setStpPreview] = useState<Record<string, any> | null>(null);
+  const [stpPreviewing, setStpPreviewing] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -1858,14 +1865,41 @@ export function HoldingDetailSheet({
                   <ArrowDownLeft className="w-3 h-3 mr-1" />STP From
                 </Button>
                 <Button variant="outline"
-                  onClick={() => {
+                  onClick={async () => {
                     setStpMode('to');
                     setStpDate(new Date().toISOString().split('T')[0]);
                     setStpAmount('');
-                    setStpDestQuery('');
-                    setStpDestResults([]);
-                    setStpDestSelected(null);
-                    setStpError('');
+                    setStpDestQuery(''); setStpDestResults([]); setStpDestSelected(null);
+                    setStpDestExistingId(''); setStpDestMode('existing');
+                    setStpError(''); setStpPreview(null);
+                    // Load existing same-AMC + same-member + same-broker + same-folio holdings
+                    const srcMeta = (h.metadata as Record<string, unknown> | null) ?? {};
+                    const srcFundHouse = String(srcMeta.fund_house ?? '').toLowerCase();
+                    const srcFolio = String(srcMeta.folio ?? '');
+                    const srcPortfolioId = (h as unknown as { portfolios?: { id: string } }).portfolios?.id;
+                    const srcBrokerId = (h as unknown as { brokers?: { id: string } }).brokers?.id ?? null;
+                    const amcKey = srcFundHouse.replace(/mutual fund|mahindra|funds management|asset management|limited|amc/gi, '').trim().split(/\s+/)[0];
+                    const { data } = await supabase
+                      .from('holdings')
+                      .select('id, symbol, name, quantity, metadata, portfolio_id, broker_id')
+                      .eq('asset_type', 'mutual_fund')
+                      .neq('id', h.id)
+                      .gt('quantity', 0);
+                    const filtered = (data ?? []).filter(x => {
+                      // Same portfolio (= same member)
+                      if (srcPortfolioId && x.portfolio_id !== srcPortfolioId) return false;
+                      // Same broker
+                      if (srcBrokerId !== (x.broker_id ?? null)) return false;
+                      // Same folio
+                      const xFolio = String((x.metadata as Record<string, unknown> | null)?.folio ?? '');
+                      if (srcFolio !== xFolio) return false;
+                      // Same AMC
+                      const xFh = String((x.metadata as Record<string, unknown> | null)?.fund_house ?? '').toLowerCase();
+                      if (!amcKey) return false;
+                      if (xFh && srcFundHouse) return xFh === srcFundHouse; // exact match preferred
+                      return xFh.includes(amcKey); // fallback
+                    });
+                    setStpDestExistingOptions(filtered);
                   }}
                   className="h-9 text-[11px]" style={{ borderColor: 'rgba(124,58,237,0.3)', color: '#7C3AED' }}>
                   <ArrowUpRight className="w-3 h-3 mr-1" />STP To
@@ -1992,49 +2026,93 @@ export function HoldingDetailSheet({
                 </div>
               )}
 
-              {/* Destination fund search (STP To) */}
+              {/* Destination fund picker (STP To): Existing vs New */}
               {stpMode === 'to' && (
-                <div className="space-y-1">
-                  <Label className="text-xs">Destination Fund (same AMC, searches new or existing)</Label>
-                  <Input
-                    value={stpDestQuery}
-                    onChange={async (e) => {
-                      const q = e.target.value;
-                      setStpDestQuery(q);
-                      if (q.length < 2) { setStpDestResults([]); return; }
-                      setStpDestSearching(true);
-                      try {
-                        const currentFundHouse = String((h.metadata as Record<string, unknown> | null)?.fund_house ?? '');
-                        const res = await fetch(`/api/mf/search?q=${encodeURIComponent(q)}&amc=${encodeURIComponent(currentFundHouse)}`);
-                        const data = await res.json();
-                        setStpDestResults(data.results ?? []);
-                      } finally { setStpDestSearching(false); }
-                    }}
-                    placeholder="e.g. Kotak Flexi Cap"
-                    className="h-9 text-xs"
-                    autoFocus
-                  />
-                  {stpDestSelected && (
-                    <div className="p-2 rounded-lg mt-1 text-xs" style={{ backgroundColor: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.2)', color: '#059669' }}>
-                      Selected: <strong>{stpDestSelected.schemeName}</strong> (AMFI {stpDestSelected.schemeCode})
-                    </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Destination Fund (same AMC)</Label>
+                  {/* Toggle */}
+                  <div className="flex gap-2">
+                    {(['existing', 'new'] as const).map(m => (
+                      <button key={m} onClick={() => { setStpDestMode(m); setStpDestSelected(null); setStpDestExistingId(''); setStpDestQuery(''); setStpDestResults([]); }}
+                        className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                        style={{
+                          backgroundColor: stpDestMode === m ? '#1B2A4A' : 'var(--wv-surface-2)',
+                          color: stpDestMode === m ? 'white' : 'var(--wv-text-muted)',
+                          border: `1px solid ${stpDestMode === m ? '#1B2A4A' : 'var(--wv-border)'}`,
+                        }}>
+                        {m === 'existing' ? 'Existing Fund' : 'New Fund'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Existing fund dropdown */}
+                  {stpDestMode === 'existing' && (
+                    stpDestExistingOptions.length === 0 ? (
+                      <p className="text-[11px] p-2 rounded-lg" style={{ backgroundColor: 'rgba(217,119,6,0.06)', color: '#D97706', border: '1px solid rgba(217,119,6,0.15)' }}>
+                        No other funds from the same AMC, member, broker, and folio found. Try &ldquo;New Fund&rdquo;.
+                      </p>
+                    ) : (
+                      <Select value={stpDestExistingId} onValueChange={setStpDestExistingId}>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Pick destination fund" /></SelectTrigger>
+                        <SelectContent>
+                          {stpDestExistingOptions.map((s: { id: string; name: string; quantity: number; metadata: Record<string, unknown> | null }) => {
+                            const fh = (s.metadata as Record<string, unknown> | null)?.fund_house;
+                            return (
+                              <SelectItem key={s.id} value={s.id} className="text-xs">
+                                {s.name} · {fmtUnits(s.quantity)} units
+                                {!fh && <span style={{ color: '#D97706' }}> ⚠ AMC unknown</span>}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    )
                   )}
-                  {!stpDestSelected && stpDestResults.length > 0 && (
-                    <div className="max-h-40 overflow-y-auto border rounded-lg mt-1" style={{ borderColor: 'var(--wv-border)' }}>
-                      {stpDestResults.map(r => (
-                        <button key={r.schemeCode} onClick={() => setStpDestSelected(r)}
-                          className="w-full text-left p-2 hover:bg-gray-50 border-b last:border-0" style={{ borderColor: 'var(--wv-border)' }}>
-                          <p className="text-xs font-medium">{r.schemeName}</p>
-                          <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
-                            AMFI {r.schemeCode}
-                            {r.latestNav != null && <> · NAV ₹{r.latestNav.toFixed(4)}</>}
-                            {r.latestDate && <> · {r.latestDate}</>}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
+
+                  {/* New fund search */}
+                  {stpDestMode === 'new' && (
+                    <>
+                      <Input
+                        value={stpDestQuery}
+                        onChange={async (e) => {
+                          const q = e.target.value;
+                          setStpDestQuery(q);
+                          setStpDestSelected(null);
+                          if (q.length < 2) { setStpDestResults([]); return; }
+                          setStpDestSearching(true);
+                          try {
+                            const currentFundHouse = String((h.metadata as Record<string, unknown> | null)?.fund_house ?? '');
+                            const res = await fetch(`/api/mf/search?q=${encodeURIComponent(q)}&amc=${encodeURIComponent(currentFundHouse)}`);
+                            const data = await res.json();
+                            setStpDestResults(data.results ?? []);
+                          } finally { setStpDestSearching(false); }
+                        }}
+                        placeholder="Search same-AMC schemes..."
+                        className="h-9 text-xs" autoFocus
+                      />
+                      {stpDestSelected && (
+                        <div className="p-2 rounded-lg text-xs" style={{ backgroundColor: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.2)', color: '#059669' }}>
+                          Selected: <strong>{stpDestSelected.schemeName}</strong> (AMFI {stpDestSelected.schemeCode})
+                        </div>
+                      )}
+                      {!stpDestSelected && stpDestResults.length > 0 && (
+                        <div className="max-h-40 overflow-y-auto border rounded-lg" style={{ borderColor: 'var(--wv-border)' }}>
+                          {stpDestResults.map(r => (
+                            <button key={r.schemeCode} onClick={() => setStpDestSelected(r)}
+                              className="w-full text-left p-2 hover:bg-gray-50 border-b last:border-0" style={{ borderColor: 'var(--wv-border)' }}>
+                              <p className="text-xs font-medium">{r.schemeName}</p>
+                              <p className="text-[10px]" style={{ color: 'var(--wv-text-muted)' }}>
+                                AMFI {r.schemeCode}
+                                {r.latestNav != null && <> · NAV ₹{r.latestNav.toFixed(4)}</>}
+                                {r.latestDate && <> · {r.latestDate}</>}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {stpDestSearching && <p className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>Searching...</p>}
+                    </>
                   )}
-                  {stpDestSearching && <p className="text-[11px]" style={{ color: 'var(--wv-text-muted)' }}>Searching...</p>}
                 </div>
               )}
 
@@ -2052,61 +2130,140 @@ export function HoldingDetailSheet({
                 </div>
               </div>
 
+              {/* Preview result */}
+              {stpPreview && (
+                <div className="rounded-lg p-3 space-y-2" style={{ backgroundColor: 'rgba(27,42,74,0.04)', border: '1px solid rgba(27,42,74,0.12)' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--wv-text-muted)' }}>STP Preview</p>
+                  <div className="space-y-1.5 text-[11px]">
+                    <div className="flex justify-between">
+                      <span style={{ color: '#DC2626' }}>Sell (Source)</span>
+                      <span style={{ color: 'var(--wv-text)' }}>{stpPreview.source?.schemeName}</span>
+                    </div>
+                    <div className="flex justify-between" style={{ color: 'var(--wv-text-secondary)' }}>
+                      <span>Date: {stpPreview.source?.date} · NAV: ₹{stpPreview.source?.nav?.toFixed(4)}</span>
+                      <span className="font-semibold">{stpPreview.source?.units?.toFixed(3)} units</span>
+                    </div>
+                    {stpPreview.source?.stt > 0 && (
+                      <div className="text-[10px]" style={{ color: '#D97706' }}>STT (0.001%): ₹{stpPreview.source.stt.toFixed(2)}</div>
+                    )}
+                    <div className="my-1" style={{ borderTop: '1px dashed var(--wv-border)' }} />
+                    <div className="flex justify-between">
+                      <span style={{ color: '#059669' }}>Buy (Destination)</span>
+                      <span style={{ color: 'var(--wv-text)' }}>{stpPreview.destination?.schemeName}</span>
+                    </div>
+                    <div className="flex justify-between" style={{ color: 'var(--wv-text-secondary)' }}>
+                      <span>Date: {stpPreview.destination?.date} · NAV: ₹{stpPreview.destination?.nav?.toFixed(4)}</span>
+                      <span className="font-semibold">{stpPreview.destination?.units?.toFixed(3)} units</span>
+                    </div>
+                    {stpPreview.destination?.stampDuty > 0 && (
+                      <div className="text-[10px]" style={{ color: '#D97706' }}>Stamp duty (0.005%): ₹{stpPreview.destination.stampDuty.toFixed(2)}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex gap-2">
-                <Button
-                  disabled={stpSaving ||
-                    !stpDate || !stpAmount ||
-                    (stpMode === 'from' && !stpSourceHoldingId) ||
-                    (stpMode === 'to' && !stpDestSelected)}
-                  onClick={async () => {
-                    setStpSaving(true);
-                    setStpError('');
-                    try {
-                      const body: Record<string, unknown> = {
-                        date: stpDate,
-                        amount: parseFloat(stpAmount),
-                      };
-                      if (stpMode === 'from') {
-                        // Source is the other fund; destination is h
-                        body.sourceHoldingId = stpSourceHoldingId;
-                        body.destinationHoldingId = h.id;
-                      } else {
-                        // Source is h; destination is new or existing
-                        body.sourceHoldingId = h.id;
-                        body.destinationSchemeCode = String(stpDestSelected!.schemeCode);
-                        body.destinationSchemeName = stpDestSelected!.schemeName;
-                        // Pass portfolio/member/family context from h's portfolio
-                        const portfolios = (h as unknown as { portfolios?: { id: string; name: string; user_id: string; family_id?: string } }).portfolios;
-                        body.portfolioName = portfolios?.name;
-                        body.memberId = portfolios?.user_id;
-                        body.familyId = portfolios?.family_id;
-                        body.brokerId = (h as unknown as { brokers?: { id: string } }).brokers?.id;
-                        body.destinationFundHouse = (h.metadata as Record<string, unknown> | null)?.fund_house;
-                      }
-
-                      const res = await fetch('/api/mf/stp', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(body),
-                      });
-                      const data = await res.json();
-                      if (!res.ok) { setStpError(data.error || 'STP failed'); return; }
-                      setStpMode(null);
-                      onHoldingChanged();
-                      onClose();
-                    } catch (err) {
-                      setStpError(String(err));
-                    } finally {
-                      setStpSaving(false);
-                    }
-                  }}
-                  className="flex-1 h-9 text-xs font-semibold text-white"
-                  style={{ backgroundColor: '#1B2A4A' }}>
-                  {stpSaving ? <><Loader2 className="w-3 h-3 animate-spin mr-1" />Processing...</> : 'Execute STP'}
+                {!stpPreview ? (
+                  <Button
+                    disabled={stpPreviewing ||
+                      !stpDate || !stpAmount ||
+                      (stpMode === 'from' && !stpSourceHoldingId) ||
+                      (stpMode === 'to' && stpDestMode === 'existing' && !stpDestExistingId) ||
+                      (stpMode === 'to' && stpDestMode === 'new' && !stpDestSelected)}
+                    onClick={async () => {
+                      setStpPreviewing(true);
+                      setStpError('');
+                      setStpPreview(null);
+                      try {
+                        const body: Record<string, unknown> = {
+                          date: stpDate,
+                          amount: parseFloat(stpAmount),
+                          preview: true,
+                        };
+                        if (stpMode === 'from') {
+                          body.sourceHoldingId = stpSourceHoldingId;
+                          body.destinationHoldingId = h.id;
+                        } else if (stpDestMode === 'existing' && stpDestExistingId) {
+                          body.sourceHoldingId = h.id;
+                          body.destinationHoldingId = stpDestExistingId;
+                        } else {
+                          body.sourceHoldingId = h.id;
+                          body.destinationSchemeCode = String(stpDestSelected!.schemeCode);
+                          body.destinationSchemeName = stpDestSelected!.schemeName;
+                          const portfolios = (h as unknown as { portfolios?: { id: string; name: string; user_id: string; family_id?: string } }).portfolios;
+                          body.portfolioName = portfolios?.name;
+                          body.memberId = portfolios?.user_id;
+                          body.familyId = portfolios?.family_id;
+                          body.brokerId = (h as unknown as { brokers?: { id: string } }).brokers?.id;
+                        }
+                        const res = await fetch('/api/mf/stp', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(body),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) { setStpError(data.error || 'Preview failed'); return; }
+                        setStpPreview(data);
+                      } catch (err) { setStpError(String(err)); }
+                      finally { setStpPreviewing(false); }
+                    }}
+                    className="flex-1 h-9 text-xs font-semibold text-white"
+                    style={{ backgroundColor: '#1B2A4A' }}>
+                    {stpPreviewing ? <><Loader2 className="w-3 h-3 animate-spin mr-1" />Loading NAVs...</> : 'Preview STP'}
+                  </Button>
+                ) : (
+                  <Button
+                    disabled={stpSaving}
+                    onClick={async () => {
+                      setStpSaving(true);
+                      setStpError('');
+                      try {
+                        const body: Record<string, unknown> = {
+                          date: stpDate,
+                          amount: parseFloat(stpAmount),
+                        };
+                        if (stpMode === 'from') {
+                          body.sourceHoldingId = stpSourceHoldingId;
+                          body.destinationHoldingId = h.id;
+                        } else if (stpDestMode === 'existing' && stpDestExistingId) {
+                          body.sourceHoldingId = h.id;
+                          body.destinationHoldingId = stpDestExistingId;
+                        } else {
+                          body.sourceHoldingId = h.id;
+                          body.destinationSchemeCode = String(stpDestSelected!.schemeCode);
+                          body.destinationSchemeName = stpDestSelected!.schemeName;
+                          const portfolios = (h as unknown as { portfolios?: { id: string; name: string; user_id: string; family_id?: string } }).portfolios;
+                          body.portfolioName = portfolios?.name;
+                          body.memberId = portfolios?.user_id;
+                          body.familyId = portfolios?.family_id;
+                          body.brokerId = (h as unknown as { brokers?: { id: string } }).brokers?.id;
+                        }
+                        const res = await fetch('/api/mf/stp', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(body),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) { setStpError(data.error || 'STP failed'); return; }
+                        setStpMode(null);
+                        setStpPreview(null);
+                        onHoldingChanged();
+                        onClose();
+                      } catch (err) { setStpError(String(err)); }
+                      finally { setStpSaving(false); }
+                    }}
+                    className="flex-1 h-9 text-xs font-semibold text-white"
+                    style={{ backgroundColor: '#059669' }}>
+                    {stpSaving ? <><Loader2 className="w-3 h-3 animate-spin mr-1" />Saving...</> : 'Confirm & Save'}
+                  </Button>
+                )}
+                <Button variant="outline"
+                  onClick={() => { if (stpPreview) { setStpPreview(null); } else { setStpMode(null); } }}
+                  disabled={stpSaving}
+                  className="h-9 text-xs">
+                  {stpPreview ? 'Change' : 'Cancel'}
                 </Button>
-                <Button variant="outline" onClick={() => setStpMode(null)} disabled={stpSaving}
-                  className="h-9 text-xs">Cancel</Button>
               </div>
             </div>
           </div>

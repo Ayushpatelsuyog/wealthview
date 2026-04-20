@@ -17,14 +17,16 @@ import { FamilyMemberSelector } from '@/components/shared/FamilyMemberSelector';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ManualAsset {
+interface Holding {
   id: string;
   portfolio_id: string;
   asset_type: string;
+  symbol: string;
   name: string;
-  current_value: number;
+  quantity: number;
+  avg_buy_price: number;
+  currency: string;
   metadata: Record<string, unknown>;
-  last_updated: string;
   portfolios: { id: string; name: string; user_id: string; family_id: string } | null;
 }
 
@@ -45,7 +47,7 @@ interface PMSRow {
   notes: string;
   memberName: string;
   ownerId: string;
-  rawAsset: ManualAsset;
+  rawAsset: Holding;
 }
 
 interface Toast {
@@ -127,41 +129,25 @@ export default function PMSPortfolioPage() {
     const names: Record<string, string> = {};
     (usersData ?? []).forEach(u => { names[u.id] = u.name; });
 
-    // Try asset_type='pms' first
-    const pmsQuery = await supabase
-      .from('manual_assets')
-      .select('id, portfolio_id, asset_type, name, current_value, metadata, last_updated, portfolios(id, name, user_id, family_id)')
+    // Query from holdings table with asset_type='pms'
+    const { data: holdingsData, error: dbErr } = await supabase
+      .from('holdings')
+      .select('id, portfolio_id, asset_type, symbol, name, quantity, avg_buy_price, currency, metadata, portfolios(id, name, user_id, family_id)')
       .eq('asset_type', 'pms');
 
-    let data = pmsQuery.data;
-    const dbErr = pmsQuery.error;
-
-    // Fallback: check metadata for pms assets
-    if ((!data || data.length === 0) && !dbErr) {
-      const { data: allAssets } = await supabase
-        .from('manual_assets')
-        .select('id, portfolio_id, asset_type, name, current_value, metadata, last_updated, portfolios(id, name, user_id, family_id)');
-      if (allAssets) {
-        data = allAssets.filter(a =>
-          (a.metadata as Record<string, unknown>)?.provider_name ||
-          (a.metadata as Record<string, unknown>)?.strategy_name
-        );
-      }
-    }
-
     if (dbErr) { setError(dbErr.message); setLoading(false); return; }
-    if (!data || data.length === 0) { setAssets([]); setLoading(false); return; }
+    if (!holdingsData || holdingsData.length === 0) { setAssets([]); setLoading(false); return; }
 
-    const rows: PMSRow[] = (data as unknown as ManualAsset[]).map(a => {
-      const meta = a.metadata ?? {};
-      const invested = Number(meta.investment_amount ?? 0);
-      const currentValue = Number(a.current_value ?? 0);
+    const rows: PMSRow[] = (holdingsData as unknown as Holding[]).map(h => {
+      const meta = h.metadata ?? {};
+      const invested = Number(meta.investment_amount ?? (h.quantity * h.avg_buy_price));
+      const currentValue = Number(meta.current_value ?? (h.quantity * h.avg_buy_price));
       const pnl = currentValue - invested;
       const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
-      const ownerId = a.portfolios?.user_id ?? '';
+      const ownerId = h.portfolios?.user_id ?? '';
 
       return {
-        id: a.id,
+        id: h.id,
         provider: String(meta.provider_name ?? ''),
         strategy: String(meta.strategy_name ?? ''),
         accountNumber: String(meta.account_number ?? ''),
@@ -177,7 +163,7 @@ export default function PMSPortfolioPage() {
         notes: String(meta.notes ?? ''),
         memberName: names[ownerId] ?? '',
         ownerId,
-        rawAsset: a,
+        rawAsset: h,
       };
     });
 

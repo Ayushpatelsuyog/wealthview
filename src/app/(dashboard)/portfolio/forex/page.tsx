@@ -17,14 +17,16 @@ import { FamilyMemberSelector } from '@/components/shared/FamilyMemberSelector';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ManualAsset {
+interface Holding {
   id: string;
   portfolio_id: string;
   asset_type: string;
+  symbol: string;
   name: string;
-  current_value: number;
+  quantity: number;
+  avg_buy_price: number;
+  currency: string;
   metadata: Record<string, unknown>;
-  last_updated: string;
   portfolios: { id: string; name: string; user_id: string; family_id: string } | null;
 }
 
@@ -44,7 +46,7 @@ interface ForexRow {
   notes: string;
   memberName: string;
   ownerId: string;
-  rawAsset: ManualAsset;
+  rawAsset: Holding;
 }
 
 interface Toast {
@@ -126,47 +128,31 @@ export default function ForexPortfolioPage() {
     const names: Record<string, string> = {};
     (usersData ?? []).forEach(u => { names[u.id] = u.name; });
 
-    // Try asset_type='forex' first
-    const fxQuery = await supabase
-      .from('manual_assets')
-      .select('id, portfolio_id, asset_type, name, current_value, metadata, last_updated, portfolios(id, name, user_id, family_id)')
+    // Query from holdings table with asset_type='forex'
+    const { data: holdingsData, error: dbErr } = await supabase
+      .from('holdings')
+      .select('id, portfolio_id, asset_type, symbol, name, quantity, avg_buy_price, currency, metadata, portfolios(id, name, user_id, family_id)')
       .eq('asset_type', 'forex');
 
-    let data = fxQuery.data;
-    const dbErr = fxQuery.error;
-
-    // Fallback: check metadata for forex assets
-    if ((!data || data.length === 0) && !dbErr) {
-      const { data: allAssets } = await supabase
-        .from('manual_assets')
-        .select('id, portfolio_id, asset_type, name, current_value, metadata, last_updated, portfolios(id, name, user_id, family_id)');
-      if (allAssets) {
-        data = allAssets.filter(a =>
-          (a.metadata as Record<string, unknown>)?.currency_pair ||
-          (a.metadata as Record<string, unknown>)?.exchange_rate_purchase
-        );
-      }
-    }
-
     if (dbErr) { setError(dbErr.message); setLoading(false); return; }
-    if (!data || data.length === 0) { setAssets([]); setLoading(false); return; }
+    if (!holdingsData || holdingsData.length === 0) { setAssets([]); setLoading(false); return; }
 
-    const rows: ForexRow[] = (data as unknown as ManualAsset[]).map(a => {
-      const meta = a.metadata ?? {};
-      const amountForeign = Number(meta.amount_foreign ?? 0);
-      const exchangeRatePurchase = Number(meta.exchange_rate_purchase ?? 0);
-      const exchangeRateCurrent = Number(meta.exchange_rate_current ?? 0);
+    const rows: ForexRow[] = (holdingsData as unknown as Holding[]).map(h => {
+      const meta = h.metadata ?? {};
+      const amountForeign = Number(meta.amount_foreign ?? h.quantity);
+      const exchangeRatePurchase = Number(meta.exchange_rate_purchase ?? h.avg_buy_price);
+      const exchangeRateCurrent = Number(meta.exchange_rate_current ?? h.avg_buy_price);
       const inrValuePurchase = Number(meta.inr_value_purchase ?? amountForeign * exchangeRatePurchase);
       const inrValueCurrent = exchangeRateCurrent > 0
         ? Number(meta.inr_value_current ?? amountForeign * exchangeRateCurrent)
-        : Number(a.current_value ?? inrValuePurchase);
+        : Number(meta.current_value ?? inrValuePurchase);
       const pnl = inrValueCurrent - inrValuePurchase;
       const pnlPercent = inrValuePurchase > 0 ? (pnl / inrValuePurchase) * 100 : 0;
-      const ownerId = a.portfolios?.user_id ?? '';
+      const ownerId = h.portfolios?.user_id ?? '';
 
       return {
-        id: a.id,
-        currencyPair: String(meta.currency_pair ?? ''),
+        id: h.id,
+        currencyPair: String(meta.currency_pair ?? h.symbol ?? ''),
         platform: String(meta.platform ?? ''),
         amountForeign,
         exchangeRatePurchase,
@@ -180,7 +166,7 @@ export default function ForexPortfolioPage() {
         notes: String(meta.notes ?? ''),
         memberName: names[ownerId] ?? '',
         ownerId,
-        rawAsset: a,
+        rawAsset: h,
       };
     });
 

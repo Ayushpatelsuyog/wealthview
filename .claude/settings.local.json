@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx:*)",
+      "Bash(cd:*)",
+      "Bash(cp:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(ls:*)",
+      "Read(//dev/**)",
+      "Bash(/home/rommel/Projects/wealthview/src/app/\\\\\\(dashboard\\\\\\)/add-assets/mutual-funds/page.tsx)",
+      "Bash(cat:*)",
+      "Bash(wc:*)",
+      "Bash(tail:*)",
+      "Bash(grep:*)",
+      "Bash(kill:*)",
+      "Bash(git stash:*)",
+      "Bash(rm:*)",
+      "Bash(node:*)",
+      "Bash(pkill:*)",
+      "Bash(curl:*)",
+      "Bash(find:*)",
+      "Bash(npm list:*)"
+    ]
+  }
+}

@@ -17,14 +17,16 @@ import { FamilyMemberSelector } from '@/components/shared/FamilyMemberSelector';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ManualAsset {
+interface Holding {
   id: string;
   portfolio_id: string;
   asset_type: string;
+  symbol: string;
   name: string;
-  current_value: number;
+  quantity: number;
+  avg_buy_price: number;
+  currency: string;
   metadata: Record<string, unknown>;
-  last_updated: string;
   portfolios: { id: string; name: string; user_id: string; family_id: string } | null;
 }
 
@@ -47,7 +49,7 @@ interface AIFRow {
   notes: string;
   memberName: string;
   ownerId: string;
-  rawAsset: ManualAsset;
+  rawAsset: Holding;
 }
 
 interface Toast {
@@ -129,46 +131,30 @@ export default function AIFPortfolioPage() {
     const names: Record<string, string> = {};
     (usersData ?? []).forEach(u => { names[u.id] = u.name; });
 
-    // Try asset_type='aif' first
-    const aifQuery = await supabase
-      .from('manual_assets')
-      .select('id, portfolio_id, asset_type, name, current_value, metadata, last_updated, portfolios(id, name, user_id, family_id)')
+    // Query from holdings table with asset_type='aif'
+    const { data: holdingsData, error: dbErr } = await supabase
+      .from('holdings')
+      .select('id, portfolio_id, asset_type, symbol, name, quantity, avg_buy_price, currency, metadata, portfolios(id, name, user_id, family_id)')
       .eq('asset_type', 'aif');
 
-    let data = aifQuery.data;
-    const dbErr = aifQuery.error;
-
-    // Fallback: check metadata for aif assets
-    if ((!data || data.length === 0) && !dbErr) {
-      const { data: allAssets } = await supabase
-        .from('manual_assets')
-        .select('id, portfolio_id, asset_type, name, current_value, metadata, last_updated, portfolios(id, name, user_id, family_id)');
-      if (allAssets) {
-        data = allAssets.filter(a =>
-          (a.metadata as Record<string, unknown>)?.commitment_amount ||
-          (a.metadata as Record<string, unknown>)?.fund_manager
-        );
-      }
-    }
-
     if (dbErr) { setError(dbErr.message); setLoading(false); return; }
-    if (!data || data.length === 0) { setAssets([]); setLoading(false); return; }
+    if (!holdingsData || holdingsData.length === 0) { setAssets([]); setLoading(false); return; }
 
-    const rows: AIFRow[] = (data as unknown as ManualAsset[]).map(a => {
-      const meta = a.metadata ?? {};
+    const rows: AIFRow[] = (holdingsData as unknown as Holding[]).map(h => {
+      const meta = h.metadata ?? {};
       const commitmentAmount = Number(meta.commitment_amount ?? 0);
       const calledAmount = Number(meta.called_amount ?? 0);
       const distributions = Number(meta.distributions ?? 0);
-      const currentValue = Number(a.current_value ?? 0);
+      const currentValue = Number(meta.current_value ?? (h.quantity * h.avg_buy_price));
       const uncalled = Number(meta.uncalled ?? Math.max(0, commitmentAmount - calledAmount));
       const tvpi = Number(meta.tvpi ?? (calledAmount > 0 ? (distributions + currentValue) / calledAmount : 0));
       const dpi = Number(meta.dpi ?? (calledAmount > 0 ? distributions / calledAmount : 0));
       const rvpi = Number(meta.rvpi ?? (calledAmount > 0 ? currentValue / calledAmount : 0));
-      const ownerId = a.portfolios?.user_id ?? '';
+      const ownerId = h.portfolios?.user_id ?? '';
 
       return {
-        id: a.id,
-        fundName: String(a.name ?? ''),
+        id: h.id,
+        fundName: String(h.name ?? ''),
         category: String(meta.category ?? ''),
         categoryLabel: String(meta.category_label ?? ''),
         fundManager: String(meta.fund_manager ?? ''),
@@ -185,7 +171,7 @@ export default function AIFPortfolioPage() {
         notes: String(meta.notes ?? ''),
         memberName: names[ownerId] ?? '',
         ownerId,
-        rawAsset: a,
+        rawAsset: h,
       };
     });
 
